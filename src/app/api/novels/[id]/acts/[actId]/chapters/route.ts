@@ -1,4 +1,7 @@
-// src/app/api/novels/[id]/acts/[actId]/chapters/route.ts
+// ==========================================
+// FILE: src/app/api/novels/[id]/acts/[actId]/chapters/route.ts (ENHANCED)
+// ==========================================
+
 import { NextRequest, NextResponse } from "next/server";
 import { novelService } from "@/lib/novels";
 

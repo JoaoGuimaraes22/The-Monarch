@@ -25,11 +25,15 @@ interface ManuscriptEditorProps {
   onChapterSelect?: (chapter: Chapter) => void;
   onActSelect?: (act: Act) => void;
   onRefresh: () => void;
-  onAddScene: (chapterId: string) => Promise<void>; // ✨ Add handlers
-  onAddChapter: (actId: string) => Promise<void>; // ✨ Add handlers
-  onDeleteScene: (sceneId: string) => Promise<void>; // ✨ NEW: Delete handlers
-  onDeleteChapter: (chapterId: string) => Promise<void>; // ✨ NEW: Delete handlers
-  onDeleteAct: (actId: string) => Promise<void>; // ✨ NEW: Delete handlers
+  onAddScene: (chapterId: string) => Promise<void>;
+  onAddChapter: (actId: string) => Promise<void>;
+  onDeleteScene: (sceneId: string) => Promise<void>;
+  onDeleteChapter: (chapterId: string) => Promise<void>;
+  onDeleteAct: (actId: string) => Promise<void>;
+  // ✨ NEW: Add these name editing handler props
+  onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
+  onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
+  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
   isMainSidebarCollapsed: boolean;
 }
 
@@ -46,11 +50,15 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onChapterSelect,
   onActSelect,
   onRefresh,
-  onAddScene, // ✨ Add handlers
-  onAddChapter, // ✨ Add handlers
-  onDeleteScene, // ✨ NEW: Delete handlers
-  onDeleteChapter, // ✨ NEW: Delete handlers
-  onDeleteAct, // ✨ NEW: Delete handlers
+  onAddScene,
+  onAddChapter,
+  onDeleteScene,
+  onDeleteChapter,
+  onDeleteAct,
+  // ✨ NEW: Destructure the name editing handlers
+  onUpdateActName,
+  onUpdateChapterName,
+  onUpdateSceneName,
   isMainSidebarCollapsed,
 }) => {
   // State management
@@ -180,11 +188,15 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onChapterSelect={onChapterSelect}
         onActSelect={onActSelect}
         onRefresh={onRefresh}
-        onAddScene={onAddScene} // ✨ Add handlers
-        onAddChapter={onAddChapter} // ✨ Add handlers
-        onDeleteScene={onDeleteScene} // ✨ NEW: Pass through delete handlers
-        onDeleteChapter={onDeleteChapter} // ✨ NEW: Pass through delete handlers
-        onDeleteAct={onDeleteAct} // ✨ NEW: Pass through delete handlers
+        onAddScene={onAddScene}
+        onAddChapter={onAddChapter}
+        onDeleteScene={onDeleteScene}
+        onDeleteChapter={onDeleteChapter}
+        onDeleteAct={onDeleteAct}
+        // ✨ NEW: Pass through the name editing handlers
+        onUpdateActName={onUpdateActName}
+        onUpdateChapterName={onUpdateChapterName}
+        onUpdateSceneName={onUpdateSceneName}
         isCollapsed={isStructureSidebarCollapsed}
         onToggleCollapse={() =>
           setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
@@ -220,9 +232,9 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           contentDisplayMode={contentDisplayMode}
           onContentChange={handleSceneContentChange}
           onSceneClick={onSceneSelect}
-          onAddScene={onAddScene} // ✨ Pass add scene handler
-          onAddChapter={onAddChapter} // ✨ Pass add chapter handler
-          novel={novel} // ✨ NEW: Pass novel data for structure info
+          onAddScene={onAddScene}
+          onAddChapter={onAddChapter}
+          novel={novel}
           marginLeft="0"
           marginRight="0"
         />

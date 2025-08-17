@@ -435,6 +435,142 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
     [novelId, selectedAct]
   );
 
+  // ✨ NEW: Name editing handlers with direct state updates
+  const handleUpdateActName = useCallback(
+    async (actId: string, newTitle: string) => {
+      if (!novelId) return;
+
+      try {
+        const response = await fetch(`/api/novels/${novelId}/acts/${actId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle }),
+        });
+
+        if (response.ok) {
+          console.log("✅ Act name updated:", newTitle);
+
+          // ✨ DIRECT: Update act name in state immediately
+          setNovel((prevNovel) => {
+            if (!prevNovel) return prevNovel;
+
+            return {
+              ...prevNovel,
+              acts: prevNovel.acts.map((act) =>
+                act.id === actId ? { ...act, title: newTitle } : act
+              ),
+            };
+          });
+        } else {
+          console.error("Failed to update act name");
+          throw new Error("Failed to update act name");
+        }
+      } catch (error) {
+        console.error("Error updating act name:", error);
+        throw error;
+      }
+    },
+    [novelId]
+  );
+
+  const handleUpdateChapterName = useCallback(
+    async (chapterId: string, newTitle: string) => {
+      if (!novelId) return;
+
+      try {
+        const response = await fetch(
+          `/api/novels/${novelId}/chapters/${chapterId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle }),
+          }
+        );
+
+        if (response.ok) {
+          console.log("✅ Chapter name updated:", newTitle);
+
+          // ✨ DIRECT: Update chapter name in state immediately
+          setNovel((prevNovel) => {
+            if (!prevNovel) return prevNovel;
+
+            return {
+              ...prevNovel,
+              acts: prevNovel.acts.map((act) => ({
+                ...act,
+                chapters: act.chapters.map((chapter) =>
+                  chapter.id === chapterId
+                    ? { ...chapter, title: newTitle }
+                    : chapter
+                ),
+              })),
+            };
+          });
+        } else {
+          console.error("Failed to update chapter name");
+          throw new Error("Failed to update chapter name");
+        }
+      } catch (error) {
+        console.error("Error updating chapter name:", error);
+        throw error;
+      }
+    },
+    [novelId]
+  );
+
+  const handleUpdateSceneName = useCallback(
+    async (sceneId: string, newTitle: string) => {
+      if (!novelId) return;
+
+      try {
+        const response = await fetch(
+          `/api/novels/${novelId}/scenes/${sceneId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle }),
+          }
+        );
+
+        if (response.ok) {
+          console.log("✅ Scene name updated:", newTitle);
+
+          // ✨ DIRECT: Update scene name in state immediately
+          setNovel((prevNovel) => {
+            if (!prevNovel) return prevNovel;
+
+            return {
+              ...prevNovel,
+              acts: prevNovel.acts.map((act) => ({
+                ...act,
+                chapters: act.chapters.map((chapter) => ({
+                  ...chapter,
+                  scenes: chapter.scenes.map((scene) =>
+                    scene.id === sceneId ? { ...scene, title: newTitle } : scene
+                  ),
+                })),
+              })),
+            };
+          });
+
+          // ✨ Update selected scene if it's the one being renamed
+          if (selectedScene?.id === sceneId) {
+            setSelectedScene((prevScene) =>
+              prevScene ? { ...prevScene, title: newTitle } : prevScene
+            );
+          }
+        } else {
+          console.error("Failed to update scene name");
+          throw new Error("Failed to update scene name");
+        }
+      } catch (error) {
+        console.error("Error updating scene name:", error);
+        throw error;
+      }
+    },
+    [novelId, selectedScene]
+  );
+
   // ✨ SIMPLE: Only refresh when explicitly needed (errors, imports, etc.)
   const handleRefresh = useCallback(() => {
     console.log("🔄 EXPLICIT REFRESH: User action triggered refresh");
@@ -493,11 +629,15 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       onChapterSelect={handleChapterSelect}
       onActSelect={handleActSelect}
       onRefresh={handleRefresh}
-      onAddScene={handleAddScene} // ✨ Add handlers
-      onAddChapter={handleAddChapter} // ✨ Add handlers
-      onDeleteScene={handleDeleteScene} // ✨ NEW: Delete handlers
-      onDeleteChapter={handleDeleteChapter} // ✨ NEW: Delete handlers
-      onDeleteAct={handleDeleteAct} // ✨ NEW: Delete handlers
+      onAddScene={handleAddScene}
+      onAddChapter={handleAddChapter}
+      onDeleteScene={handleDeleteScene}
+      onDeleteChapter={handleDeleteChapter}
+      onDeleteAct={handleDeleteAct}
+      // ✨ NEW: Name editing handlers
+      onUpdateActName={handleUpdateActName}
+      onUpdateChapterName={handleUpdateChapterName}
+      onUpdateSceneName={handleUpdateSceneName}
       isMainSidebarCollapsed={isMainSidebarCollapsed}
     />
   );

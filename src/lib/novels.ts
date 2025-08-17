@@ -37,6 +37,7 @@ export interface Chapter {
 
 export interface Scene {
   id: string;
+  title: string; // ✨ NEW: Scene title field
   content: string;
   wordCount: number;
   order: number;
@@ -46,6 +47,23 @@ export interface Scene {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// ✨ NEW: Update interfaces
+export interface UpdateActData {
+  title?: string;
+}
+
+export interface UpdateChapterData {
+  title?: string;
+}
+
+export interface UpdateSceneMetadata {
+  title?: string;
+  povCharacter?: string | null;
+  sceneType?: string;
+  notes?: string;
+  status?: string;
 }
 
 export interface ImportStructureData {
@@ -195,6 +213,7 @@ export const novelService = {
             for (const sceneData of chapterData.scenes) {
               await tx.scene.create({
                 data: {
+                  title: `Scene ${sceneData.order}`, // ✨ NEW: Default scene title
                   content: sceneData.content,
                   wordCount: sceneData.wordCount,
                   order: sceneData.order,
@@ -278,8 +297,12 @@ export const novelService = {
     }
   },
 
-  // Update a scene's content
-  async updateScene(sceneId: string, content: string): Promise<Scene> {
+  // ✨ ENHANCED: Update scene content and/or metadata
+  async updateScene(
+    sceneId: string,
+    content: string,
+    metadata?: UpdateSceneMetadata
+  ): Promise<Scene> {
     try {
       // Calculate word count
       const wordCount = content
@@ -288,13 +311,30 @@ export const novelService = {
         .split(/\s+/)
         .filter((word) => word.length > 0).length;
 
+      // Build update data
+      const updateData: {
+        content: string;
+        wordCount: number;
+        updatedAt: Date;
+        title?: string;
+        povCharacter?: string | null;
+        sceneType?: string;
+        notes?: string;
+        status?: string;
+      } = {
+        content,
+        wordCount,
+        updatedAt: new Date(),
+      };
+
+      // Add metadata if provided
+      if (metadata) {
+        Object.assign(updateData, metadata);
+      }
+
       const scene = await prisma.scene.update({
         where: { id: sceneId },
-        data: {
-          content,
-          wordCount,
-          updatedAt: new Date(),
-        },
+        data: updateData,
       });
 
       // Update novel's total word count
@@ -304,6 +344,81 @@ export const novelService = {
     } catch (error) {
       console.error("Error updating scene:", error);
       throw new Error("Failed to update scene");
+    }
+  },
+
+  // ✨ NEW: Update scene metadata only (without content/word count changes)
+  async updateSceneMetadata(
+    sceneId: string,
+    data: UpdateSceneMetadata
+  ): Promise<Scene> {
+    try {
+      const updatedScene = await prisma.scene.update({
+        where: { id: sceneId },
+        data: {
+          ...data,
+          updatedAt: new Date(),
+        },
+      });
+
+      return updatedScene;
+    } catch (error) {
+      console.error("Error updating scene metadata:", error);
+      throw new Error("Failed to update scene metadata");
+    }
+  },
+
+  // ✨ NEW: Update act metadata
+  async updateAct(actId: string, data: UpdateActData): Promise<Act> {
+    try {
+      const updatedAct = await prisma.act.update({
+        where: { id: actId },
+        data: {
+          ...data,
+          updatedAt: new Date(),
+        },
+        include: {
+          chapters: {
+            orderBy: { order: "asc" },
+            include: {
+              scenes: {
+                orderBy: { order: "asc" },
+              },
+            },
+          },
+        },
+      });
+
+      return updatedAct;
+    } catch (error) {
+      console.error("Error updating act:", error);
+      throw new Error("Failed to update act");
+    }
+  },
+
+  // ✨ NEW: Update chapter metadata
+  async updateChapter(
+    chapterId: string,
+    data: UpdateChapterData
+  ): Promise<Chapter> {
+    try {
+      const updatedChapter = await prisma.chapter.update({
+        where: { id: chapterId },
+        data: {
+          ...data,
+          updatedAt: new Date(),
+        },
+        include: {
+          scenes: {
+            orderBy: { order: "asc" },
+          },
+        },
+      });
+
+      return updatedChapter;
+    } catch (error) {
+      console.error("Error updating chapter:", error);
+      throw new Error("Failed to update chapter");
     }
   },
 
@@ -607,8 +722,6 @@ export const novelService = {
     }
   },
 
-  // Add these methods to your existing novelService object in src/lib/novels.ts
-
   // Create a new scene in a chapter
   async createScene(
     chapterId: string,
@@ -665,6 +778,7 @@ export const novelService = {
         // Create the new scene
         const newScene = await tx.scene.create({
           data: {
+            title: `Scene ${newOrder}`, // ✨ NEW: Default scene title
             content: "", // Empty content initially
             wordCount: 0,
             order: newOrder,
@@ -757,6 +871,7 @@ export const novelService = {
         // ✨ NEW: Automatically create Scene 1 for the new chapter
         await tx.scene.create({
           data: {
+            title: "Scene 1", // ✨ NEW: Default scene title
             content: "", // Empty content initially
             wordCount: 0,
             order: 1, // First scene

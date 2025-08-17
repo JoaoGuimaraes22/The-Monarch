@@ -57,6 +57,7 @@ model Chapter {
 
 model Scene {
   id        String   @id @default(cuid())
+  title     String   @default("")          // ✨ NEW: Scene title field
   content   String   @default("")
   wordCount Int      @default(0)
   order     Int

@@ -1,7 +1,7 @@
 // src/app/components/manuscript/manuscript-editor/manuscript-structure-sidebar.tsx
 import React from "react";
 import { BookOpen, ChevronLeft, ChevronRight, FileText } from "lucide-react";
-import { ChapterTree } from "@/app/components/manuscript/chapter-tree";
+import { EnhancedChapterTree } from "../chapter-tree/enhanced-chapter-tree";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
 interface ManuscriptStructureSidebarProps {
@@ -13,11 +13,15 @@ interface ManuscriptStructureSidebarProps {
   onChapterSelect?: (chapter: Chapter) => void;
   onActSelect?: (act: Act) => void;
   onRefresh: () => void;
-  onAddScene: (chapterId: string) => Promise<void>; // ✨ Add handlers
-  onAddChapter: (actId: string) => Promise<void>; // ✨ Add handlers
-  onDeleteScene: (sceneId: string) => Promise<void>; // ✨ NEW: Delete handlers
-  onDeleteChapter: (chapterId: string) => Promise<void>; // ✨ NEW: Delete handlers
-  onDeleteAct: (actId: string) => Promise<void>; // ✨ NEW: Delete handlers
+  onAddScene: (chapterId: string) => Promise<void>;
+  onAddChapter: (actId: string) => Promise<void>;
+  onDeleteScene: (sceneId: string) => Promise<void>;
+  onDeleteChapter: (chapterId: string) => Promise<void>;
+  onDeleteAct: (actId: string) => Promise<void>;
+  // ✨ NEW: Add these name editing handler props
+  onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
+  onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
+  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   left: string;
@@ -35,11 +39,15 @@ export const ManuscriptStructureSidebar: React.FC<
   onChapterSelect,
   onActSelect,
   onRefresh,
-  onAddScene, // ✨ Add handlers
-  onAddChapter, // ✨ Add handlers
-  onDeleteScene, // ✨ NEW: Delete handlers
-  onDeleteChapter, // ✨ NEW: Delete handlers
-  onDeleteAct, // ✨ NEW: Delete handlers
+  onAddScene,
+  onAddChapter,
+  onDeleteScene,
+  onDeleteChapter,
+  onDeleteAct,
+  // ✨ NEW: Destructure the name editing handlers
+  onUpdateActName,
+  onUpdateChapterName,
+  onUpdateSceneName,
   isCollapsed,
   onToggleCollapse,
   left,
@@ -78,7 +86,7 @@ export const ManuscriptStructureSidebar: React.FC<
 
       {!isCollapsed && (
         <div className="flex-1 p-4 overflow-y-auto">
-          <ChapterTree
+          <EnhancedChapterTree
             novel={novel}
             selectedSceneId={selectedScene?.id}
             selectedChapterId={selectedChapterId}
@@ -87,11 +95,18 @@ export const ManuscriptStructureSidebar: React.FC<
             onChapterSelect={onChapterSelect}
             onActSelect={onActSelect}
             onRefresh={onRefresh}
-            onAddScene={onAddScene} // ✨ Add handlers
-            onAddChapter={onAddChapter} // ✨ Add handlers
-            onDeleteScene={onDeleteScene} // ✨ NEW: Pass through delete handlers
-            onDeleteChapter={onDeleteChapter} // ✨ NEW: Pass through delete handlers
-            onDeleteAct={onDeleteAct} // ✨ NEW: Pass through delete handlers
+            onAddScene={onAddScene}
+            onAddChapter={onAddChapter}
+            onDeleteScene={onDeleteScene}
+            onDeleteChapter={onDeleteChapter}
+            onDeleteAct={onDeleteAct}
+            // ✨ NEW: Pass through the name editing handlers (if ChapterTree supports them)
+            // Note: You'll need to either:
+            // 1. Replace ChapterTree with EnhancedChapterTree, or
+            // 2. Add these props to your existing ChapterTree component
+            onUpdateActName={onUpdateActName}
+            onUpdateChapterName={onUpdateChapterName}
+            onUpdateSceneName={onUpdateSceneName}
             novelId={novel.id}
           />
         </div>
