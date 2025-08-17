@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { DocxUploader } from "@/app/components/manuscript/docx-uploader";
 import { ManuscriptEmptyState } from "@/app/components/manuscript/manuscript-empty-state";
 import { ManuscriptEditor } from "@/app/components/manuscript/manuscript-editor";
-import { ViewMode } from "@/app/components/manuscript/view-mode-selector";
+import { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
 import { NovelWithStructure, Scene, Act, Chapter } from "@/lib/novels";
 import { useSidebar } from "@/app/components/workspace/sidebar-context";
 
@@ -571,6 +571,70 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
     [novelId, selectedScene]
   );
 
+  // ✨ SIMPLEST: Add act directly to state (following your exact pattern)
+  const handleAddAct = useCallback(
+    async (title?: string, insertAfterActId?: string) => {
+      if (!novelId) return;
+
+      try {
+        const response = await fetch(`/api/novels/${novelId}/acts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            insertAfterActId,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log("✅ Act created:", result.act);
+
+          // ✨ DIRECT: Update novel state immediately with new act
+          setNovel((prevNovel) => {
+            if (!prevNovel) return prevNovel;
+
+            const updatedActs = [...(prevNovel.acts || [])];
+
+            if (insertAfterActId) {
+              // Find insertion point and insert after the specified act
+              const insertIndex = updatedActs.findIndex(
+                (act) => act.id === insertAfterActId
+              );
+              if (insertIndex >= 0) {
+                updatedActs.splice(insertIndex + 1, 0, result.act);
+              } else {
+                updatedActs.push(result.act);
+              }
+            } else {
+              // Add at the end
+              updatedActs.push(result.act);
+            }
+
+            return {
+              ...prevNovel,
+              acts: updatedActs,
+            };
+          });
+
+          // Optionally, auto-select the new act
+          setSelectedAct(result.act);
+          setSelectedChapter(null);
+          setSelectedScene(result.act.chapters?.[0]?.scenes?.[0] || null);
+          setViewMode("act");
+        } else {
+          const error = await response.json();
+          console.error("Failed to create act:", error);
+          alert("Failed to create act: " + (error.error || "Unknown error"));
+        }
+      } catch (error) {
+        console.error("Error creating act:", error);
+        alert("Error creating act. Please try again.");
+      }
+    },
+    [novelId]
+  );
+
   // ✨ SIMPLE: Only refresh when explicitly needed (errors, imports, etc.)
   const handleRefresh = useCallback(() => {
     console.log("🔄 EXPLICIT REFRESH: User action triggered refresh");
@@ -639,6 +703,7 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       onUpdateChapterName={handleUpdateChapterName}
       onUpdateSceneName={handleUpdateSceneName}
       isMainSidebarCollapsed={isMainSidebarCollapsed}
+      onAddAct={handleAddAct}
     />
   );
 }

@@ -15,6 +15,7 @@ interface ManuscriptStructureSidebarProps {
   onRefresh: () => void;
   onAddScene: (chapterId: string) => Promise<void>;
   onAddChapter: (actId: string) => Promise<void>;
+  onAddAct?: (title?: string, insertAfterActId?: string) => Promise<void>; // ✨ NEW
   onDeleteScene: (sceneId: string) => Promise<void>;
   onDeleteChapter: (chapterId: string) => Promise<void>;
   onDeleteAct: (actId: string) => Promise<void>;
@@ -41,6 +42,7 @@ export const ManuscriptStructureSidebar: React.FC<
   onRefresh,
   onAddScene,
   onAddChapter,
+  onAddAct,
   onDeleteScene,
   onDeleteChapter,
   onDeleteAct,
@@ -97,6 +99,7 @@ export const ManuscriptStructureSidebar: React.FC<
             onRefresh={onRefresh}
             onAddScene={onAddScene}
             onAddChapter={onAddChapter}
+            onAddAct={onAddAct}
             onDeleteScene={onDeleteScene}
             onDeleteChapter={onDeleteChapter}
             onDeleteAct={onDeleteAct}

@@ -1,10 +1,8 @@
-// ==========================================
-// FILE: src/app/components/manuscript/chapter-tree/enhanced-chapter-tree.tsx
-// ==========================================
-
+// src/app/components/manuscript/chapter-tree/enhanced-chapter-tree.tsx
 import React, { useState } from "react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 import { EnhancedActItem } from "./enhanced-act-item";
+import { AddActInterface } from "./add-act-interface";
 
 interface EnhancedChapterTreeProps {
   novel: NovelWithStructure;
@@ -17,6 +15,7 @@ interface EnhancedChapterTreeProps {
   onRefresh: () => void;
   onAddScene: (chapterId: string) => Promise<void>;
   onAddChapter: (actId: string) => Promise<void>;
+  onAddAct?: (title?: string, insertAfterActId?: string) => Promise<void>; // ✨ NEW
   onDeleteScene: (sceneId: string) => Promise<void>;
   onDeleteChapter: (chapterId: string) => Promise<void>;
   onDeleteAct: (actId: string) => Promise<void>;
@@ -38,6 +37,7 @@ export const EnhancedChapterTree: React.FC<EnhancedChapterTreeProps> = ({
   onRefresh,
   onAddScene,
   onAddChapter,
+  onAddAct,
   onDeleteScene,
   onDeleteChapter,
   onDeleteAct,
@@ -50,6 +50,9 @@ export const EnhancedChapterTree: React.FC<EnhancedChapterTreeProps> = ({
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
     new Set()
   );
+
+  // Don't show add act interface if handler not provided
+  const showAddAct = !!onAddAct;
 
   // CRUD handlers - call parent handlers
   const handleAddScene = async (chapterId: string) => {
@@ -177,45 +180,80 @@ export const EnhancedChapterTree: React.FC<EnhancedChapterTreeProps> = ({
     setExpandedChapters(newExpanded);
   };
 
+  // ✨ UPDATED: Handle empty state with Add Act option
   if (!novel.acts || novel.acts.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">
-        <p>No manuscript structure found.</p>
-        <p className="text-sm mt-2">Import a document to get started.</p>
+      <div className="space-y-4">
+        <div className="text-center py-8">
+          <p className="text-gray-400 mb-4">No content yet</p>
+          <p className="text-sm text-gray-500 mb-4">
+            Create your first act to start writing
+          </p>
+        </div>
+        {showAddAct && <AddActInterface onAddAct={onAddAct} />}
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {novel.acts
-        .sort((a, b) => a.order - b.order)
-        .map((act) => (
-          <EnhancedActItem
-            key={act.id}
-            act={act}
-            isExpanded={expandedActs.has(act.id)}
-            onToggleExpand={() => toggleActExpand(act.id)}
-            onActSelect={onActSelect || (() => {})}
-            onChapterSelect={onChapterSelect || (() => {})}
-            onSceneSelect={onSceneSelect}
-            onActDelete={handleActDelete}
-            onChapterDelete={handleChapterDelete}
-            onSceneDelete={handleSceneDelete}
-            onAddChapter={handleAddChapter}
-            onAddScene={handleAddScene}
-            // ✨ NEW: Name editing handlers
-            onUpdateActName={handleUpdateActName}
-            onUpdateChapterName={handleUpdateChapterName}
-            onUpdateSceneName={handleUpdateSceneName}
-            selectedSceneId={selectedSceneId}
-            selectedChapterId={selectedChapterId}
-            selectedActId={selectedActId}
-            expandedChapters={expandedChapters}
-            onToggleChapterExpand={toggleChapterExpand}
-            novelId={novelId}
-          />
-        ))}
+    <div className="space-y-3">
+      {/* ✨ NEW: Add Act button at the top */}
+      {showAddAct && <AddActInterface onAddAct={onAddAct} />}
+
+      {/* ✨ UPDATED: Acts list with inline add buttons */}
+      <div className="space-y-2">
+        {novel.acts
+          .sort((a, b) => a.order - b.order)
+          .map((act, index) => (
+            <React.Fragment key={act.id}>
+              <EnhancedActItem
+                act={act}
+                isExpanded={expandedActs.has(act.id)}
+                onToggleExpand={() => toggleActExpand(act.id)}
+                onActSelect={onActSelect || (() => {})}
+                onChapterSelect={onChapterSelect || (() => {})}
+                onSceneSelect={onSceneSelect}
+                onActDelete={handleActDelete}
+                onChapterDelete={handleChapterDelete}
+                onSceneDelete={handleSceneDelete}
+                onAddChapter={handleAddChapter}
+                onAddScene={handleAddScene}
+                // ✨ NEW: Name editing handlers
+                onUpdateActName={handleUpdateActName}
+                onUpdateChapterName={handleUpdateChapterName}
+                onUpdateSceneName={handleUpdateSceneName}
+                selectedSceneId={selectedSceneId}
+                selectedChapterId={selectedChapterId}
+                selectedActId={selectedActId}
+                expandedChapters={expandedChapters}
+                onToggleChapterExpand={toggleChapterExpand}
+                novelId={novelId}
+              />
+
+              {/* ✨ NEW: Add act button between acts */}
+              {showAddAct && index < novel.acts.length - 1 && (
+                <div className="py-1">
+                  <AddActInterface
+                    onAddAct={onAddAct}
+                    insertAfterActId={act.id}
+                    isInline
+                  />
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+
+        {/* ✨ NEW: Add act button at the end */}
+        {showAddAct && novel.acts.length > 0 && (
+          <div className="py-1">
+            <AddActInterface
+              onAddAct={onAddAct}
+              insertAfterActId={novel.acts[novel.acts.length - 1].id}
+              isInline
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

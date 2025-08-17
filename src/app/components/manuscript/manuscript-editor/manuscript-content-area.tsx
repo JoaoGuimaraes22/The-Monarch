@@ -1,9 +1,9 @@
 import React from "react";
 import { FileText, Plus } from "lucide-react";
-import { SceneTextEditor } from "@/app/components/manuscript/scene-text-editor";
+import { SceneTextEditor } from "@/app/components/manuscript/manuscript-editor/scene-text-editor";
 import { SceneGrid } from "./scene-grid";
-import { AggregatedContent } from "@/app/components/manuscript/content-aggregation-service";
-import { ViewMode } from "@/app/components/manuscript/view-mode-selector";
+import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/content-aggregation-service";
+import { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
 import { Scene, Chapter, Act, NovelWithStructure } from "@/lib/novels";
 
 export type ContentDisplayMode = "document" | "grid";

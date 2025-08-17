@@ -15,7 +15,7 @@ export { SceneCard } from "./scene-card";
 export { SceneGrid } from "./scene-grid";
 
 // Re-export the ViewMode type from the view-mode-selector
-export type { ViewMode } from "@/app/components/manuscript/view-mode-selector";
+export type { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
 
 // ✨ NEW: Export ContentDisplayMode type
 export type { ContentDisplayMode } from "./manuscript-header";

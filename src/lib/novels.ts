@@ -900,4 +900,123 @@ export const novelService = {
       throw new Error("Failed to create chapter");
     }
   },
+
+  // Add this method to your src/lib/novels.ts file in the novelService object
+
+  // Create a new act in a novel
+  async createAct(
+    novelId: string,
+    insertAfterActId?: string,
+    title?: string
+  ): Promise<Act> {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // Verify novel exists
+        const novel = await tx.novel.findUnique({
+          where: { id: novelId },
+          include: {
+            acts: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+
+        if (!novel) {
+          throw new Error("Novel not found");
+        }
+
+        // Determine the order for the new act
+        let newOrder = 1;
+
+        if (insertAfterActId) {
+          // Insert after specific act
+          const afterAct = novel.acts.find((a) => a.id === insertAfterActId);
+          if (afterAct) {
+            newOrder = afterAct.order + 1;
+
+            // Shift all acts after this position
+            await tx.act.updateMany({
+              where: {
+                novelId: novelId,
+                order: {
+                  gte: newOrder,
+                },
+              },
+              data: {
+                order: {
+                  increment: 1,
+                },
+              },
+            });
+          }
+        } else {
+          // Add at the end
+          newOrder = novel.acts.length + 1;
+        }
+
+        // Generate default title if not provided
+        const actTitle = title || `Act ${newOrder}`;
+
+        // Create the new act with initial chapter and scene
+        const newAct = await tx.act.create({
+          data: {
+            title: actTitle,
+            order: newOrder,
+            novelId: novelId,
+          },
+          include: {
+            chapters: {
+              orderBy: { order: "asc" },
+              include: {
+                scenes: {
+                  orderBy: { order: "asc" },
+                },
+              },
+            },
+          },
+        });
+
+        // ✨ Automatically create Chapter 1 with Scene 1 for the new act
+        await tx.chapter.create({
+          data: {
+            title: "Chapter 1",
+            order: 1,
+            actId: newAct.id,
+            scenes: {
+              create: {
+                title: "Scene 1",
+                content: "", // Empty content initially
+                wordCount: 0,
+                order: 1, // First scene
+                status: "draft",
+                povCharacter: null,
+                sceneType: "",
+                notes: "",
+              },
+            },
+          },
+        });
+
+        // Return the act with the newly created chapter and scene
+        const actWithStructure = await tx.act.findUnique({
+          where: { id: newAct.id },
+          include: {
+            chapters: {
+              orderBy: { order: "asc" },
+              include: {
+                scenes: {
+                  orderBy: { order: "asc" },
+                },
+              },
+            },
+          },
+        });
+
+        return actWithStructure!;
+      });
+    } catch (error) {
+      console.error("Error creating act:", error);
+      throw new Error("Failed to create act");
+    }
+  },
 };

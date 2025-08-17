@@ -1,14 +1,13 @@
 // chapter-tree/index.ts
 
 // Main component (default export)
-export { ChapterTree as default } from "./chapter-tree";
-export { ChapterTree } from "./chapter-tree";
+export { EnhancedChapterTree as default } from "./enhanced-chapter-tree";
+export { EnhancedChapterTree } from "./enhanced-chapter-tree";
 
 // Sub-components (if needed elsewhere)
-export { TreeItem } from "./tree-item";
-export { SceneItem } from "./scene-item";
-export { ChapterItem } from "./chapter-item";
-export { ActItem } from "./act-item";
+export { EnhancedSceneItem } from "./enhanced-scene-item";
+export { EnhancedChapterItem } from "./enhanced-chapter-item";
+export { EnhancedActItem } from "./enhanced-act-item";
 
 // Types (if needed elsewhere)
 export type {

@@ -9,7 +9,7 @@ import {
   ViewInfo,
   ContentDisplayMode,
 } from "@/app/components/manuscript/manuscript-editor";
-import { contentAggregationService } from "@/app/components/manuscript/content-aggregation-service";
+import { contentAggregationService } from "@/app/components/manuscript/manuscript-editor/content-aggregation-service";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
 interface ManuscriptEditorProps {
@@ -35,6 +35,7 @@ interface ManuscriptEditorProps {
   onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
   onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
   isMainSidebarCollapsed: boolean;
+  onAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
 }
 
 export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
@@ -52,6 +53,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onRefresh,
   onAddScene,
   onAddChapter,
+  onAddAct,
   onDeleteScene,
   onDeleteChapter,
   onDeleteAct,
@@ -193,6 +195,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onDeleteScene={onDeleteScene}
         onDeleteChapter={onDeleteChapter}
         onDeleteAct={onDeleteAct}
+        onAddAct={onAddAct}
         // ✨ NEW: Pass through the name editing handlers
         onUpdateActName={onUpdateActName}
         onUpdateChapterName={onUpdateChapterName}

@@ -1,7 +1,7 @@
 import React from "react";
 import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { Scene } from "@/lib/novels";
-import { ViewMode } from "@/app/components/manuscript/view-mode-selector";
+import { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
 
 interface ViewInfo {
   title: string;
