@@ -1019,4 +1019,239 @@ export const novelService = {
       throw new Error("Failed to create act");
     }
   },
+
+  // Add these methods to your src/lib/novels.ts file
+  // Novel service reordering methods
+
+  /**
+   * Reorder a scene within or between chapters
+   */
+  async reorderScene(
+    sceneId: string,
+    targetChapterId: string,
+    newOrder: number
+  ): Promise<Scene> {
+    try {
+      console.log("🔄 Starting scene reorder transaction:", {
+        sceneId,
+        targetChapterId,
+        newOrder,
+      });
+
+      return await prisma.$transaction(async (tx) => {
+        // Get the scene to move with its current chapter relationship
+        const sceneToMove = await tx.scene.findUnique({
+          where: { id: sceneId },
+        });
+
+        if (!sceneToMove) {
+          throw new Error("Scene not found");
+        }
+
+        const sourceChapterId = sceneToMove.chapterId;
+        const oldOrder = sceneToMove.order;
+
+        console.log("📊 Scene move details:", {
+          sourceChapter: sourceChapterId,
+          targetChapter: targetChapterId,
+          oldOrder,
+          newOrder,
+          crossChapter: sourceChapterId !== targetChapterId,
+        });
+
+        // Case 1: Moving to a different chapter
+        if (sourceChapterId !== targetChapterId) {
+          console.log("🔀 Cross-chapter move");
+
+          // Step 1: Remove from source chapter (close gap)
+          await tx.scene.updateMany({
+            where: {
+              chapterId: sourceChapterId,
+              order: { gt: oldOrder },
+            },
+            data: {
+              order: { decrement: 1 },
+            },
+          });
+
+          // Step 2: Make space in target chapter
+          await tx.scene.updateMany({
+            where: {
+              chapterId: targetChapterId,
+              order: { gte: newOrder },
+            },
+            data: {
+              order: { increment: 1 },
+            },
+          });
+
+          // Step 3: Move the scene (return basic scene, not with relations)
+          const updatedScene = await tx.scene.update({
+            where: { id: sceneId },
+            data: {
+              chapterId: targetChapterId,
+              order: newOrder,
+            },
+          });
+
+          console.log("✅ Cross-chapter move completed");
+          return updatedScene;
+        }
+
+        // Case 2: Reordering within the same chapter
+        console.log("🔄 Same-chapter reorder");
+
+        if (oldOrder === newOrder) {
+          console.log("⚡ No change needed - same position");
+          return sceneToMove;
+        }
+
+        if (oldOrder < newOrder) {
+          // Moving down: shift scenes between oldOrder+1 and newOrder down by 1
+          await tx.scene.updateMany({
+            where: {
+              chapterId: sourceChapterId,
+              order: {
+                gt: oldOrder,
+                lte: newOrder,
+              },
+            },
+            data: {
+              order: { decrement: 1 },
+            },
+          });
+        } else {
+          // Moving up: shift scenes between newOrder and oldOrder-1 up by 1
+          await tx.scene.updateMany({
+            where: {
+              chapterId: sourceChapterId,
+              order: {
+                gte: newOrder,
+                lt: oldOrder,
+              },
+            },
+            data: {
+              order: { increment: 1 },
+            },
+          });
+        }
+
+        // Update the moved scene
+        const updatedScene = await tx.scene.update({
+          where: { id: sceneId },
+          data: { order: newOrder },
+        });
+
+        console.log("✅ Same-chapter reorder completed");
+        return updatedScene;
+      });
+    } catch (error) {
+      console.error("❌ Scene reorder failed:", error);
+      throw new Error(
+        `Failed to reorder scene: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  },
+
+  /**
+   * Reorder a chapter within the same act
+   */
+  async reorderChapter(chapterId: string, newOrder: number): Promise<Chapter> {
+    try {
+      console.log("🔄 Starting chapter reorder transaction:", {
+        chapterId,
+        newOrder,
+      });
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Get the chapter to move with its current act relationship
+        const chapterToMove = await tx.chapter.findUnique({
+          where: { id: chapterId },
+        });
+
+        if (!chapterToMove) {
+          throw new Error("Chapter not found");
+        }
+
+        const actId = chapterToMove.actId;
+        const oldOrder = chapterToMove.order;
+
+        console.log("📊 Chapter move details:", {
+          actId,
+          oldOrder,
+          newOrder,
+        });
+
+        if (oldOrder === newOrder) {
+          console.log("⚡ No change needed - same position");
+          // Still need to return with scenes included
+          return await tx.chapter.findUnique({
+            where: { id: chapterId },
+            include: {
+              scenes: {
+                orderBy: { order: "asc" },
+              },
+            },
+          });
+        }
+
+        if (oldOrder < newOrder) {
+          // Moving down: shift chapters between oldOrder+1 and newOrder down by 1
+          await tx.chapter.updateMany({
+            where: {
+              actId: actId,
+              order: {
+                gt: oldOrder,
+                lte: newOrder,
+              },
+            },
+            data: {
+              order: { decrement: 1 },
+            },
+          });
+        } else {
+          // Moving up: shift chapters between newOrder and oldOrder-1 up by 1
+          await tx.chapter.updateMany({
+            where: {
+              actId: actId,
+              order: {
+                gte: newOrder,
+                lt: oldOrder,
+              },
+            },
+            data: {
+              order: { increment: 1 },
+            },
+          });
+        }
+
+        // Update the moved chapter and include scenes to match interface
+        return await tx.chapter.update({
+          where: { id: chapterId },
+          data: { order: newOrder },
+          include: {
+            scenes: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+      });
+
+      if (!result) {
+        throw new Error("Failed to reorder chapter");
+      }
+
+      console.log("✅ Chapter reorder completed");
+      return result;
+    } catch (error) {
+      console.error("❌ Chapter reorder failed:", error);
+      throw new Error(
+        `Failed to reorder chapter: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  },
 };
