@@ -104,11 +104,11 @@ export async function POST(
         ),
         wordCount: parsedStructure.wordCount,
       },
-      // NEW: Include validation results with detected issues
+      // NEW: Include validation results with structured issues
       validation: {
         isValid: validation.isValid,
         errors: validation.errors,
-        warnings: validation.warnings, // This includes the issues we detected
+        warnings: validation.warnings, // Now contains StructureIssue objects
       },
       // NEW: Show detected issues count in success response
       issuesDetected: validation.warnings.length,

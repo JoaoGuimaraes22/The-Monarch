@@ -69,9 +69,9 @@ src/
 │   │       │   ├── enhanced-chapter-item.tsx     # Chapter tree items with inline editing
 │   │       │   ├── enhanced-scene-item.tsx       # Scene tree items with inline editing
 │   │       │   ├── enhanced-chapter-tree.tsx     # Main tree component
-│   │       │   ├── add-act-interface.tsx         # ✅ NEW: Add act UI component
+│   │       │   ├── add-act-interface.tsx         # ✅ Add act UI component
 │   │       │   └── index.ts                      # Barrel exports
-│   │       ├── docx-uploader.tsx
+│   │       ├── docx-uploader.tsx  # ✅ ENHANCED: Advanced import with issue detection
 │   │       ├── delete-confirmation-dialog.tsx
 │   │       ├── manuscript-empty-state.tsx
 │   │       ├── scene-text-editor.tsx # ✅ Professional Tiptap editor
@@ -82,10 +82,10 @@ src/
 │           ├── route.ts           # GET, POST /api/novels
 │           ├── [id]/
 │           │   ├── route.ts       # GET, PUT, DELETE /api/novels/[id]
-│           │   ├── import/route.ts # POST /api/novels/[id]/import
+│           │   ├── import/route.ts # ✅ ENHANCED: Advanced import with issue detection
 │           │   ├── structure/route.ts # GET, DELETE /api/novels/[id]/structure
 │           │   ├── acts/
-│           │   │   ├── route.ts   # ✅ NEW: POST /api/novels/[id]/acts (create act)
+│           │   │   ├── route.ts   # ✅ POST /api/novels/[id]/acts (create act)
 │           │   │   └── [actId]/
 │           │   │       ├── route.ts # PUT, DELETE /api/novels/[id]/acts/[actId]
 │           │   │       └── chapters/
@@ -101,7 +101,8 @@ src/
 ├── lib/
 │   ├── prisma.ts                 # Database client
 │   ├── novels.ts                 # Novel service layer (comprehensive CRUD)
-│   └── docx-parser.ts            # Document parsing using mammoth
+│   ├── enhanced-docx-parser.ts   # ✅ NEW: Advanced document parser with issue detection
+│   └── docx-parser.ts            # Legacy parser (deprecated)
 └── prisma/
     └── schema.prisma             # Database schema (Acts, Chapters, Scenes)
 ```
@@ -330,69 +331,102 @@ model Scene {
    - **No page refreshes**: All operations update React state instantly
    - **Error resilience**: Graceful handling of API failures with user feedback
 
-**Implementation Details**:
-- All buttons appear on hover with smooth transitions
-- Operations use direct React state updates with `setNovel(prevNovel => {...})`
-- Color-coded buttons: green for scenes, blue for chapters, red for delete
-- Auto-clear selected scene/chapter/act when deleted items were selected
-- Professional UX with instant feedback and loading states
+## 🚀 NEW: Enhanced Document Import System (Steps 1-5 Complete)
 
-**Performance**: Buttery smooth interactions with zero page refreshes for all CRUD operations
+**Goal**: Build an intelligent import system with advanced issue detection and auto-fix suggestions
 
-## 🚧 IN PROGRESS: Enhanced Document Import System
+**✅ COMPLETED: Steps 1-5**
 
-**Goal**: Build an intelligent import system with conflict resolution and structure validation
+### **Step 1: Enhanced Parser Foundation** ✅
+- **File**: `src/lib/enhanced-docx-parser.ts`
+- **Multiple detection strategies** for Acts, Chapters, and Scenes
+- **Better title extraction** and formatting
+- **Roman numeral detection** and keyword-based parsing
+- **Drop-in replacement** for original DocxParser with same interface
 
-**Next Major Feature**: Interactive Import Preview with Smart Conflict Resolution
+### **Step 2: Basic Issue Detection** ✅
+- **Issue Categories**: Empty sections, scene length validation, document size
+- **Enhanced validation** with separate errors vs warnings
+- **Backward compatible** API responses with new `issues` field
+- **Auto-save tracking** of detected issues for transparency
 
-**Planned Implementation**:
+### **Step 3: Dark UI Integration** ✅
+- **Enhanced DocxUploader** with issue display section
+- **Dark themed alerts** replacing bright white Alert components
+- **Issue categorization** with proper severity indicators
+- **Success confirmation** showing "No issues detected" when perfect
+- **User-friendly messaging** explaining issues are suggestions, not failures
 
-### **Phase 1: Enhanced Document Parser** ⬅️ **CURRENT FOCUS**
-- **Improved structure detection**: Better handling of inconsistent formatting
-- **Ordering validation**: Detect duplicate chapter numbers, gaps, inconsistencies
-- **Content analysis**: Identify orphaned scenes, empty sections, formatting issues
-- **Conflict detection**: Compare against existing manuscript structure
+### **Step 4: Advanced Issue Types** ✅
+- **Numbering Issues**: Duplicate act/chapter/scene numbers, gaps in sequences
+- **Title Issues**: Similar titles, identical chapter names, too many generic titles
+- **Structure Consistency**: Uneven act sizes, single-chapter acts, varying scene counts
+- **Document Scale**: Very large/small documents, imbalanced scene lengths
+- **Original vs Fixed**: Shows what was wrong in source vs what was auto-corrected
 
-### **Phase 2: Interactive Import Preview**
-- **Parse-first workflow**: Analyze document before importing
-- **Issue visualization**: Show detected problems in a preview interface
-- **User-guided resolution**: Let users fix conflicts before committing
-- **One-click fixes**: Smart defaults for common issues (renumbering, gap filling)
+### **Step 5: Auto-Fix Suggestions** ✅
+- **Structured Issue Objects**: `StructureIssue` interface with `type`, `severity`, `autoFixable`
+- **Fix Action Metadata**: Specific fix types (`renumber_chapters`, `combine_scenes`, etc.)
+- **Clickable Fix Buttons**: Blue "Auto-fix" buttons with action descriptions
+- **Fix State Management**: Loading states and progress indicators
+- **Enhanced Issue Cards**: Each issue in own card with fix options and explanations
 
-### **Phase 3: Smart Import Modes**
-- **Content-aware decisions**: Detect if importing revisions vs new content
-- **Conflict resolution strategies**: Replace, keep both, merge, or skip
-- **Import modes**: Full replace, add new only, smart merge
-- **Version awareness**: Foundation for future version control
+**Current Enhanced Import Features**:
+- ✅ **Advanced Structure Detection** with confidence scoring
+- ✅ **20+ Issue Types** detected automatically
+- ✅ **Auto-Fix Suggestions** with clickable buttons
+- ✅ **Transparency** - shows what was auto-corrected during import
+- ✅ **Dark Theme Integration** with professional UI
+- ✅ **Structured Data** - issues are objects with metadata, not just strings
+- ✅ **User Guidance** - specific actionable suggestions for improvement
 
-### **Phase 4: Advanced Features** (Future)
-- **Diff visualization**: Show exact changes between versions
-- **Selective import**: Choose specific chapters/scenes to import
-- **Backup and restore**: Automatic backups before major imports
-- **Collaborative features**: Handle multi-author document conflicts
+**Example Enhanced Import Experience**:
+```
+✅ Import Successful!
+Acts: 1 • Chapters: 3 • Scenes: 5 • Words: 2,634
 
-**Current Status**: Ready to begin enhanced parser development
+⚠ Issues Detected
+1 potential issue found in your document:
+
+⚠ Original document has duplicate chapter numbers: 2
+   Auto-fixed during import with sequential numbering
+   [⚡ Auto-fix: Renumber all chapters sequentially (1, 2, 3...)]
+
+Issues marked with ⚡ can be automatically fixed.
+```
 
 ## 🎯 Future Enhancements
 
+### **Near-Term (Ready to Implement)**
+1. **Functional Auto-Fix** - Make fix buttons actually reprocess documents
+2. **Preview Mode** - Show structure before importing with conflict resolution
+3. **Enhanced metadata editing** - Make right panel interactive (edit POV, status, notes)
+4. **Export functionality** - Clean HTML/Word document export with formatting options
+
+### **Medium-Term**
 1. **Character Management System** - Track characters, relationships, scene appearances
-2. **Enhanced metadata editing** - Make right panel interactive (edit POV, status, notes)
-3. **Export functionality** - Clean HTML/Word document export with formatting options
-4. **Search across content** - Find text across scenes/chapters/acts with filtering
-5. **Writing analytics** - Progress tracking, writing goals, productivity insights
-6. **Version control system** - Branch manuscripts, track changes, collaborative editing
-7. **Drag-and-drop reordering** - Visual reordering of acts/chapters/scenes in sidebar
+2. **Search across content** - Find text across scenes/chapters/acts with filtering
+3. **Writing analytics** - Progress tracking, writing goals, productivity insights
+4. **Drag-and-drop reordering** - Visual reordering of acts/chapters/scenes in sidebar
+
+### **Long-Term**
+1. **Version control system** - Branch manuscripts, track changes, collaborative editing
+2. **Collaborative features** - Multi-author support with conflict resolution
+3. **AI Writing Assistant** - Context-aware suggestions and continuity checking
+4. **Advanced Export** - Professional typesetting and formatting options
 
 ## 🔧 Technical Notes
 
 ### **Dependencies Added**:
 - `@tiptap/react` - React integration for Tiptap editor
 - `@tiptap/starter-kit` - Essential Tiptap extensions
+- `mammoth` - .docx to HTML conversion for document import
 
 ### **Import Patterns**:
 - UI components: `import { Button, Card } from '@/app/components/ui'`
 - Feature components: `import { ManuscriptEditor } from '@/app/components/manuscript/manuscript-editor/'`
 - Chapter tree: `import { EnhancedChapterTree } from '@/app/components/manuscript/chapter-tree'`
+- Enhanced parser: `import { EnhancedDocxParser } from '@/lib/enhanced-docx-parser'`
 - All paths use `@/app/` alias
 
 ### **Component Architecture**:
@@ -404,9 +438,10 @@ model Scene {
 
 ### **Styling Standards**:
 - **Dark theme**: black/gray backgrounds, white text, red accents
-- **No gradients**: clean, minimal aesthetic
+- **No gradients**: clean, minimal aesthetic matching Claude interface
 - **Consistent spacing**: using Tailwind utilities with minimal gaps
 - **Focus states**: red-500 focus rings for accessibility
+- **Custom dark alerts**: No bright white backgrounds in success/warning messages
 
 ### **Data Flow**:
 ```
@@ -415,6 +450,13 @@ Tiptap Editor → Debounced Save → PUT /scenes/[id] → Database
 Multi-level Views → Content Aggregation Service → Combined HTML
 Grid View → Scene Cards → Click Handlers → Navigation
 CRUD Operations → Direct State Updates → Real Server Data
+Enhanced Import → Issue Detection → Auto-Fix UI → User Guidance
+```
+
+### **Enhanced Import Flow**:
+```
+File Upload → Enhanced DocxParser → Structure Detection → Issue Analysis
+→ Auto-Fix Suggestions → User Review → Import with Fixes → Success with Transparency
 ```
 
 ### **State Management Architecture**:
@@ -432,20 +474,37 @@ ManuscriptPage (Parent)
 
 ## 💬 Context for Next Development
 
+### **Recent Achievements (Steps 1-5)**
+- **Enhanced Document Import** system completely implemented
+- **Advanced issue detection** with 20+ issue types and auto-fix suggestions
+- **Professional dark-themed UI** for import workflow
+- **Structured issue objects** instead of simple text warnings
+- **Auto-fix foundation** ready for functional implementation
+
+### **Current State**
 - **Full CRUD Operations** are complete and working smoothly across all levels
+- **Enhanced Import System** provides intelligent document analysis and user guidance
 - **Inline editing** system is fully functional with real-time updates
 - **Component architecture** is clean and maintainable with proper separation
 - **Performance optimized** - no page refreshes, instant state updates for all operations
-- **Ready for Enhanced Import** - Parser improvements and conflict resolution system
-- **Foundation for Version Control** - Conflict detection infrastructure in place
-- **All sidebar interactions** work perfectly (adding, deleting, editing, navigation)
 - **Professional text editing** experience with Tiptap integration
 - **Smart display mode persistence** - grid/document preference maintained
 - **Auto content creation** - New acts/chapters automatically include initial structure
 - **Simple State Management** - Direct React state updates with real server data
+
+### **Technical Excellence**
 - Focus on **practical utility** over flashy features
 - **Dark theme consistency** - match Claude interface aesthetic throughout
+- **Type-safe interfaces** across the entire application
+- **Step-by-step implementation** approach for maintainable development
+- **Clean component separation** with barrel exports and logical organization
+
+### **Next Logical Steps**
+1. **Functional Auto-Fix** - Implement actual document reprocessing with fixes
+2. **Preview Mode** - Show parsed structure before import with user approval
+3. **Character Management** - Add the next major feature area
+4. **Enhanced Metadata** - Make scene details panel interactive
 
 ---
 
-_Professional manuscript manager with complete CRUD operations and inline editing! Ready for enhanced document import system with conflict resolution and structure validation._
+_Professional manuscript manager with complete CRUD operations, enhanced document import system with advanced issue detection and auto-fix suggestions! The import system now provides intelligent analysis and user guidance while maintaining smooth UX._

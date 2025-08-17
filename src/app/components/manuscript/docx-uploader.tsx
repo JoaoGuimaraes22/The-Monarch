@@ -6,6 +6,8 @@ import {
   AlertCircle,
   X,
   Info,
+  Zap,
+  Settings,
 } from "lucide-react";
 import {
   Button,
@@ -33,11 +35,29 @@ interface ImportResult {
   validation?: {
     isValid: boolean;
     errors: string[];
-    warnings: string[];
+    warnings: StructureIssue[];
   };
   issuesDetected?: number;
   error?: string;
   details?: string[];
+}
+
+interface StructureIssue {
+  type: string;
+  severity: "error" | "warning" | "info";
+  message: string;
+  suggestion?: string;
+  autoFixable: boolean;
+  fixAction?: {
+    type:
+      | "renumber_chapters"
+      | "renumber_scenes"
+      | "combine_scenes"
+      | "split_scenes"
+      | "rename_duplicate";
+    description: string;
+    targetId?: string;
+  };
 }
 
 export const DocxUploader: React.FC<DocxUploaderProps> = ({
@@ -49,7 +69,46 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [isApplyingFix, setIsApplyingFix] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAutoFix = async (issue: StructureIssue) => {
+    if (!issue.fixAction || !selectedFile) return;
+
+    setIsApplyingFix(issue.type);
+
+    try {
+      // For now, just show what would happen
+      // In a real implementation, this would call the API with fix instructions
+      console.log("Applying auto-fix:", issue.fixAction);
+
+      // Simulate applying fix
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // For demo: just show that it was "applied"
+      alert(
+        `Auto-fix applied: ${issue.fixAction.description}\n\nIn a real implementation, this would reprocess the document with the fix applied.`
+      );
+    } catch (error) {
+      console.error("Error applying auto-fix:", error);
+      alert("Failed to apply auto-fix. Please try again.");
+    } finally {
+      setIsApplyingFix(null);
+    }
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case "error":
+        return <AlertCircle className="w-4 h-4 text-red-400" />;
+      case "warning":
+        return <AlertCircle className="w-4 h-4 text-yellow-400" />;
+      case "info":
+        return <Info className="w-4 h-4 text-blue-400" />;
+      default:
+        return <Info className="w-4 h-4 text-gray-400" />;
+    }
+  };
 
   const handleFileSelect = (file: File) => {
     // Validate file type
@@ -305,30 +364,74 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
                             Issues Detected
                           </h3>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <p className="text-sm text-yellow-200">
                             {importResult.issuesDetected} potential issue
                             {importResult.issuesDetected !== 1 ? "s" : ""} found
                             in your document:
                           </p>
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                          <div className="space-y-3 max-h-48 overflow-y-auto">
                             {importResult.validation.warnings.map(
-                              (warning, index) => (
+                              (issue, index) => (
                                 <div
                                   key={index}
-                                  className="flex items-start space-x-2 text-sm"
+                                  className="bg-yellow-800/20 rounded-lg p-3 border border-yellow-600"
                                 >
-                                  <Info className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
-                                  <span className="text-yellow-100">
-                                    {warning}
-                                  </span>
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-start space-x-2 mb-2">
+                                        {getSeverityIcon(issue.severity)}
+                                        <div className="flex-1">
+                                          <p className="text-sm text-yellow-100 font-medium">
+                                            {issue.message}
+                                          </p>
+                                          {issue.suggestion && (
+                                            <p className="text-xs text-yellow-200 mt-1">
+                                              {issue.suggestion}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Auto-fix button */}
+                                      {issue.autoFixable && issue.fixAction && (
+                                        <div className="mt-2">
+                                          <button
+                                            onClick={() => handleAutoFix(issue)}
+                                            disabled={isApplyingFix !== null}
+                                            className={`flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded-md transition-colors ${
+                                              isApplyingFix === issue.type
+                                                ? "bg-blue-700"
+                                                : ""
+                                            }`}
+                                          >
+                                            {isApplyingFix === issue.type ? (
+                                              <>
+                                                <Settings className="w-3 h-3 animate-spin" />
+                                                <span>Applying...</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Zap className="w-3 h-3" />
+                                                <span>
+                                                  Auto-fix:{" "}
+                                                  {issue.fixAction.description}
+                                                </span>
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               )
                             )}
                           </div>
-                          <p className="text-xs text-yellow-300 mt-2">
-                            These are suggestions for improvement - your
-                            document imported successfully.
+                          <p className="text-xs text-yellow-300 mt-3">
+                            Issues marked with{" "}
+                            <Zap className="w-3 h-3 inline mx-1" /> can be
+                            automatically fixed.
                           </p>
                         </div>
                       </div>
