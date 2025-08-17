@@ -17,11 +17,15 @@ import {
   Alert,
 } from "@/app/components/ui";
 
-import { DocumentAutoFixService } from "@/lib/document-auto-fix-service";
+// Updated imports for refactored parser
+import { AutoFixService } from "@/lib/doc-parse";
 import {
-  EnhancedDocxParser,
+  StructureAnalyzer,
   ParsedStructure,
-} from "@/lib/enhanced-docx-parser";
+  StructureIssue,
+  ParsedAct,
+  ParsedChapter,
+} from "@/lib/doc-parse";
 
 interface DocxUploaderProps {
   novelId: string;
@@ -48,24 +52,6 @@ interface ImportResult {
   details?: string[];
 }
 
-interface StructureIssue {
-  type: string;
-  severity: "error" | "warning" | "info";
-  message: string;
-  suggestion?: string;
-  autoFixable: boolean;
-  fixAction?: {
-    type:
-      | "renumber_chapters"
-      | "renumber_scenes"
-      | "combine_scenes"
-      | "split_scenes"
-      | "rename_duplicate";
-    description: string;
-    targetId?: string;
-  };
-}
-
 export const DocxUploader: React.FC<DocxUploaderProps> = ({
   novelId,
   onImportSuccess,
@@ -81,96 +67,83 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Replace your current handleAutoFix method in DocxUploader with this:
+
   const handleAutoFix = async (issue: StructureIssue) => {
-    if (!issue.fixAction) return;
+    if (!issue.fixAction || !selectedFile) {
+      console.error("❌ Missing fix action or selected file");
+      return;
+    }
 
     setIsApplyingFix(issue.type);
 
     try {
-      console.log("🔧 Starting auto-fix process...");
+      console.log("🔧 Starting server-side auto-fix process...");
+      console.log("📄 File:", selectedFile.name);
+      console.log("🎯 Issue:", issue.type, issue.fixAction.type);
 
-      // Check if we have the parsed structure
-      if (!parsedStructure) {
-        if (!fileBuffer) {
-          alert(
-            "❌ Cannot apply fix: Document buffer is not available. Please re-upload the document."
-          );
-          return;
-        }
+      // Create FormData with the file and fix details
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("issueType", issue.type);
+      formData.append("fixAction", JSON.stringify(issue.fixAction));
 
-        try {
-          console.log("📖 Parsing document from buffer for auto-fix...");
-          const structure = await DocumentAutoFixService.parseFromBuffer(
-            fileBuffer
-          );
-          setParsedStructure(structure);
-          console.log("✅ Document structure parsed successfully");
-        } catch (parseError) {
-          console.error("❌ Failed to parse document:", parseError);
-          alert(
-            "❌ Cannot apply fix: Failed to parse document structure. Please try re-uploading the document."
-          );
-          return;
-        }
-      }
+      console.log("📤 Sending auto-fix request to server...");
 
-      // Step 2: Apply the specific fix
-      console.log("🔧 Applying fix:", issue.fixAction.description);
-      const fixResult = await DocumentAutoFixService.applyAutoFix(
-        parsedStructure,
-        issue
-      );
+      // Send to server-side auto-fix endpoint
+      const response = await fetch(`/api/novels/${novelId}/auto-fix`, {
+        method: "POST",
+        body: formData,
+      });
 
-      if (fixResult.success && fixResult.fixedStructure) {
-        console.log("✅ Auto-fix completed successfully");
+      const result = await response.json();
 
-        // Step 3: Update our stored structure
-        setParsedStructure(fixResult.fixedStructure);
+      if (response.ok && result.success) {
+        console.log("✅ Server-side auto-fix completed successfully");
+        console.log("📊 Updated structure:", result.structure);
 
-        // Step 4: Re-validate the fixed structure to update the UI
-        const newValidation = EnhancedDocxParser.validateStructure(
-          fixResult.fixedStructure
-        );
-
-        // Step 5: Update the import result to show the changes
+        // Update the import result to show the changes
         setImportResult((prev) => {
           if (!prev) return prev;
 
           return {
             ...prev,
-            structure: {
-              acts: fixResult.fixedStructure!.acts.length,
-              chapters: fixResult.fixedStructure!.acts.reduce(
-                (sum, act) => sum + act.chapters.length,
-                0
-              ),
-              scenes: fixResult.fixedStructure!.acts.reduce(
-                (sum, act) =>
-                  sum +
-                  act.chapters.reduce(
-                    (chSum, ch) => chSum + ch.scenes.length,
-                    0
-                  ),
-                0
-              ),
-              wordCount: fixResult.fixedStructure!.wordCount,
-            },
-            validation: newValidation,
-            issuesDetected: newValidation.warnings.length,
+            structure: result.structure,
+            validation: result.validation,
+            issuesDetected: result.issuesDetected,
           };
         });
 
-        // Step 6: Show success feedback
-        alert(`✅ Auto-fix applied successfully!\n\n${fixResult.message}`);
+        // Show success feedback with details
+        const message = `✅ Auto-fix applied successfully!\n\n${
+          result.message
+        }\n\n📊 Updated Structure:\n• Acts: ${
+          result.structure.acts
+        }\n• Chapters: ${result.structure.chapters}\n• Scenes: ${
+          result.structure.scenes
+        }\n• Words: ${result.structure.wordCount.toLocaleString()}`;
+
+        alert(message);
+
+        console.log("🎉 Auto-fix UI updated successfully");
       } else {
-        console.error("❌ Auto-fix failed:", fixResult.error);
-        alert(`❌ Auto-fix failed: ${fixResult.message}`);
+        console.error("❌ Server-side auto-fix failed:", result.error);
+
+        // Show detailed error message
+        const errorMessage = `❌ Auto-fix failed: ${
+          result.message || result.error
+        }${result.details ? "\n\nDetails: " + result.details : ""}`;
+
+        alert(errorMessage);
       }
-    } catch (error) {
-      console.error("❌ Error applying auto-fix:", error);
-      alert("❌ Failed to apply auto-fix. Please try again.");
+    } catch (networkError) {
+      console.error("❌ Network error during auto-fix:", networkError);
+      alert(
+        "❌ Failed to connect to auto-fix service. Please check your connection and try again."
+      );
     } finally {
       setIsApplyingFix(null);
+      console.log("🏁 Auto-fix process completed");
     }
   };
 
@@ -218,8 +191,8 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
       const buffer = await file.arrayBuffer();
       setFileBuffer(buffer);
       console.log("✅ File buffer stored for auto-fix functionality");
-    } catch (error) {
-      console.warn("⚠️ Could not read file buffer:", error);
+    } catch (bufferError) {
+      console.warn("⚠️ Could not read file buffer:", bufferError);
       setFileBuffer(null);
     }
   };
@@ -294,7 +267,8 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
           message: "",
         });
       }
-    } catch (error) {
+    } catch (networkError) {
+      console.error("Network error during upload:", networkError);
       setImportResult({
         success: false,
         error: "Network error. Please check your connection and try again.",

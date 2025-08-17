@@ -28,6 +28,3 @@ export type {
   ParseContext,
   DetectionResult,
 } from "./types";
-
-// For backward compatibility, alias the main parser
-export const DocumentAutoFixService = AutoFixService;

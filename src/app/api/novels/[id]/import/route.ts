@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { novelService } from "@/lib/novels";
-import { EnhancedDocxParser } from "@/lib/enhanced-docx-parser";
+import { EnhancedDocxParser } from "@/lib/doc-parse";
 
 // POST /api/novels/[id]/import - Import .docx file into novel
 export async function POST(

@@ -1,7 +1,14 @@
 // src/lib/doc-parse/structure-analyzer.ts
 // Issue detection and analysis (moved from EnhancedDocxParser)
 
-import { ParsedStructure, StructureIssue, ValidationResult } from "./types";
+import {
+  ParsedStructure,
+  ParsedAct,
+  ParsedChapter,
+  ParsedScene,
+  StructureIssue,
+  ValidationResult,
+} from "./types";
 
 export class StructureAnalyzer {
   /**
@@ -15,7 +22,7 @@ export class StructureAnalyzer {
       errors.push("No acts found in document");
     }
 
-    structure.acts.forEach((act, actIndex) => {
+    structure.acts.forEach((act: ParsedAct, actIndex: number) => {
       if (!act.title.trim()) {
         errors.push(`Act ${actIndex + 1} has no title`);
       }
@@ -24,7 +31,7 @@ export class StructureAnalyzer {
         errors.push(`Act "${act.title}" has no chapters`);
       }
 
-      act.chapters.forEach((chapter, chapterIndex) => {
+      act.chapters.forEach((chapter: ParsedChapter, chapterIndex: number) => {
         if (!chapter.title.trim()) {
           errors.push(
             `Chapter ${chapterIndex + 1} in Act "${act.title}" has no title`
@@ -58,7 +65,7 @@ export class StructureAnalyzer {
     }
 
     // Check each act
-    structure.acts.forEach((act) => {
+    structure.acts.forEach((act: ParsedAct) => {
       this.analyzeAct(act, issues);
     });
 
@@ -79,17 +86,17 @@ export class StructureAnalyzer {
 
     // Extract chapter numbers
     const chapterNumbers: number[] = [];
-    originalTitles.forEach((title) => {
+    originalTitles.forEach((title: string) => {
       const match = title.match(/chapter\s+(\d+)/i);
       if (match) {
-        chapterNumbers.push(parseInt(match[1]));
+        chapterNumbers.push(parseInt(match[1], 10));
       }
     });
 
     if (chapterNumbers.length > 1) {
       // Check for duplicates
       const duplicates = chapterNumbers.filter(
-        (num, index) => chapterNumbers.indexOf(num) !== index
+        (num: number, index: number) => chapterNumbers.indexOf(num) !== index
       );
       if (duplicates.length > 0) {
         issues.push({
@@ -108,7 +115,9 @@ export class StructureAnalyzer {
       }
 
       // Check for gaps
-      const sortedNumbers = [...new Set(chapterNumbers)].sort((a, b) => a - b);
+      const sortedNumbers = [...new Set(chapterNumbers)].sort(
+        (a: number, b: number) => a - b
+      );
       for (let i = 1; i < sortedNumbers.length; i++) {
         if (sortedNumbers[i] - sortedNumbers[i - 1] > 1) {
           issues.push({
@@ -130,9 +139,9 @@ export class StructureAnalyzer {
     }
 
     // Check for duplicate titles
-    const lowerTitles = originalTitles.map((t) => t.toLowerCase());
+    const lowerTitles = originalTitles.map((t: string) => t.toLowerCase());
     const duplicateTitles = lowerTitles.filter(
-      (title, index) => lowerTitles.indexOf(title) !== index
+      (title: string, index: number) => lowerTitles.indexOf(title) !== index
     );
     if (duplicateTitles.length > 0) {
       issues.push({
@@ -152,7 +161,7 @@ export class StructureAnalyzer {
   /**
    * Analyze a single act
    */
-  private static analyzeAct(act: any, issues: StructureIssue[]): void {
+  private static analyzeAct(act: ParsedAct, issues: StructureIssue[]): void {
     // Empty acts
     if (act.chapters.length === 0) {
       issues.push({
@@ -164,7 +173,7 @@ export class StructureAnalyzer {
       });
     }
 
-    act.chapters.forEach((chapter: any) => {
+    act.chapters.forEach((chapter: ParsedChapter) => {
       this.analyzeChapter(chapter, issues);
     });
   }
@@ -172,7 +181,10 @@ export class StructureAnalyzer {
   /**
    * Analyze a single chapter
    */
-  private static analyzeChapter(chapter: any, issues: StructureIssue[]): void {
+  private static analyzeChapter(
+    chapter: ParsedChapter,
+    issues: StructureIssue[]
+  ): void {
     // Empty chapters
     if (chapter.scenes.length === 0) {
       issues.push({
@@ -188,7 +200,7 @@ export class StructureAnalyzer {
     const veryShortScenes: number[] = [];
     const veryLongScenes: number[] = [];
 
-    chapter.scenes.forEach((scene: any) => {
+    chapter.scenes.forEach((scene: ParsedScene) => {
       // Very short scenes
       if (scene.wordCount < 50 && scene.wordCount > 0) {
         veryShortScenes.push(scene.order);
@@ -205,6 +217,7 @@ export class StructureAnalyzer {
           type: "empty_scene",
           severity: "warning",
           message: `Scene ${scene.order} in "${chapter.title}" is empty`,
+          suggestion: "Remove this empty scene or add content",
           autoFixable: false,
         });
       }
@@ -231,12 +244,16 @@ export class StructureAnalyzer {
     }
 
     // Long scenes
-    veryLongScenes.forEach((sceneOrder) => {
-      const scene = chapter.scenes.find((s: any) => s.order === sceneOrder);
+    veryLongScenes.forEach((sceneOrder: number) => {
+      const scene = chapter.scenes.find(
+        (s: ParsedScene) => s.order === sceneOrder
+      );
       issues.push({
         type: "long_scene",
         severity: "info",
-        message: `Scene ${sceneOrder} in "${chapter.title}" is very long (${scene?.wordCount} words)`,
+        message: `Scene ${sceneOrder} in "${chapter.title}" is very long (${
+          scene?.wordCount || 0
+        } words)`,
         suggestion: "Consider splitting this scene",
         autoFixable: true,
         fixAction: {
@@ -278,8 +295,12 @@ export class StructureAnalyzer {
 
     // Scene count
     const totalScenes = structure.acts.reduce(
-      (sum, act) =>
-        sum + act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+      (sum: number, act: ParsedAct) =>
+        sum +
+        act.chapters.reduce(
+          (chSum: number, ch: ParsedChapter) => chSum + ch.scenes.length,
+          0
+        ),
       0
     );
 
@@ -321,5 +342,52 @@ export class StructureAnalyzer {
         autoFixable: false,
       });
     }
+  }
+
+  /**
+   * Get issue counts by severity
+   */
+  static getIssueSummary(issues: StructureIssue[]): {
+    errors: number;
+    warnings: number;
+    info: number;
+    total: number;
+  } {
+    const errors = issues.filter(
+      (issue: StructureIssue) => issue.severity === "error"
+    ).length;
+    const warnings = issues.filter(
+      (issue: StructureIssue) => issue.severity === "warning"
+    ).length;
+    const info = issues.filter(
+      (issue: StructureIssue) => issue.severity === "info"
+    ).length;
+
+    return {
+      errors,
+      warnings,
+      info,
+      total: issues.length,
+    };
+  }
+
+  /**
+   * Filter issues by severity
+   */
+  static filterIssuesBySeverity(
+    issues: StructureIssue[],
+    severity: "error" | "warning" | "info"
+  ): StructureIssue[] {
+    return issues.filter(
+      (issue: StructureIssue) => issue.severity === severity
+    );
+  }
+
+  /**
+   * Check if structure has critical errors that prevent import
+   */
+  static hasCriticalErrors(structure: ParsedStructure): boolean {
+    const validation = this.validateStructure(structure);
+    return !validation.isValid;
   }
 }

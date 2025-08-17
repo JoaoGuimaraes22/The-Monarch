@@ -3,6 +3,9 @@
 
 import {
   ParsedStructure,
+  ParsedAct,
+  ParsedChapter,
+  ParsedScene,
   StructureIssue,
   AutoFixResult,
   AutoFixOptions,
@@ -152,43 +155,111 @@ export class AutoFixService {
     }
   }
 
+  // Enhanced renumberChapters method with detailed debugging
+  // Replace this method in your AutoFixService
+
   /**
    * Renumber all chapters sequentially within each act
    */
   private static renumberChapters(structure: ParsedStructure): AutoFixResult {
     try {
+      console.log("🔢 Starting chapter renumbering...");
+      console.log("📊 Original structure:", {
+        acts: structure.acts.length,
+        chapters: structure.acts.reduce(
+          (sum, act) => sum + act.chapters.length,
+          0
+        ),
+      });
+
       const fixedStructure = this.deepCloneStructure(structure);
       let totalRenamed = 0;
+      let totalReordered = 0;
 
-      fixedStructure.acts.forEach((act) => {
-        act.chapters.forEach((chapter, index) => {
+      fixedStructure.acts.forEach((act: ParsedAct, actIndex: number) => {
+        console.log(`\n🎭 Processing Act ${actIndex + 1}: "${act.title}"`);
+        console.log(`📚 Chapters in this act: ${act.chapters.length}`);
+
+        act.chapters.forEach((chapter: ParsedChapter, index: number) => {
           const newOrder = index + 1;
           const oldOrder = chapter.order;
+          const oldTitle = chapter.title;
 
+          console.log(`\n  📖 Chapter ${index + 1}:`);
+          console.log(`     Original: order=${oldOrder}, title="${oldTitle}"`);
+
+          // Update the order
           chapter.order = newOrder;
-
-          const titleMatch = chapter.title.match(
-            /^(chapter\s+)(\d+|[ivx]+)(.*)$/i
-          );
-          if (titleMatch) {
-            const newTitle = `${titleMatch[1]}${newOrder}${
-              titleMatch[3] || ""
-            }`;
-            console.log(`📝 Renaming: "${chapter.title}" → "${newTitle}"`);
-            chapter.title = newTitle;
-            totalRenamed++;
-          } else if (oldOrder !== newOrder) {
-            totalRenamed++;
+          if (oldOrder !== newOrder) {
+            totalReordered++;
+            console.log(`     🔄 Order changed: ${oldOrder} → ${newOrder}`);
           }
+
+          // Try to update the title if it contains "Chapter X"
+          // Enhanced regex to catch more patterns
+          const titlePatterns = [
+            /^(chapter\s+)(\d+|[ivx]+)(.*)$/i, // "Chapter 1", "Chapter I"
+            /^(ch\.?\s+)(\d+|[ivx]+)(.*)$/i, // "Ch. 1", "Ch 1"
+            /^(chap\.?\s+)(\d+|[ivx]+)(.*)$/i, // "Chap. 1", "Chap 1"
+            /^(\d+|[ivx]+)(\.\s*|:\s*|-\s*)(.*)$/i, // "1. Title", "1: Title", "1 - Title"
+          ];
+
+          let titleUpdated = false;
+          for (const pattern of titlePatterns) {
+            const titleMatch = oldTitle.match(pattern);
+            if (titleMatch) {
+              let newTitle;
+              if (pattern === titlePatterns[3]) {
+                // Pattern for "1. Title"
+                newTitle = `${newOrder}${titleMatch[2]}${titleMatch[3]}`;
+              } else {
+                newTitle = `${titleMatch[1]}${newOrder}${titleMatch[3] || ""}`;
+              }
+
+              console.log(`     📝 Title pattern matched: ${pattern}`);
+              console.log(
+                `     📝 Title changed: "${oldTitle}" → "${newTitle}"`
+              );
+              chapter.title = newTitle;
+              totalRenamed++;
+              titleUpdated = true;
+              break;
+            }
+          }
+
+          if (!titleUpdated && oldOrder !== newOrder) {
+            console.log(
+              `     ⚠️  Order changed but title pattern not recognized`
+            );
+            console.log(`     ⚠️  Title: "${oldTitle}"`);
+            // Still count as a change even if we didn't update the title
+          }
+
+          console.log(
+            `     Final: order=${chapter.order}, title="${chapter.title}"`
+          );
         });
       });
 
+      console.log(`\n✅ Renumbering summary:`);
+      console.log(`   📝 Titles renamed: ${totalRenamed}`);
+      console.log(`   🔄 Orders changed: ${totalReordered}`);
+      console.log(
+        `   📊 Total changes: ${Math.max(totalRenamed, totalReordered)}`
+      );
+
+      const totalChanges = Math.max(totalRenamed, totalReordered);
+
       return {
         success: true,
-        message: `Successfully renumbered ${totalRenamed} chapters sequentially`,
+        message:
+          totalChanges > 0
+            ? `Successfully renumbered ${totalChanges} chapters (${totalRenamed} titles updated, ${totalReordered} orders fixed)`
+            : "No chapters needed renumbering - all were already sequential",
         fixedStructure,
       };
     } catch (error) {
+      console.error("❌ Chapter renumbering failed:", error);
       return {
         success: false,
         message: "Failed to renumber chapters",
@@ -204,9 +275,9 @@ export class AutoFixService {
     try {
       const fixedStructure = this.deepCloneStructure(structure);
 
-      fixedStructure.acts.forEach((act) => {
-        act.chapters.forEach((chapter) => {
-          chapter.scenes.forEach((scene, index) => {
+      fixedStructure.acts.forEach((act: ParsedAct) => {
+        act.chapters.forEach((chapter: ParsedChapter) => {
+          chapter.scenes.forEach((scene: ParsedScene, index: number) => {
             scene.order = index + 1;
           });
         });
@@ -237,23 +308,26 @@ export class AutoFixService {
       const fixedStructure = this.deepCloneStructure(structure);
       let combinedCount = 0;
 
-      fixedStructure.acts.forEach((act) => {
-        act.chapters.forEach((chapter) => {
-          const newScenes: any[] = [];
-          let currentCombinedScene: any = null;
+      fixedStructure.acts.forEach((act: ParsedAct) => {
+        act.chapters.forEach((chapter: ParsedChapter) => {
+          const newScenes: ParsedScene[] = [];
+          let currentCombinedScene: ParsedScene | null = null;
 
           for (const scene of chapter.scenes) {
             if (scene.wordCount < (options.minimumSceneLength || 50)) {
               if (currentCombinedScene) {
+                // Combine with previous short scene
                 currentCombinedScene.content +=
                   '\n\n<div class="scene-break" style="margin: 1rem 0; text-align: center; color: #9ca3af;">* * *</div>\n\n' +
                   scene.content;
                 currentCombinedScene.wordCount += scene.wordCount;
                 combinedCount++;
               } else {
+                // Start a new combined scene
                 currentCombinedScene = { ...scene };
               }
             } else {
+              // Regular length scene
               if (currentCombinedScene) {
                 newScenes.push(currentCombinedScene);
                 currentCombinedScene = null;
@@ -262,11 +336,13 @@ export class AutoFixService {
             }
           }
 
+          // Don't forget the last combined scene if it exists
           if (currentCombinedScene) {
             newScenes.push(currentCombinedScene);
           }
 
-          newScenes.forEach((scene, index) => {
+          // Renumber all scenes sequentially
+          newScenes.forEach((scene: ParsedScene, index: number) => {
             scene.order = index + 1;
           });
 
@@ -302,7 +378,8 @@ export class AutoFixService {
       const seenActTitles = new Set<string>();
       const seenChapterTitles = new Set<string>();
 
-      fixedStructure.acts.forEach((act) => {
+      fixedStructure.acts.forEach((act: ParsedAct) => {
+        // Handle duplicate act titles
         const originalTitle = act.title.toLowerCase();
         if (seenActTitles.has(originalTitle)) {
           let counter = 2;
@@ -318,8 +395,9 @@ export class AutoFixService {
           seenActTitles.add(originalTitle);
         }
 
+        // Handle duplicate chapter titles within this act and globally
         const actChapterTitles = new Set<string>();
-        act.chapters.forEach((chapter) => {
+        act.chapters.forEach((chapter: ParsedChapter) => {
           const originalChapterTitle = chapter.title.toLowerCase();
           if (
             actChapterTitles.has(originalChapterTitle) ||
@@ -365,15 +443,15 @@ export class AutoFixService {
   /**
    * Calculate total word count across all acts
    */
-  private static calculateTotalWordCount(acts: any[]): number {
+  private static calculateTotalWordCount(acts: ParsedAct[]): number {
     return acts.reduce(
-      (total, act) =>
+      (total: number, act: ParsedAct) =>
         total +
         act.chapters.reduce(
-          (actTotal: number, chapter: any) =>
+          (actTotal: number, chapter: ParsedChapter) =>
             actTotal +
             chapter.scenes.reduce(
-              (chapterTotal: number, scene: any) =>
+              (chapterTotal: number, scene: ParsedScene) =>
                 chapterTotal + scene.wordCount,
               0
             ),
@@ -401,37 +479,42 @@ export class AutoFixService {
   ): string {
     switch (issue.fixAction?.type) {
       case "renumber_chapters":
-        const chapterCounts = structure.acts.map((act) => act.chapters.length);
+        const chapterCounts = structure.acts.map(
+          (act: ParsedAct) => act.chapters.length
+        );
         const totalChapters = chapterCounts.reduce(
-          (sum, count) => sum + count,
+          (sum: number, count: number) => sum + count,
           0
         );
         return `Will renumber ${totalChapters} chapters sequentially within their acts`;
 
       case "renumber_scenes":
-        const sceneCounts = structure.acts.flatMap((act) =>
-          act.chapters.map((ch) => ch.scenes.length)
+        const sceneCounts = structure.acts.flatMap((act: ParsedAct) =>
+          act.chapters.map((ch: ParsedChapter) => ch.scenes.length)
         );
-        const totalScenes = sceneCounts.reduce((sum, count) => sum + count, 0);
+        const totalScenes = sceneCounts.reduce(
+          (sum: number, count: number) => sum + count,
+          0
+        );
         return `Will renumber ${totalScenes} scenes sequentially within their chapters`;
 
       case "combine_scenes":
-        const shortScenes = structure.acts.flatMap((act) =>
-          act.chapters.flatMap((ch) =>
-            ch.scenes.filter((scene) => scene.wordCount < 50)
+        const shortScenes = structure.acts.flatMap((act: ParsedAct) =>
+          act.chapters.flatMap((ch: ParsedChapter) =>
+            ch.scenes.filter((scene: ParsedScene) => scene.wordCount < 50)
           )
         );
         return `Will combine ${shortScenes.length} scenes that are under 50 words`;
 
       case "rename_duplicate":
         const allTitles = [
-          ...structure.acts.map((act) => act.title.toLowerCase()),
-          ...structure.acts.flatMap((act) =>
-            act.chapters.map((ch) => ch.title.toLowerCase())
+          ...structure.acts.map((act: ParsedAct) => act.title.toLowerCase()),
+          ...structure.acts.flatMap((act: ParsedAct) =>
+            act.chapters.map((ch: ParsedChapter) => ch.title.toLowerCase())
           ),
         ];
         const duplicates = allTitles.filter(
-          (title, index) => allTitles.indexOf(title) !== index
+          (title: string, index: number) => allTitles.indexOf(title) !== index
         );
         return `Will rename ${
           new Set(duplicates).size
