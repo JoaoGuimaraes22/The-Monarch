@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { novelService } from "@/lib/novels";
-import { DocxParser } from "@/lib/docx-parser";
+import { EnhancedDocxParser } from "@/lib/enhanced-docx-parser";
 
 // POST /api/novels/[id]/import - Import .docx file into novel
 export async function POST(
@@ -47,12 +47,12 @@ export async function POST(
       );
     }
 
-    console.log("Starting document parsing...");
+    console.log("Starting enhanced document parsing...");
 
-    // Parse the document structure
-    const parsedStructure = await DocxParser.parseDocx(file);
+    // Parse the document structure with enhanced parser
+    const parsedStructure = await EnhancedDocxParser.parseDocx(file);
 
-    console.log("Parsing completed:", {
+    console.log("Enhanced parsing completed:", {
       acts: parsedStructure.acts.length,
       totalChapters: parsedStructure.acts.reduce(
         (sum, act) => sum + act.chapters.length,
@@ -64,10 +64,11 @@ export async function POST(
         0
       ),
       wordCount: parsedStructure.wordCount,
+      issues: parsedStructure.issues?.length || 0,
     });
 
-    // Validate the parsed structure
-    const validation = DocxParser.validateStructure(parsedStructure);
+    // Validate the parsed structure with enhanced validation
+    const validation = EnhancedDocxParser.validateStructure(parsedStructure);
     if (!validation.isValid) {
       return NextResponse.json(
         {
@@ -103,12 +104,31 @@ export async function POST(
         ),
         wordCount: parsedStructure.wordCount,
       },
+      // NEW: Include validation results with detected issues
+      validation: {
+        isValid: validation.isValid,
+        errors: validation.errors,
+        warnings: validation.warnings, // This includes the issues we detected
+      },
+      // NEW: Show detected issues count in success response
+      issuesDetected: validation.warnings.length,
     });
   } catch (error) {
     console.error("Error importing document:", error);
 
     // Handle specific error types
     if (error instanceof Error) {
+      if (error.message.includes("Enhanced parsing failed")) {
+        return NextResponse.json(
+          {
+            error:
+              "Could not parse the document. Please ensure it's a valid .docx file.",
+            details: error.message,
+          },
+          { status: 400 }
+        );
+      }
+
       if (error.message.includes("Failed to parse document")) {
         return NextResponse.json(
           {

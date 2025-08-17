@@ -1,5 +1,12 @@
 import React, { useState, useRef } from "react";
-import { Upload, FileText, CheckCircle, AlertCircle, X } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  X,
+  Info,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -23,6 +30,12 @@ interface ImportResult {
     scenes: number;
     wordCount: number;
   };
+  validation?: {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  issuesDetected?: number;
   error?: string;
   details?: string[];
 }
@@ -113,7 +126,7 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
         // Wait a moment to show success, then call onImportSuccess
         setTimeout(() => {
           onImportSuccess();
-        }, 2000);
+        }, 3000); // Increased time to let users read issues
       } else {
         setImportResult({
           success: false,
@@ -238,79 +251,148 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
         {importResult && (
           <div className="space-y-4">
             {importResult.success ? (
-              <Alert
-                type="royal"
-                title="Import Successful!"
-                dismissible={false}
-              >
-                <div className="space-y-2">
-                  <p>{importResult.message}</p>
-                  {importResult.structure && (
-                    <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                      <div>
-                        <span className="text-gray-300">Acts:</span>
-                        <span className="ml-2 font-semibold">
-                          {importResult.structure.acts}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-300">Chapters:</span>
-                        <span className="ml-2 font-semibold">
-                          {importResult.structure.chapters}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-300">Scenes:</span>
-                        <span className="ml-2 font-semibold">
-                          {importResult.structure.scenes}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-300">Words:</span>
-                        <span className="ml-2 font-semibold">
-                          {importResult.structure.wordCount.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Alert>
-            ) : (
-              <Alert type="error" title="Import Failed" dismissible={false}>
-                <div className="space-y-2">
-                  <p>{importResult.error}</p>
-                  {importResult.details &&
-                    Array.isArray(importResult.details) &&
-                    importResult.details.length > 0 && (
-                      <div className="mt-2">
-                        <p className="font-medium">Issues found:</p>
-                        <ul className="list-disc list-inside text-sm space-y-1">
-                          {importResult.details.map((detail, index) => (
-                            <li key={index}>{detail}</li>
-                          ))}
-                        </ul>
+              <>
+                {/* Success Message */}
+                <div className="bg-green-900/20 border border-green-700 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <h3 className="text-lg font-semibold text-green-300">
+                      Import Successful!
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-green-200">{importResult.message}</p>
+                    {importResult.structure && (
+                      <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                        <div>
+                          <span className="text-green-300">Acts:</span>
+                          <span className="ml-2 font-semibold text-white">
+                            {importResult.structure.acts}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-green-300">Chapters:</span>
+                          <span className="ml-2 font-semibold text-white">
+                            {importResult.structure.chapters}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-green-300">Scenes:</span>
+                          <span className="ml-2 font-semibold text-white">
+                            {importResult.structure.scenes}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-green-300">Words:</span>
+                          <span className="ml-2 font-semibold text-white">
+                            {importResult.structure.wordCount.toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     )}
+                  </div>
                 </div>
-              </Alert>
-            )}
 
-            {!importResult.success && (
-              <div className="flex space-x-3">
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setSelectedFile(null);
-                    setImportResult(null);
-                  }}
-                  className="flex-1"
-                >
-                  Try Again
-                </Button>
-                <Button variant="ghost" onClick={onCancel}>
-                  Cancel
-                </Button>
-              </div>
+                {/* Issues Section */}
+                {importResult.validation && (
+                  <>
+                    {importResult.validation.warnings &&
+                    importResult.validation.warnings.length > 0 ? (
+                      <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <AlertCircle className="w-5 h-5 text-yellow-400" />
+                          <h3 className="text-lg font-semibold text-yellow-300">
+                            Issues Detected
+                          </h3>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-yellow-200">
+                            {importResult.issuesDetected} potential issue
+                            {importResult.issuesDetected !== 1 ? "s" : ""} found
+                            in your document:
+                          </p>
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {importResult.validation.warnings.map(
+                              (warning, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-start space-x-2 text-sm"
+                                >
+                                  <Info className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                                  <span className="text-yellow-100">
+                                    {warning}
+                                  </span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                          <p className="text-xs text-yellow-300 mt-2">
+                            These are suggestions for improvement - your
+                            document imported successfully.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-green-900/20 border border-green-700 rounded-lg p-4">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-5 h-5 text-green-400" />
+                          <h3 className="text-lg font-semibold text-green-300">
+                            Document Quality
+                          </h3>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-green-200">
+                            No issues detected! Your document structure looks
+                            excellent.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Success note */}
+                <div className="text-center text-sm text-gray-400">
+                  Redirecting to manuscript editor...
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Error Message */}
+                <Alert type="error" title="Import Failed" dismissible={false}>
+                  <div className="space-y-2">
+                    <p>{importResult.error}</p>
+                    {importResult.details &&
+                      Array.isArray(importResult.details) &&
+                      importResult.details.length > 0 && (
+                        <div className="mt-2">
+                          <p className="font-medium">Issues found:</p>
+                          <ul className="list-disc list-inside text-sm space-y-1">
+                            {importResult.details.map((detail, index) => (
+                              <li key={index}>{detail}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                  </div>
+                </Alert>
+
+                <div className="flex space-x-3">
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setImportResult(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Try Again
+                  </Button>
+                  <Button variant="ghost" onClick={onCancel}>
+                    Cancel
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         )}
