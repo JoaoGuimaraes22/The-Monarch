@@ -1,0 +1,130 @@
+📁 themonarch/
+├── 📄 eslint.config.mjs
+├── 📝 monarch-project-tracker.md
+├── ⚛️  next.config.ts
+├── ⚛️  next-env.d.ts
+├── 📋 package.json
+├── 📋 package-lock.json
+├── 📄 postcss.config.mjs
+├── 📁 prisma/
+│   ├── 📄 dev.db
+│   ├── 📁 migrations/
+│   │   ├── 📁 20250816173852_init/
+│   │   │   └── 📄 migration.sql
+│   │   ├── 📁 20250816194920_add_manuscript_structure/
+│   │   │   └── 📄 migration.sql
+│   │   └── 📄 migration_lock.toml
+│   └── 📄 schema.prisma
+├── 📄 project-structure.txt
+├── 📁 public/
+│   ├── 🖼️  file.svg
+│   ├── 🖼️  globe.svg
+│   ├── 🖼️  next.svg
+│   ├── 🖼️  vercel.svg
+│   └── 🖼️  window.svg
+├── 📝 README.md
+├── 📁 scripts/
+│   └── 📜 project-structure.sh
+├── 📁 src/
+│   ├── 📁 app/
+│   │   ├── 📁 (app)/
+│   │   │   ├── ⚛️  layout.tsx
+│   │   │   └── 📁 novels/
+│   │   │       ├── 📁 [novelId]/
+│   │   │       │   ├── 📁 characters/
+│   │   │       │   │   └── ⚛️  page.tsx
+│   │   │       │   ├── 📁 dashboard/
+│   │   │       │   │   └── ⚛️  page.tsx
+│   │   │       │   ├── ⚛️  layout.tsx
+│   │   │       │   └── 📁 manuscript/
+│   │   │       │       └── ⚛️  page.tsx
+│   │   │       └── ⚛️  page.tsx
+│   │   ├── 📁 (marketing)/
+│   │   │   └── ⚛️  layout.tsx
+│   │   ├── 📁 api/
+│   │   │   └── 📁 novels/
+│   │   │       ├── 📁 [id]/
+│   │   │       │   ├── 📁 acts/
+│   │   │       │   │   └── 📁 [actId]/
+│   │   │       │   │       └── ⚛️  route.ts
+│   │   │       │   ├── 📁 chapters/
+│   │   │       │   │   └── 📁 [chapterId]/
+│   │   │       │   │       └── ⚛️  route.ts
+│   │   │       │   ├── 📁 import/
+│   │   │       │   │   └── ⚛️  route.ts
+│   │   │       │   ├── ⚛️  route.ts
+│   │   │       │   ├── 📁 scenes/
+│   │   │       │   │   └── 📁 [sceneId]/
+│   │   │       │   │       └── ⚛️  route.ts
+│   │   │       │   └── 📁 structure/
+│   │   │       │       └── ⚛️  route.ts
+│   │   │       └── ⚛️  route.ts
+│   │   ├── 📁 components/
+│   │   │   ├── 📁 manuscript/
+│   │   │   │   ├── 📁 chapter-tree/
+│   │   │   │   │   ├── ⚛️  act-item.tsx
+│   │   │   │   │   ├── ⚛️  chapter-item.tsx
+│   │   │   │   │   ├── ⚛️  chapter-tree.tsx
+│   │   │   │   │   ├── ⚛️  index.ts
+│   │   │   │   │   ├── ⚛️  scene-item.tsx
+│   │   │   │   │   ├── ⚛️  tree-item.tsx
+│   │   │   │   │   ├── ⚛️  types.ts
+│   │   │   │   │   └── ⚛️  utils.ts
+│   │   │   │   ├── ⚛️  content-aggregation-service.ts
+│   │   │   │   ├── ⚛️  delete-confirmation-dialog.tsx
+│   │   │   │   ├── ⚛️  docx-uploader.tsx
+│   │   │   │   ├── 📁 manuscript-editor/
+│   │   │   │   │   ├── ⚛️  index.ts
+│   │   │   │   │   ├── ⚛️  manuscript-content-area.tsx
+│   │   │   │   │   ├── ⚛️  manuscript-editor.tsx
+│   │   │   │   │   ├── ⚛️  manuscript-header.tsx
+│   │   │   │   │   ├── ⚛️  manuscript-metadata-sidebar.tsx
+│   │   │   │   │   ├── ⚛️  manuscript-structure-sidebar.tsx
+│   │   │   │   │   ├── ⚛️  scene-card.tsx
+│   │   │   │   │   └── ⚛️  scene-grid.tsx
+│   │   │   │   ├── ⚛️  manuscript-empty-state.tsx
+│   │   │   │   ├── ⚛️  scene-text-editor.tsx
+│   │   │   │   └── ⚛️  view-mode-selector.tsx
+│   │   │   ├── 📁 novel-selection-page/
+│   │   │   │   ├── ⚛️  create-novel-form.tsx
+│   │   │   │   ├── ⚛️  delete-confirmation-dialog.tsx
+│   │   │   │   ├── ⚛️  empty-state.tsx
+│   │   │   │   ├── ⚛️  novel-card.tsx
+│   │   │   │   ├── ⚛️  novels-grid.tsx
+│   │   │   │   └── ⚛️  page-header.tsx
+│   │   │   ├── 📁 ui/
+│   │   │   │   ├── ⚛️  alert.tsx
+│   │   │   │   ├── ⚛️  badge.tsx
+│   │   │   │   ├── ⚛️  button.tsx
+│   │   │   │   ├── ⚛️  card.tsx
+│   │   │   │   ├── ⚛️  index.ts
+│   │   │   │   ├── ⚛️  input.tsx
+│   │   │   │   └── ⚛️  logo.tsx
+│   │   │   └── 📁 workspace/
+│   │   │       ├── ⚛️  dashboard-page.tsx
+│   │   │       ├── ⚛️  sidebar.tsx
+│   │   │       ├── ⚛️  sidebar-context.tsx
+│   │   │       └── ⚛️  workspace-layout.tsx
+│   │   ├── 📄 favicon.ico
+│   │   ├── 🎨 globals.css
+│   │   ├── 📁 layout/
+│   │   │   ├── ⚛️  header.tsx
+│   │   │   ├── ⚛️  landing-header.tsx
+│   │   │   └── ⚛️  sidebar.tsx
+│   │   ├── ⚛️  layout.tsx
+│   │   └── ⚛️  page.tsx
+│   ├── 📁 hooks/
+│   │   └── ⚛️  useNovels.ts
+│   ├── 📁 lib/
+│   │   ├── ⚛️  docx-parser.ts
+│   │   ├── ⚛️  novels.ts
+│   │   └── ⚛️  prisma.ts
+│   ├── 📁 types/
+│   └── 📁 utils/
+└── 📋 tsconfig.json
+
+Generated on: Sun, Aug 17, 2025  5:37:28 AM
+Directory: /c/Users/jssgm/Dev/Projects/ProdMonarch/themonarch
+Max depth: 14
+Include hidden: false
+Excluded patterns: node_modules .git .next dist build coverage .DS_Store *.log

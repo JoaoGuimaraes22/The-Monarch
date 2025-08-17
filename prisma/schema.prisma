@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Novel {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  coverImage  String?
+  wordCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  acts        Act[]
+
+  @@map("novels")
+}
+
+model Act {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  novelId   String
+  novel     Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  chapters  Chapter[]
+
+  @@map("acts")
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  actId     String
+  act       Act     @relation(fields: [actId], references: [id], onDelete: Cascade)
+  scenes    Scene[]
+
+  @@map("chapters")
+}
+
+model Scene {
+  id        String   @id @default(cuid())
+  content   String   @default("")
+  wordCount Int      @default(0)
+  order     Int
+  
+  // Metadata
+  povCharacter String?
+  sceneType    String   @default("") // JSON array as string: action, dialogue, introspective
+  notes        String   @default("")
+  status       String   @default("draft") // draft, review, complete
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  chapterId String
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@map("scenes")
+}
