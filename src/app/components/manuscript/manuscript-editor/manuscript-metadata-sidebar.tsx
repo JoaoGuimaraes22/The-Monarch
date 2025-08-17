@@ -1,110 +1,147 @@
-// src/app/components/manuscript/manuscript-editor/manuscript-structure-sidebar.tsx
 import React from "react";
-import { BookOpen, ChevronLeft, ChevronRight, FileText } from "lucide-react";
-import { EnhancedChapterTree } from "@/app/components/manuscript/chapter-tree/enhanced-chapter-tree";
-import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
+import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { Scene } from "@/lib/novels";
+import { ViewMode } from "@/app/components/manuscript/view-mode-selector";
 
-interface ManuscriptStructureSidebarProps {
-  novel: NovelWithStructure;
+interface ViewInfo {
+  title: string;
+  subtitle: string;
+  wordCount: number;
+  sceneCount: number;
+}
+
+interface ManuscriptMetadataSidebarProps {
   selectedScene: Scene | null;
-  selectedChapterId?: string;
-  selectedActId?: string;
-  onSceneSelect: (sceneId: string, scene: Scene) => void;
-  onChapterSelect?: (chapter: Chapter) => void;
-  onActSelect?: (act: Act) => void;
-  onRefresh: () => void;
-  onAddScene: (chapterId: string) => Promise<void>;
-  onAddChapter: (actId: string) => Promise<void>;
-  onDeleteScene: (sceneId: string) => Promise<void>;
-  onDeleteChapter: (chapterId: string) => Promise<void>;
-  onDeleteAct: (actId: string) => Promise<void>;
-  // ✨ NEW: Add these name editing handler props
-  onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
-  onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
-  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
+  viewMode: ViewMode;
+  viewInfo: ViewInfo;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  left: string;
   width: string;
 }
 
-export const ManuscriptStructureSidebar: React.FC<
-  ManuscriptStructureSidebarProps
+export const ManuscriptMetadataSidebar: React.FC<
+  ManuscriptMetadataSidebarProps
 > = ({
-  novel,
   selectedScene,
-  selectedChapterId,
-  selectedActId,
-  onSceneSelect,
-  onChapterSelect,
-  onActSelect,
-  onRefresh,
-  onAddScene,
-  onAddChapter,
-  onDeleteScene,
-  onDeleteChapter,
-  onDeleteAct,
-  // ✨ NEW: Destructure the name editing handlers
-  onUpdateActName,
-  onUpdateChapterName,
-  onUpdateSceneName,
+  viewMode,
+  viewInfo,
   isCollapsed,
   onToggleCollapse,
-  left,
   width,
 }) => {
   return (
     <div
-      className="fixed top-0 bg-gray-800 border-r border-gray-700 flex flex-col transition-all duration-300 z-20"
-      style={{ left, width, height: "100vh" }}
+      className="fixed top-0 right-0 bg-gray-800 border-l border-gray-700 flex flex-col transition-all duration-300 z-20"
+      style={{ width, height: "100vh" }}
     >
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
-          {!isCollapsed && (
-            <div>
-              <h2 className="text-lg font-semibold text-white">
-                Manuscript Structure
-              </h2>
-              <p className="text-sm text-gray-400">Navigate your story</p>
-            </div>
-          )}
-
-          {isCollapsed && <BookOpen className="w-6 h-6 text-red-500 mx-auto" />}
-
           <button
             onClick={onToggleCollapse}
             className="p-1 text-gray-400 hover:text-white transition-colors"
           >
             {isCollapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
               <ChevronLeft className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
             )}
           </button>
+
+          {!isCollapsed && (
+            <div className="flex-1 ml-3">
+              <h2 className="text-lg font-semibold text-white">
+                {viewMode === "scene" ? "Scene Details" : "Content Details"}
+              </h2>
+              <p className="text-sm text-gray-400">
+                {viewMode === "scene"
+                  ? "Metadata and tools"
+                  : `${viewMode} overview`}
+              </p>
+            </div>
+          )}
+
+          {isCollapsed && <Settings className="w-6 h-6 text-red-500 mx-auto" />}
         </div>
       </div>
 
       {!isCollapsed && (
-        <div className="flex-1 p-4 overflow-y-auto">
-          <EnhancedChapterTree
-            novel={novel}
-            selectedSceneId={selectedScene?.id}
-            selectedChapterId={selectedChapterId}
-            selectedActId={selectedActId}
-            onSceneSelect={onSceneSelect}
-            onChapterSelect={onChapterSelect}
-            onActSelect={onActSelect}
-            onRefresh={onRefresh}
-            onAddScene={onAddScene}
-            onAddChapter={onAddChapter}
-            onDeleteScene={onDeleteScene}
-            onDeleteChapter={onDeleteChapter}
-            onDeleteAct={onDeleteAct}
-            onUpdateActName={onUpdateActName}
-            onUpdateChapterName={onUpdateChapterName}
-            onUpdateSceneName={onUpdateSceneName}
-            novelId={novel.id}
-          />
+        <div className="flex-1 p-4">
+          {selectedScene ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  View Mode
+                </label>
+                <div className="text-sm text-gray-400 capitalize">
+                  {viewMode} view
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Word Count
+                </label>
+                <div className="text-sm text-gray-400">
+                  {viewInfo.wordCount.toLocaleString()} words
+                </div>
+              </div>
+
+              {viewMode === "scene" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Status
+                    </label>
+                    <div className="text-sm text-gray-400">
+                      {selectedScene.status}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      POV Character
+                    </label>
+                    <div className="text-sm text-gray-400">
+                      {selectedScene.povCharacter || "Not set"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Scene Type
+                    </label>
+                    <div className="text-sm text-gray-400">
+                      {selectedScene.sceneType || "Not set"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Notes
+                    </label>
+                    <div className="text-sm text-gray-400">
+                      {selectedScene.notes || "No notes"}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {viewMode !== "scene" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Scenes Included
+                  </label>
+                  <div className="text-sm text-gray-400">
+                    {viewInfo.sceneCount} scenes combined
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-400">
+              <p>Select a scene to view details</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -113,9 +150,9 @@ export const ManuscriptStructureSidebar: React.FC<
           <button
             onClick={onToggleCollapse}
             className="p-2 text-gray-400 hover:text-white transition-colors"
-            title="Expand Structure"
+            title="Expand Details"
           >
-            <FileText className="w-5 h-5" />
+            <Settings className="w-5 h-5" />
           </button>
         </div>
       )}
