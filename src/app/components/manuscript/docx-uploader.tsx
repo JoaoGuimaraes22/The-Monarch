@@ -9,6 +9,7 @@ import {
   Zap,
   Settings,
 } from "lucide-react";
+
 import {
   Button,
   Card,
@@ -17,15 +18,9 @@ import {
   Alert,
 } from "@/app/components/ui";
 
-// Updated imports for refactored parser
-import { AutoFixService } from "@/lib/doc-parse";
-import {
-  StructureAnalyzer,
-  ParsedStructure,
-  StructureIssue,
-  ParsedAct,
-  ParsedChapter,
-} from "@/lib/doc-parse";
+import { StructurePreview } from "./structure-preview";
+
+import { ParsedStructure, StructureIssue } from "@/lib/doc-parse";
 
 interface DocxUploaderProps {
   novelId: string;
@@ -50,6 +45,9 @@ interface ImportResult {
   issuesDetected?: number;
   error?: string;
   details?: string[];
+  isFixed?: boolean;
+  fixApplied?: string;
+  isImported?: boolean;
 }
 
 export const DocxUploader: React.FC<DocxUploaderProps> = ({
@@ -67,7 +65,12 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Replace your current handleAutoFix method in DocxUploader with this:
+  // Structure preview state
+  const [fixedStructureData, setFixedStructureData] =
+    useState<ParsedStructure | null>(null);
+  const [isImportingFixed, setIsImportingFixed] = useState(false);
+  const [originalStructureForComparison, setOriginalStructureForComparison] =
+    useState<ParsedStructure | null>(null);
 
   const handleAutoFix = async (issue: StructureIssue) => {
     if (!issue.fixAction || !selectedFile) {
@@ -81,6 +84,11 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
       console.log("🔧 Starting server-side auto-fix process...");
       console.log("📄 File:", selectedFile.name);
       console.log("🎯 Issue:", issue.type, issue.fixAction.type);
+
+      // Store original structure for comparison if we don't have it yet
+      if (!originalStructureForComparison && importResult?.structure) {
+        // We'll need to get the original parsed structure - for now we'll show the preview without comparison
+      }
 
       // Create FormData with the file and fix details
       const formData = new FormData();
@@ -102,6 +110,9 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
         console.log("✅ Server-side auto-fix completed successfully");
         console.log("📊 Updated structure:", result.structure);
 
+        // Store the fixed structure data for preview and import
+        setFixedStructureData(result.fixedStructureData);
+
         // Update the import result to show the changes
         setImportResult((prev) => {
           if (!prev) return prev;
@@ -111,17 +122,20 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
             structure: result.structure,
             validation: result.validation,
             issuesDetected: result.issuesDetected,
+            // Add flag to show this has been fixed but not imported
+            isFixed: true,
+            fixApplied: issue.type,
           };
         });
 
-        // Show success feedback with details
+        // Show success feedback with preview info
         const message = `✅ Auto-fix applied successfully!\n\n${
           result.message
         }\n\n📊 Updated Structure:\n• Acts: ${
           result.structure.acts
         }\n• Chapters: ${result.structure.chapters}\n• Scenes: ${
           result.structure.scenes
-        }\n• Words: ${result.structure.wordCount.toLocaleString()}`;
+        }\n• Words: ${result.structure.wordCount.toLocaleString()}\n\n⚠️ Preview the changes below and click "Import Fixed Structure" to save to database.`;
 
         alert(message);
 
@@ -144,6 +158,71 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
     } finally {
       setIsApplyingFix(null);
       console.log("🏁 Auto-fix process completed");
+    }
+  };
+
+  // Add new function to handle importing the fixed structure
+  const handleImportFixedStructure = async () => {
+    if (!fixedStructureData) {
+      alert("❌ No fixed structure data available to import");
+      return;
+    }
+
+    setIsImportingFixed(true);
+
+    try {
+      console.log("💾 Importing fixed structure to database...");
+
+      const response = await fetch(`/api/novels/${novelId}/import-fixed`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fixedStructure: fixedStructureData,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log("✅ Fixed structure imported successfully");
+
+        // Clear the fixed structure data since it's now imported
+        setFixedStructureData(null);
+        setOriginalStructureForComparison(null);
+
+        // Update UI to show import is complete
+        setImportResult((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            isFixed: false,
+            isImported: true,
+          };
+        });
+
+        alert(
+          "✅ Fixed structure imported successfully!\n\nYou can now continue to the editor with the corrected structure."
+        );
+
+        // Auto-redirect after successful import
+        setTimeout(() => {
+          onImportSuccess();
+        }, 2000);
+      } else {
+        console.error("❌ Failed to import fixed structure:", result.error);
+        alert(
+          `❌ Failed to import fixed structure: ${
+            result.message || result.error
+          }`
+        );
+      }
+    } catch (error) {
+      console.error("❌ Network error during import:", error);
+      alert("❌ Failed to import fixed structure. Please try again.");
+    } finally {
+      setIsImportingFixed(false);
     }
   };
 
@@ -184,7 +263,8 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
 
     setSelectedFile(file);
     setImportResult(null);
-    setParsedStructure(null); // Clear any previous parsed structure
+    setFixedStructureData(null); // Clear any previous fixed structure
+    setOriginalStructureForComparison(null);
 
     // Read the file as ArrayBuffer for later use in auto-fix
     try {
@@ -426,6 +506,66 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
                   </div>
                 </div>
 
+                {/* Structure Preview and Import Section */}
+                {fixedStructureData && (
+                  <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+                        <FileText className="w-5 h-5 text-blue-400" />
+                        <span>Structure Preview</span>
+                      </h3>
+                      <div className="text-sm text-gray-400">
+                        Fixed • Ready to Import
+                      </div>
+                    </div>
+
+                    <StructurePreview
+                      fixedStructure={fixedStructureData}
+                      originalStructure={
+                        originalStructureForComparison || undefined
+                      }
+                      showComparison={!!originalStructureForComparison}
+                    />
+
+                    <div className="mt-4 flex space-x-3">
+                      <Button
+                        variant="primary"
+                        onClick={handleImportFixedStructure}
+                        disabled={isImportingFixed}
+                        className="flex items-center space-x-2"
+                      >
+                        {isImportingFixed ? (
+                          <>
+                            <Settings className="w-4 h-4 animate-spin" />
+                            <span>Importing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Import Fixed Structure</span>
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setFixedStructureData(null);
+                          setOriginalStructureForComparison(null);
+                        }}
+                        disabled={isImportingFixed}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 text-xs text-gray-400">
+                      ⚠️ Importing will save the fixed structure to your
+                      database and cannot be undone.
+                    </div>
+                  </div>
+                )}
+
                 {/* Issues Section */}
                 {importResult.validation && (
                   <>
@@ -529,26 +669,30 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
                 )}
 
                 {/* Success note or Continue button */}
-                {importResult.validation?.warnings?.some(
-                  (issue) => issue.autoFixable
-                ) ? (
-                  <div className="text-center space-y-3">
-                    <p className="text-sm text-gray-400">
-                      You can apply auto-fixes above, or continue with the
-                      current structure.
-                    </p>
-                    <Button
-                      variant="primary"
-                      onClick={onImportSuccess}
-                      className="px-8"
-                    >
-                      Continue to Editor
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center text-sm text-gray-400">
-                    Redirecting to manuscript editor...
-                  </div>
+                {!fixedStructureData && (
+                  <>
+                    {importResult.validation?.warnings?.some(
+                      (issue) => issue.autoFixable
+                    ) ? (
+                      <div className="text-center space-y-3">
+                        <p className="text-sm text-gray-400">
+                          You can apply auto-fixes above, or continue with the
+                          current structure.
+                        </p>
+                        <Button
+                          variant="primary"
+                          onClick={onImportSuccess}
+                          className="px-8"
+                        >
+                          Continue to Editor
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center text-sm text-gray-400">
+                        Redirecting to manuscript editor...
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             ) : (
