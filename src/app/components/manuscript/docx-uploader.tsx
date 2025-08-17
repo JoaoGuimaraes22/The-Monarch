@@ -17,6 +17,12 @@ import {
   Alert,
 } from "@/app/components/ui";
 
+import { DocumentAutoFixService } from "@/lib/document-auto-fix-service";
+import {
+  EnhancedDocxParser,
+  ParsedStructure,
+} from "@/lib/enhanced-docx-parser";
+
 interface DocxUploaderProps {
   novelId: string;
   onImportSuccess: () => void;
@@ -70,28 +76,99 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isApplyingFix, setIsApplyingFix] = useState<string | null>(null);
+  const [parsedStructure, setParsedStructure] =
+    useState<ParsedStructure | null>(null);
+  const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAutoFix = async (issue: StructureIssue) => {
-    if (!issue.fixAction || !selectedFile) return;
+    if (!issue.fixAction) return;
 
     setIsApplyingFix(issue.type);
 
     try {
-      // For now, just show what would happen
-      // In a real implementation, this would call the API with fix instructions
-      console.log("Applying auto-fix:", issue.fixAction);
+      console.log("🔧 Starting auto-fix process...");
 
-      // Simulate applying fix
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Check if we have the parsed structure
+      if (!parsedStructure) {
+        if (!fileBuffer) {
+          alert(
+            "❌ Cannot apply fix: Document buffer is not available. Please re-upload the document."
+          );
+          return;
+        }
 
-      // For demo: just show that it was "applied"
-      alert(
-        `Auto-fix applied: ${issue.fixAction.description}\n\nIn a real implementation, this would reprocess the document with the fix applied.`
+        try {
+          console.log("📖 Parsing document from buffer for auto-fix...");
+          const structure = await DocumentAutoFixService.parseFromBuffer(
+            fileBuffer
+          );
+          setParsedStructure(structure);
+          console.log("✅ Document structure parsed successfully");
+        } catch (parseError) {
+          console.error("❌ Failed to parse document:", parseError);
+          alert(
+            "❌ Cannot apply fix: Failed to parse document structure. Please try re-uploading the document."
+          );
+          return;
+        }
+      }
+
+      // Step 2: Apply the specific fix
+      console.log("🔧 Applying fix:", issue.fixAction.description);
+      const fixResult = await DocumentAutoFixService.applyAutoFix(
+        parsedStructure,
+        issue
       );
+
+      if (fixResult.success && fixResult.fixedStructure) {
+        console.log("✅ Auto-fix completed successfully");
+
+        // Step 3: Update our stored structure
+        setParsedStructure(fixResult.fixedStructure);
+
+        // Step 4: Re-validate the fixed structure to update the UI
+        const newValidation = EnhancedDocxParser.validateStructure(
+          fixResult.fixedStructure
+        );
+
+        // Step 5: Update the import result to show the changes
+        setImportResult((prev) => {
+          if (!prev) return prev;
+
+          return {
+            ...prev,
+            structure: {
+              acts: fixResult.fixedStructure!.acts.length,
+              chapters: fixResult.fixedStructure!.acts.reduce(
+                (sum, act) => sum + act.chapters.length,
+                0
+              ),
+              scenes: fixResult.fixedStructure!.acts.reduce(
+                (sum, act) =>
+                  sum +
+                  act.chapters.reduce(
+                    (chSum, ch) => chSum + ch.scenes.length,
+                    0
+                  ),
+                0
+              ),
+              wordCount: fixResult.fixedStructure!.wordCount,
+            },
+            validation: newValidation,
+            issuesDetected: newValidation.warnings.length,
+          };
+        });
+
+        // Step 6: Show success feedback
+        alert(`✅ Auto-fix applied successfully!\n\n${fixResult.message}`);
+      } else {
+        console.error("❌ Auto-fix failed:", fixResult.error);
+        alert(`❌ Auto-fix failed: ${fixResult.message}`);
+      }
     } catch (error) {
-      console.error("Error applying auto-fix:", error);
-      alert("Failed to apply auto-fix. Please try again.");
+      console.error("❌ Error applying auto-fix:", error);
+      alert("❌ Failed to apply auto-fix. Please try again.");
     } finally {
       setIsApplyingFix(null);
     }
@@ -110,7 +187,7 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
     }
   };
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     // Validate file type
     if (!file.name.endsWith(".docx")) {
       setImportResult({
@@ -134,6 +211,17 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
 
     setSelectedFile(file);
     setImportResult(null);
+    setParsedStructure(null); // Clear any previous parsed structure
+
+    // Read the file as ArrayBuffer for later use in auto-fix
+    try {
+      const buffer = await file.arrayBuffer();
+      setFileBuffer(buffer);
+      console.log("✅ File buffer stored for auto-fix functionality");
+    } catch (error) {
+      console.warn("⚠️ Could not read file buffer:", error);
+      setFileBuffer(null);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -182,10 +270,22 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
 
       if (response.ok && result.success) {
         setImportResult(result);
-        // Wait a moment to show success, then call onImportSuccess
-        setTimeout(() => {
-          onImportSuccess();
-        }, 3000); // Increased time to let users read issues
+
+        // Don't parse here - we'll only parse if user tries to apply auto-fix
+        // This avoids the "Could not find file in options" error
+
+        // Don't auto-redirect if there are issues that can be fixed
+        const hasAutoFixableIssues =
+          result.validation?.warnings?.some((issue) => issue.autoFixable) ||
+          false;
+
+        if (!hasAutoFixableIssues) {
+          // No fixable issues - proceed with auto-redirect after 3 seconds
+          setTimeout(() => {
+            onImportSuccess();
+          }, 3000);
+        }
+        // If there are fixable issues, user must manually proceed or apply fixes
       } else {
         setImportResult({
           success: false,
@@ -454,10 +554,28 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
                   </>
                 )}
 
-                {/* Success note */}
-                <div className="text-center text-sm text-gray-400">
-                  Redirecting to manuscript editor...
-                </div>
+                {/* Success note or Continue button */}
+                {importResult.validation?.warnings?.some(
+                  (issue) => issue.autoFixable
+                ) ? (
+                  <div className="text-center space-y-3">
+                    <p className="text-sm text-gray-400">
+                      You can apply auto-fixes above, or continue with the
+                      current structure.
+                    </p>
+                    <Button
+                      variant="primary"
+                      onClick={onImportSuccess}
+                      className="px-8"
+                    >
+                      Continue to Editor
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center text-sm text-gray-400">
+                    Redirecting to manuscript editor...
+                  </div>
+                )}
               </>
             ) : (
               <>
