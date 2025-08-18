@@ -8,3 +8,4 @@ export { Badge } from "./badge";
 export { Alert } from "./alert";
 export { Logo } from "./logo";
 export { EditableText } from "./editable-text";
+export { DeleteConfirmationDialog } from "./delete-confirmation-dialog";

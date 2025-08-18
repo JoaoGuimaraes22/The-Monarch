@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { DocxUploader } from "@/app/components/manuscript/docx-uploader";
-import { ManuscriptEmptyState } from "@/app/components/manuscript/manuscript-empty-state";
+import {
+  ManuscriptEmptyState,
+  DocxUploader,
+} from "@/app/components/manuscript/import-system/";
 import { ManuscriptEditor } from "@/app/components/manuscript/manuscript-editor";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
 import { NovelWithStructure, Scene, Act, Chapter } from "@/lib/novels";

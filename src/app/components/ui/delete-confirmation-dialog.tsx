@@ -1,6 +1,9 @@
+// src/app/components/ui/delete-confirmation-dialog.tsx
+// Generic reusable delete confirmation dialog for the entire app
+
 import React from "react";
 import { AlertTriangle, X } from "lucide-react";
-import { Button } from "@/app/components/ui";
+import { Button } from "./button";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -9,11 +12,22 @@ interface DeleteConfirmationDialogProps {
   title: string;
   message: string;
   isDeleting?: boolean;
+  confirmButtonText?: string;
+  variant?: "default" | "danger";
 }
 
 export const DeleteConfirmationDialog: React.FC<
   DeleteConfirmationDialogProps
-> = ({ isOpen, onClose, onConfirm, title, message, isDeleting = false }) => {
+> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  isDeleting = false,
+  confirmButtonText = "Delete",
+  variant = "danger",
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -53,12 +67,14 @@ export const DeleteConfirmationDialog: React.FC<
               Cancel
             </Button>
             <Button
-              variant="primary"
+              variant={variant === "danger" ? "primary" : "primary"}
               onClick={onConfirm}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className={
+                variant === "danger" ? "bg-red-600 hover:bg-red-700" : ""
+              }
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting..." : confirmButtonText}
             </Button>
           </div>
         </div>
