@@ -1,12 +1,14 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// Updated with smart chapter expansion - start with first chapter expanded
+// ✨ ENHANCED: Added view density toggle for clean vs detailed view
 
 import React, { useState, useEffect } from "react";
-import { BookOpen, FileText } from "lucide-react";
+import { BookOpen, FileText, Eye, BarChart3 } from "lucide-react";
 import { CollapsibleSidebar } from "@/app/components/ui";
 import { DeleteAllManuscriptButton } from "./delete-all-button";
 import { DraggableManuscriptTree } from "../../chapter-tree/draggable-manuscript-tree";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
+
+export type ViewDensity = "clean" | "detailed";
 
 interface ManuscriptStructureSidebarProps {
   novel: NovelWithStructure;
@@ -61,34 +63,68 @@ export const ManuscriptStructureSidebar: React.FC<
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
     new Set()
   );
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+
+  // ✨ NEW: View density state
+  const [viewDensity, setViewDensity] = useState<ViewDensity>("detailed");
 
   // ✅ Initialize with smart defaults
   useEffect(() => {
+    if (!novel.acts || novel.acts.length === 0) return;
+
     const allChapterIds = novel.acts.flatMap((act) =>
       act.chapters.map((chapter) => chapter.id)
     );
 
+    if (allChapterIds.length === 0) return;
+
     // Smart initialization strategy:
     // 1. If there's a selected scene, expand its chapter
     // 2. If there's a selected chapter, expand it
-    // 3. Otherwise, expand the first chapter (for discoverability)
-    const initialExpanded = new Set<string>();
+    // 3. Otherwise, expand the first chapter with scenes
+    let targetChapterId: string | null = null;
 
-    if (selectedScene && selectedChapterId) {
-      // Expand the chapter containing the selected scene
-      initialExpanded.add(selectedChapterId);
+    if (selectedScene) {
+      // Find the chapter containing the selected scene
+      for (const act of novel.acts) {
+        for (const chapter of act.chapters) {
+          if (chapter.scenes.some((scene) => scene.id === selectedScene.id)) {
+            targetChapterId = chapter.id;
+            break;
+          }
+        }
+        if (targetChapterId) break;
+      }
     } else if (selectedChapterId) {
-      // Expand the selected chapter
-      initialExpanded.add(selectedChapterId);
-    } else if (allChapterIds.length > 0) {
-      // Expand the first chapter for discoverability
-      initialExpanded.add(allChapterIds[0]);
+      targetChapterId = selectedChapterId;
+    } else if (isFirstLoad) {
+      // Find first chapter with scenes
+      for (const act of novel.acts) {
+        for (const chapter of act.chapters) {
+          if (chapter.scenes.length > 0) {
+            targetChapterId = chapter.id;
+            break;
+          }
+        }
+        if (targetChapterId) break;
+      }
+
+      // If no chapter has scenes, just expand the first chapter
+      if (!targetChapterId && allChapterIds.length > 0) {
+        targetChapterId = allChapterIds[0];
+      }
     }
 
-    setExpandedChapters(initialExpanded);
-  }, [novel.acts, selectedScene, selectedChapterId]);
+    if (targetChapterId) {
+      setExpandedChapters(new Set([targetChapterId]));
+    }
 
-  // ✅ Handle chapter toggle
+    if (isFirstLoad) {
+      setIsFirstLoad(false);
+    }
+  }, [novel.acts, selectedScene, selectedChapterId, isFirstLoad]);
+
+  // ✅ Chapter toggle handler
   const handleChapterToggle = (chapterId: string) => {
     setExpandedChapters((prev) => {
       const newSet = new Set(prev);
@@ -101,27 +137,50 @@ export const ManuscriptStructureSidebar: React.FC<
     });
   };
 
-  // ✅ Auto-expand chapter when scene is selected from elsewhere
-  useEffect(() => {
-    if (
-      selectedScene &&
-      selectedChapterId &&
-      !expandedChapters.has(selectedChapterId)
-    ) {
-      setExpandedChapters((prev) => new Set([...prev, selectedChapterId]));
-    }
-  }, [selectedScene, selectedChapterId, expandedChapters]);
+  // ✅ Expand/Collapse all chapters
+  const handleExpandAll = () => {
+    const allChapterIds = novel.acts.flatMap((act) =>
+      act.chapters.map((chapter) => chapter.id)
+    );
+    setExpandedChapters(new Set(allChapterIds));
+  };
 
-  // Collapsed content - show when sidebar is collapsed
-  const collapsedContent = (
-    <button
-      onClick={onToggleCollapse}
-      className="p-2 text-gray-400 hover:text-white transition-colors"
-      title="Expand Structure"
-    >
-      <FileText className="w-5 h-5" />
-    </button>
-  );
+  const handleCollapseAll = () => {
+    setExpandedChapters(new Set());
+  };
+
+  // ✨ NEW: Toggle view density
+  const toggleViewDensity = () => {
+    setViewDensity((prev) => (prev === "clean" ? "detailed" : "clean"));
+  };
+
+  // ✨ NEW: Enhanced delete handlers with proper confirmation
+  const handleSceneDelete = async (sceneId: string, title: string) => {
+    try {
+      await onDeleteScene(sceneId);
+    } catch (error) {
+      console.error("Failed to delete scene:", error);
+      alert("Failed to delete scene. Please try again.");
+    }
+  };
+
+  const handleChapterDelete = async (chapterId: string) => {
+    try {
+      await onDeleteChapter(chapterId);
+    } catch (error) {
+      console.error("Failed to delete chapter:", error);
+      alert("Failed to delete chapter. Please try again.");
+    }
+  };
+
+  const handleActDelete = async (actId: string) => {
+    try {
+      await onDeleteAct(actId);
+    } catch (error) {
+      console.error("Failed to delete act:", error);
+      alert("Failed to delete act. Please try again.");
+    }
+  };
 
   // ✅ Provide a default function for onChapterSelect if it's undefined
   const handleChapterSelect =
@@ -133,6 +192,17 @@ export const ManuscriptStructureSidebar: React.FC<
         handleChapterToggle(chapter.id);
       }
     });
+
+  // Collapsed content - show when sidebar is collapsed
+  const collapsedContent = (
+    <button
+      onClick={onToggleCollapse}
+      className="p-2 text-gray-400 hover:text-white transition-colors"
+      title="Expand Structure"
+    >
+      <FileText className="w-5 h-5" />
+    </button>
+  );
 
   return (
     <CollapsibleSidebar
@@ -147,71 +217,99 @@ export const ManuscriptStructureSidebar: React.FC<
       collapsedContent={collapsedContent}
       className="z-20"
     >
-      {/* Main content when expanded - WITH SMART CHAPTER EXPANSION */}
-      <div className="p-4">
-        {/* ✅ NEW: Toolbar Section */}
-        <div className="mb-4 pb-4 border-b border-gray-700">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* ✅ Enhanced Tools Section */}
+        <div className="px-4 py-3 border-b border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-              Tools
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              TOOLS
             </span>
-            <DeleteAllManuscriptButton
-              novelId={novel.id}
-              onSuccess={onRefresh}
-              className=""
-            />
+            <div className="flex items-center space-x-2">
+              {/* ✨ NEW: View Density Toggle */}
+              <button
+                onClick={toggleViewDensity}
+                className={`p-1.5 rounded transition-colors text-xs flex items-center space-x-1 ${
+                  viewDensity === "clean"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+                title={
+                  viewDensity === "clean" ? "Show details" : "Hide details"
+                }
+              >
+                {viewDensity === "clean" ? (
+                  <>
+                    <BarChart3 className="w-3 h-3" />
+                    <span>Details</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3 h-3" />
+                    <span>Clean</span>
+                  </>
+                )}
+              </button>
+
+              {/* ✨ SMALLER: Delete All Button */}
+              <DeleteAllManuscriptButton
+                novelId={novel.id}
+                onSuccess={onRefresh}
+                size="sm"
+              />
+            </div>
           </div>
+
+          {/* ✅ Chapter Expansion Controls - Only show in detailed view */}
+          {viewDensity === "detailed" && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-400">
+                {expandedChapters.size} of{" "}
+                {novel.acts.flatMap((act) => act.chapters).length} chapters
+                expanded
+              </span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleExpandAll}
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Expand All
+                </button>
+                <span className="text-gray-500">•</span>
+                <button
+                  onClick={handleCollapseAll}
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Collapse All
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ✨ Quick Expand/Collapse All Button */}
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-xs text-gray-500">
-            {expandedChapters.size} of{" "}
-            {novel.acts.flatMap((act) => act.chapters).length} chapters expanded
-          </span>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => {
-                const allChapterIds = novel.acts.flatMap((act) =>
-                  act.chapters.map((chapter) => chapter.id)
-                );
-                setExpandedChapters(new Set(allChapterIds));
-              }}
-              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
-              title="Expand all chapters"
-            >
-              Expand All
-            </button>
-            <span className="text-xs text-gray-600">•</span>
-            <button
-              onClick={() => setExpandedChapters(new Set())}
-              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
-              title="Collapse all chapters"
-            >
-              Collapse All
-            </button>
-          </div>
+        {/* ✅ Enhanced Manuscript Tree */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <DraggableManuscriptTree
+            novel={novel}
+            selectedSceneId={selectedScene?.id}
+            selectedChapterId={selectedChapterId}
+            selectedActId={selectedActId}
+            expandedChapters={expandedChapters}
+            viewDensity={viewDensity} // ✨ NEW: Pass view density to tree
+            onSceneSelect={onSceneSelect}
+            onChapterSelect={handleChapterSelect}
+            onActSelect={onActSelect}
+            onChapterToggle={handleChapterToggle}
+            onSceneDelete={handleSceneDelete}
+            onChapterDelete={handleChapterDelete}
+            onActDelete={handleActDelete}
+            onAddScene={onAddScene}
+            onAddChapter={onAddChapter}
+            onUpdateActName={onUpdateActName}
+            onUpdateChapterName={onUpdateChapterName}
+            onUpdateSceneName={onUpdateSceneName}
+            onRefresh={onRefresh}
+          />
         </div>
-
-        <DraggableManuscriptTree
-          novel={novel}
-          selectedSceneId={selectedScene?.id}
-          selectedChapterId={selectedChapterId}
-          selectedActId={selectedActId}
-          expandedChapters={expandedChapters} // ✅ Now properly managed
-          onSceneSelect={onSceneSelect}
-          onChapterSelect={handleChapterSelect}
-          onChapterToggle={handleChapterToggle} // ✅ Now properly handled
-          onSceneDelete={async (sceneId: string, title: string) => {
-            if (
-              window.confirm(`Delete scene "${title}"? This cannot be undone.`)
-            ) {
-              await onDeleteScene(sceneId);
-            }
-          }}
-          onAddScene={onAddScene}
-          onRefresh={onRefresh}
-        />
       </div>
     </CollapsibleSidebar>
   );

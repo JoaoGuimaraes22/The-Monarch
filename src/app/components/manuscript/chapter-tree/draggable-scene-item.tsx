@@ -1,27 +1,26 @@
 // src/app/components/manuscript/chapter-tree/draggable-scene-item.tsx
-// Updated to include actId for boundary checking
+// ✨ ENHANCED: Added inline editing, better actions, improved UX, and view density control
 
-import React from "react";
+import React, { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  FileText,
-  GripVertical,
-  MoreHorizontal,
-  Trash2,
-  Edit3,
-} from "lucide-react";
+import { FileText, GripVertical, Trash2, Edit3 } from "lucide-react";
 import { Scene } from "@/lib/novels";
-import { StatusIndicator, WordCountDisplay } from "@/app/components/ui";
+import {
+  StatusIndicator,
+  WordCountDisplay,
+  EditableText,
+} from "@/app/components/ui";
 
 interface DraggableSceneItemProps {
   scene: Scene;
   chapterId: string;
-  actId: string; // ✅ NEW: For act boundary checking
+  actId: string;
   isSelected: boolean;
+  viewDensity?: "clean" | "detailed"; // ✨ NEW: Control metadata display
   onSelect: (sceneId: string, scene: Scene) => void;
   onDelete: (sceneId: string, title: string) => void;
-  onEditName?: (sceneId: string, currentTitle: string) => void;
+  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Inline editing
 }
 
 export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
@@ -29,10 +28,13 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   chapterId,
   actId,
   isSelected,
+  viewDensity = "detailed", // ✨ NEW: Default to detailed view
   onSelect,
   onDelete,
-  onEditName,
+  onUpdateSceneName,
 }) => {
+  const [isHovered, setIsHovered] = useState(false); // ✨ NEW: Hover state
+
   const {
     attributes,
     listeners,
@@ -47,7 +49,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
       type: "scene",
       scene,
       chapterId,
-      actId, // ✅ Include actId in drag data
+      actId,
       sourceIndex: scene.order,
     },
   });
@@ -55,6 +57,22 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  };
+
+  // ✨ NEW: Handle scene name update
+  const handleUpdateSceneName = async (newTitle: string) => {
+    if (onUpdateSceneName) {
+      await onUpdateSceneName(scene.id, newTitle);
+    }
+  };
+
+  // ✨ NEW: Handle delete with confirmation
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const sceneTitle = scene.title || `Scene ${scene.order}`;
+    if (window.confirm(`Delete "${sceneTitle}"?`)) {
+      onDelete(scene.id, sceneTitle);
+    }
   };
 
   return (
@@ -77,15 +95,20 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         cursor-pointer select-none
       `}
       onClick={() => onSelect(scene.id, scene)}
+      onMouseEnter={() => setIsHovered(true)} // ✨ NEW: Track hover
+      onMouseLeave={() => setIsHovered(false)} // ✨ NEW: Track hover
     >
-      {/* Drag Handle */}
+      {/* ✨ ENHANCED: Drag Handle - Show on hover or when selected */}
       <div
         {...attributes}
         {...listeners}
         className={`
-          opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing
-          ${isDragging ? "opacity-100" : ""}
-          ${isSelected ? "opacity-100" : ""}
+          transition-opacity cursor-grab active:cursor-grabbing
+          ${
+            isDragging || isSelected || isHovered
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100"
+          }
           p-1 hover:bg-gray-600 rounded
         `}
         onClick={(e) => e.stopPropagation()}
@@ -94,61 +117,93 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         <GripVertical className="w-3 h-3 text-gray-400" />
       </div>
 
-      {/* Scene Icon */}
-      <FileText className="w-4 h-4 flex-shrink-0 text-blue-400" />
+      {/* ✨ ENHANCED: Scene Status Icon */}
+      <StatusIndicator
+        status={scene.status}
+        variant="compact"
+        showIcon
+        showText={false}
+        className="flex-shrink-0"
+      />
 
-      {/* Scene Content */}
+      {/* ✨ ENHANCED: Scene Content with Inline Editing */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">
           <span className="text-xs font-medium text-gray-400">
             SC{scene.order}
           </span>
-          <span className="text-sm truncate">
-            {scene.title || `Scene ${scene.order}`}
-          </span>
+
+          {/* ✨ NEW: Editable Scene Title */}
+          <div className="flex-1 min-w-0">
+            <EditableText
+              value={scene.title || `Scene ${scene.order}`}
+              onSave={handleUpdateSceneName}
+              placeholder="Scene name"
+              className="text-sm font-medium"
+              maxLength={50}
+            />
+          </div>
         </div>
 
-        {/* Scene metadata */}
-        <div className="flex items-center space-x-2 text-xs">
-          <StatusIndicator status={scene.status} variant="compact" />
-          <span className="text-gray-500">•</span>
-          <WordCountDisplay
-            count={scene.wordCount}
-            variant="compact"
-            className="text-gray-500"
-          />
-          {scene.povCharacter && (
-            <>
-              <span className="text-gray-500">•</span>
-              <span className="text-gray-500 truncate">
-                {scene.povCharacter}
-              </span>
-            </>
-          )}
-        </div>
+        {/* ✨ ENHANCED: Scene metadata - Only show in detailed view */}
+        {viewDensity === "detailed" && (
+          <div className="flex items-center space-x-2 text-xs mt-1">
+            <WordCountDisplay
+              count={scene.wordCount}
+              variant="compact"
+              className="text-gray-500"
+            />
+
+            {scene.povCharacter && (
+              <>
+                <span className="text-gray-500">•</span>
+                <span className="text-gray-500 truncate">
+                  POV: {scene.povCharacter}
+                </span>
+              </>
+            )}
+
+            {scene.sceneType && (
+              <>
+                <span className="text-gray-500">•</span>
+                <span className="text-gray-500 truncate">
+                  {scene.sceneType}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Scene Actions */}
-      <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1">
-        {onEditName && (
+      {/* ✨ ENHANCED: Action Buttons - Show on hover or when selected */}
+      <div
+        className={`
+        flex items-center space-x-1 transition-opacity
+        ${
+          isHovered || isSelected
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100"
+        }
+      `}
+      >
+        {/* Edit button - only show if editing is enabled */}
+        {onUpdateSceneName && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEditName(scene.id, scene.title);
+              // The EditableText component handles editing, so this could trigger focus
             }}
-            className="p-1 hover:bg-blue-600 rounded text-gray-400 hover:text-blue-300"
+            className="p-1 hover:bg-blue-600 rounded text-gray-400 hover:text-blue-300 transition-colors"
             title="Edit scene name"
           >
             <Edit3 className="w-3 h-3" />
           </button>
         )}
 
+        {/* Delete button */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(scene.id, scene.title || `Scene ${scene.order}`);
-          }}
-          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300"
+          onClick={handleDelete}
+          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300 transition-colors"
           title="Delete scene"
         >
           <Trash2 className="w-3 h-3" />

@@ -57,15 +57,15 @@ src/
 │   │   │   ├── sidebar-context.tsx # Context for sidebar state management
 │   │   │   └── workspace-layout.tsx
 │   │   └── manuscript/            # ✅ REFACTORED: Clean organized structure
-│   │       ├── import-system/     # ✅ NEW: Import workflow components grouped
+│   │       ├── import-system/     # ✅ COMPLETE: Import workflow components grouped
 │   │       │   ├── docx-uploader.tsx          # Advanced import with auto-fix & preview
 │   │       │   ├── structure-preview.tsx      # Structure preview component
 │   │       │   ├── manuscript-empty-state.tsx # Empty state with import options
 │   │       │   └── index.ts                   # Barrel exports
-│   │       ├── manuscript-editor/ # ✅ REFACTORED: Organized by function
+│   │       ├── manuscript-editor/ # ✅ COMPLETE: Organized by function
 │   │       │   ├── layout/                    # Layout components
 │   │       │   │   ├── manuscript-header.tsx
-│   │       │   │   ├── manuscript-structure-sidebar.tsx  # ✅ UPDATED: Uses CollapsibleSidebar
+│   │       │   │   ├── manuscript-structure-sidebar.tsx  # ✅ ENHANCED: Smart chapter expansion
 │   │       │   │   ├── manuscript-metadata-sidebar.tsx   # ✅ UPDATED: Uses shared components
 │   │       │   │   └── index.ts
 │   │       │   ├── content-views/             # Content display modes
@@ -83,17 +83,19 @@ src/
 │   │       │   │   └── index.ts
 │   │       │   ├── manuscript-editor.tsx      # Main coordinator
 │   │       │   └── index.ts
-│   │       └── chapter-tree/      # ✅ ENHANCED: Drag-and-drop with shared components
+│   │       ├── delete-all-manuscript-button.tsx # ✅ NEW: Debug tool for clearing structure
+│   │       └── chapter-tree/      # ✅ COMPLETE: Enhanced drag-and-drop with visual feedback
 │   │           ├── types.ts                      # Shared interfaces
-│   │           ├── utils.ts                      # ✅ NEW: Utility functions with shared status configs
+│   │           ├── utils.ts                      # ✅ ENHANCED: Utility functions with shared status configs
 │   │           ├── enhanced-act-item.tsx         # Act tree items with inline editing
 │   │           ├── enhanced-chapter-item.tsx     # Chapter tree items with inline editing
 │   │           ├── enhanced-scene-item.tsx       # Scene tree items with inline editing
 │   │           ├── enhanced-chapter-tree.tsx     # Main tree component
 │   │           ├── add-act-interface.tsx         # Add act UI component
-│   │           ├── draggable-scene-item.tsx      # ✅ UPDATED: Uses shared components
+│   │           ├── draggable-scene-item.tsx      # ✅ ENHANCED: Act boundary checking
 │   │           ├── sortable-chapter-container.tsx # ✅ UPDATED: Uses shared components
-│   │           ├── draggable-manuscript-tree.tsx # ✅ COMPLETE: Full drag-and-drop system
+│   │           ├── draggable-chapter-container.tsx # ✅ NEW: Chapter drag handles with visual feedback
+│   │           ├── draggable-manuscript-tree.tsx # ✅ COMPLETE: Dual scene & chapter drag system
 │   │           └── index.ts                      # Barrel exports
 │   └── api/
 │       └── novels/
@@ -112,12 +114,12 @@ src/
 │           │   │           └── route.ts # POST /api/novels/[id]/acts/[actId]/chapters
 │           │   ├── chapters/[chapterId]/
 │           │   │   ├── route.ts # PUT, DELETE /api/novels/[id]/chapters/[chapterId]
-│           │   │   ├── reorder/route.ts # ✅ NEW: Chapter reordering API
+│           │   │   ├── reorder/route.ts # ✅ COMPLETE: Chapter reordering API
 │           │   │   └── scenes/
 │           │   │       └── route.ts # POST /api/novels/[id]/chapters/[chapterId]/scenes
 │           │   └── scenes/[sceneId]/
 │           │       ├── route.ts # PUT, DELETE /api/novels/[id]/scenes/[sceneId]
-│           │       └── reorder/route.ts # ✅ NEW: Scene reordering API
+│           │       └── reorder/route.ts # ✅ COMPLETE: Scene reordering API
 ├── hooks/
 │   └── useNovels.ts              # React hooks for novel operations
 ├── lib/
@@ -210,6 +212,39 @@ model Scene {
 
 ## ✅ Recently Completed Features
 
+### **✅ COMPLETE: Enhanced Drag-and-Drop System with Visual Feedback**
+
+**Goal**: Create intuitive drag-and-drop for both scenes and chapters with proper visual distinction
+
+**Completed Features**:
+
+1. **✅ Dual-Level Drag System**
+
+   - **Scene Dragging**: Within same chapter or between chapters (same act)
+   - **Chapter Dragging**: Within same act only
+   - **Act Boundary Protection**: Prevents cross-act moves with user-friendly alerts
+   - **Smart Context Switching**: Different visual feedback for scene vs chapter operations
+
+2. **✅ Enhanced Visual Feedback**
+
+   - **Scene Dragging**: Blue highlights, blue drag overlay, blue drop zones
+   - **Chapter Dragging**: Yellow highlights, yellow drag overlay, yellow drop zones
+   - **Drag Handles**: Appear on hover with proper grip icons
+   - **Drop Indicators**: Clear visual feedback showing valid drop targets
+
+3. **✅ Professional UX Patterns**
+
+   - **SortableContext**: Proper drag context separation for chapters vs scenes
+   - **Loading States**: "Reordering..." overlay during API calls
+   - **Error Handling**: Graceful failure with user feedback
+   - **Boundary Checking**: Smart prevention of invalid moves
+
+4. **✅ Sidebar Enhancements**
+   - **Smart Chapter Expansion**: Auto-expand selected chapter, collapse others by default
+   - **Expand/Collapse All**: Quick controls for chapter visibility
+   - **Tools Section**: Dedicated toolbar with delete all functionality
+   - **Delete All Button**: Emergency manuscript clearing for debugging
+
 ### **✅ COMPLETE: Enhanced Document Import System with Server-Side Auto-Fix**
 
 **Goal**: Build an intelligent import system with advanced issue detection, auto-fix, and manual confirmation workflow
@@ -273,7 +308,7 @@ model Scene {
 3. **✅ Drag-and-Drop API Endpoints**
    - **Scene Reordering**: `PUT /api/novels/[id]/scenes/[sceneId]/reorder`
    - **Chapter Reordering**: `PUT /api/novels/[id]/chapters/[chapterId]/reorder`
-   - **Cross-Container Moves**: Scenes can move between chapters
+   - **Cross-Container Moves**: Scenes can move between chapters (same act)
    - **Order Management**: Automatic sequence handling with gap closing
 
 ### **✅ COMPLETE: Component Architecture Refactoring**
@@ -308,39 +343,6 @@ model Scene {
    - **Unified Word Counts**: All word count displays use shared formatting
    - **Drag-and-Drop Enhancement**: Components use shared UI patterns
 
-### **✅ COMPLETE: Drag-and-Drop Ordering System**
-
-**Goal**: Allow users to reorder acts, chapters, and scenes using intuitive drag-and-drop mechanics
-
-**Completed Features**:
-
-1. **✅ Visual Drag Components**
-
-   - **DraggableSceneItem**: Individual draggable scene items with visual feedback
-   - **SortableChapterContainer**: Chapter containers that accept scene drops
-   - **DraggableManuscriptTree**: Main drag context coordinator
-   - **Enhanced Visual Indicators**: Clear drop zones and drag previews
-
-2. **✅ Drag-and-Drop Logic**
-
-   - **Cross-Chapter Moves**: Drag scenes between different chapters
-   - **Same-Chapter Reordering**: Reorder scenes within same chapter
-   - **Live Visual Feedback**: Real-time drop indicators and drag overlays
-   - **Optimistic UI**: Smooth interactions with loading states
-
-3. **✅ Database Integration**
-
-   - **Transaction Safety**: All reorder operations use database transactions
-   - **Order Management**: Automatic sequence updates with proper gap handling
-   - **Error Handling**: Comprehensive error handling and user feedback
-   - **Real-time Updates**: Immediate UI refresh after successful reordering
-
-4. **✅ Enhanced User Experience**
-   - **Drag Handles**: Clear visual indicators for draggable items
-   - **Drop Zones**: Visual feedback showing where items can be dropped
-   - **Loading States**: Professional loading indicators during operations
-   - **Undo Support**: Error handling allows recovery from failed operations
-
 ## 🚀 Next Priority Features
 
 ### **🎯 HIGH PRIORITY: Ready to Implement**
@@ -350,7 +352,7 @@ model Scene {
 3. **🔍 Global Search** - Find text across scenes/chapters/acts with filtering
 4. **📊 Writing Analytics** - Progress tracking, writing goals, productivity insights
 
-### **🔄 MEDIUM PRIORITY: Planning Phase**
+### **📄 MEDIUM PRIORITY: Planning Phase**
 
 1. **📤 Enhanced Export** - Clean HTML/Word document export with formatting options
 2. **🔗 Cross-Reference System** - Link scenes, characters, and plot elements
@@ -370,7 +372,7 @@ model Scene {
 
 - **Modular Service Design** - Clean separation of concerns with type safety
 - **Component Organization** - Logical grouping with shared patterns
-- **Drag-and-Drop System** - Professional UX with robust backend support
+- **Dual-Level Drag System** - Professional UX with visual feedback distinction
 - **Import/Export Pipeline** - Intelligent document processing with auto-fix
 
 ### **✅ Code Quality Standards**:
@@ -392,16 +394,17 @@ model Scene {
 
 **Your Monarch Story Platform is now production-ready with:**
 
+✅ **Enhanced Drag-and-Drop System** - Intuitive scene and chapter reordering with visual feedback  
 ✅ **Full-Featured Manuscript Management** - Complete CRUD operations for novel structure  
-✅ **Professional Drag-and-Drop System** - Intuitive reordering of acts, chapters, and scenes  
 ✅ **Advanced Document Import** - Intelligent parsing with auto-fix capabilities  
 ✅ **Clean Architecture** - Modular, maintainable, and scalable codebase  
 ✅ **Type-Safe Implementation** - Complete TypeScript coverage with no `any` types  
 ✅ **Shared Component Library** - Consistent UI patterns across the entire application  
-✅ **Database Integration** - Robust data persistence with transaction safety
+✅ **Database Integration** - Robust data persistence with transaction safety  
+✅ **Debug Tools** - Emergency delete all functionality for development
 
 **The foundation is solid and ready for the next phase of feature development!** 🚀
 
 ---
 
-_Complete manuscript management system with drag-and-drop reordering, intelligent document import, and professional component architecture. Ready for character management, search functionality, and advanced writing features._
+_Complete manuscript management system with enhanced dual-level drag-and-drop (scenes + chapters), intelligent document import, professional component architecture, and debug tools. Ready for character management, search functionality, and advanced writing features._
