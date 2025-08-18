@@ -14,13 +14,13 @@ interface SceneGridProps {
   onSceneClick: (sceneId: string, scene: Scene) => void;
   onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ Scene rename handler
   onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ NEW: Chapter rename handler
-  novel?: NovelWithStructure | null; // ✨ NEW: Access to novel data for finding chapters
+  novel?: NovelWithStructure | null | undefined; // ✨ NEW: Access to novel data for finding chapters
 }
 
 // ✨ NEW: Helper function to find chapter object from novel structure
 const findChapterFromSection = (
-  novel: NovelWithStructure | null,
-  section: any
+  novel: NovelWithStructure | null | undefined,
+  section: { scenes: Scene[]; id: string; title: string; wordCount: number }
 ): Chapter | null => {
   if (!novel?.acts) return null;
 
