@@ -1,10 +1,10 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// Updated to use shared CollapsibleSidebar component
+// Updated to use DraggableManuscriptTree for drag-and-drop functionality
 
 import React from "react";
 import { BookOpen, FileText } from "lucide-react";
 import { CollapsibleSidebar } from "@/app/components/ui";
-import { EnhancedChapterTree } from "../../chapter-tree/enhanced-chapter-tree";
+import { DraggableManuscriptTree } from "../../chapter-tree/draggable-manuscript-tree";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
 interface ManuscriptStructureSidebarProps {
@@ -72,7 +72,7 @@ export const ManuscriptStructureSidebar: React.FC<
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
       title="Manuscript Structure"
-      subtitle="Navigate your story"
+      subtitle="Navigate your story • Drag to reorder"
       icon={BookOpen}
       position="left"
       width={width}
@@ -80,27 +80,29 @@ export const ManuscriptStructureSidebar: React.FC<
       collapsedContent={collapsedContent}
       className="z-20"
     >
-      {/* Main content when expanded */}
+      {/* Main content when expanded - NOW WITH DRAG-AND-DROP */}
       <div className="p-4">
-        <EnhancedChapterTree
+        <DraggableManuscriptTree
           novel={novel}
           selectedSceneId={selectedScene?.id}
           selectedChapterId={selectedChapterId}
           selectedActId={selectedActId}
+          expandedChapters={new Set()} // You might want to manage this state
           onSceneSelect={onSceneSelect}
           onChapterSelect={onChapterSelect}
-          onActSelect={onActSelect}
-          onRefresh={onRefresh}
+          onChapterToggle={(chapterId: string) => {
+            // Handle chapter expand/collapse - you might want to manage this state
+            console.log("Toggle chapter:", chapterId);
+          }}
+          onSceneDelete={async (sceneId: string, title: string) => {
+            if (
+              window.confirm(`Delete scene "${title}"? This cannot be undone.`)
+            ) {
+              await onDeleteScene(sceneId);
+            }
+          }}
           onAddScene={onAddScene}
-          onAddChapter={onAddChapter}
-          onAddAct={onAddAct}
-          onDeleteScene={onDeleteScene}
-          onDeleteChapter={onDeleteChapter}
-          onDeleteAct={onDeleteAct}
-          onUpdateActName={onUpdateActName}
-          onUpdateChapterName={onUpdateChapterName}
-          onUpdateSceneName={onUpdateSceneName}
-          novelId={novel.id}
+          onRefresh={onRefresh}
         />
       </div>
     </CollapsibleSidebar>

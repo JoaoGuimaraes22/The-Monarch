@@ -20,8 +20,9 @@ export function formatWordCount(count: number): string {
  * Get scene status with icon and color styling
  * Updated to use shared STATUS_CONFIGS for consistency
  */
-export function getSceneStatus(status: string): SceneStatus {
-  const config = STATUS_CONFIGS[status.toLowerCase()] || STATUS_CONFIGS.draft;
+export function getSceneStatus(scene: { status: string }): SceneStatus {
+  const config =
+    STATUS_CONFIGS[scene.status.toLowerCase()] || STATUS_CONFIGS.draft;
 
   return {
     icon: config.icon,
