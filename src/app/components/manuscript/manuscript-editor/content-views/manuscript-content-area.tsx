@@ -1,14 +1,14 @@
 // src/app/components/manuscript/manuscript-editor/content-views/manuscript-content-area.tsx
-// ✨ ENHANCED: Added scene rename functionality in grid view
+// ✨ ENHANCED: Complete rename functionality including title headers and scene names in document view
 
 import React from "react";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, Edit2 } from "lucide-react";
 import { SceneTextEditor } from "@/app/components/manuscript/manuscript-editor/scene-text-editor";
 import { SceneGrid } from "./grid-view/";
 import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/services/";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
 import { Scene, Chapter, Act, NovelWithStructure } from "@/lib/novels";
-import { EditableText } from "@/app/components/ui"; // ✨ NEW: Import EditableText
+import { EditableText } from "@/app/components/ui";
 
 export type ContentDisplayMode = "document" | "grid";
 
@@ -18,10 +18,11 @@ interface ManuscriptContentAreaProps {
   contentDisplayMode: ContentDisplayMode;
   onContentChange: (content: string) => void;
   onSceneClick: (sceneId: string, scene: Scene) => void;
-  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Scene rename handler
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>;
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
   onAddChapter?: (actId: string, afterChapterId?: string) => void;
-  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ NEW: Chapter rename handler
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
+  onActRename?: (actId: string, newTitle: string) => Promise<void>; // ✨ NEW: Act rename handler
   novel?: NovelWithStructure | null;
   marginLeft: string;
   marginRight: string;
@@ -37,6 +38,52 @@ const findActIdForChapter = (
   for (const act of novel.acts) {
     if (act.chapters.some((chapter) => chapter.id === chapterId)) {
       return act.id;
+    }
+  }
+  return null;
+};
+
+// ✨ Helper function to find chapter from novel structure
+const findChapterFromSection = (
+  novel: NovelWithStructure | null | undefined,
+  section: { scenes: Scene[]; id: string; title: string; wordCount: number }
+): Chapter | null => {
+  if (!novel?.acts) return null;
+
+  for (const act of novel.acts) {
+    for (const chapter of act.chapters) {
+      if (
+        section.scenes.some((sectionScene: Scene) =>
+          chapter.scenes.some(
+            (chapterScene) => chapterScene.id === sectionScene.id
+          )
+        )
+      ) {
+        return chapter;
+      }
+    }
+  }
+  return null;
+};
+
+// ✨ Helper function to find act from novel structure
+const findActFromSection = (
+  novel: NovelWithStructure | null | undefined,
+  section: { scenes: Scene[]; id: string; title: string; wordCount: number }
+): Act | null => {
+  if (!novel?.acts) return null;
+
+  for (const act of novel.acts) {
+    for (const chapter of act.chapters) {
+      if (
+        section.scenes.some((sectionScene: Scene) =>
+          chapter.scenes.some(
+            (chapterScene) => chapterScene.id === sectionScene.id
+          )
+        )
+      ) {
+        return act;
+      }
     }
   }
   return null;
@@ -80,6 +127,80 @@ const AddChapterButton: React.FC<{
   );
 };
 
+// ✨ NEW: Document View Title Header with Rename Capability
+const DocumentViewTitleHeader: React.FC<{
+  viewMode: ViewMode;
+  aggregatedContent: AggregatedContent;
+  novel?: NovelWithStructure | null;
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
+  onActRename?: (actId: string, newTitle: string) => Promise<void>;
+}> = ({ viewMode, aggregatedContent, novel, onChapterRename, onActRename }) => {
+  if (!aggregatedContent?.sections[0]) return null;
+
+  const section = aggregatedContent.sections[0];
+
+  if (viewMode === "chapter") {
+    const chapterInfo = findChapterFromSection(novel, section);
+
+    return (
+      <div className="mb-8 p-6 border-b border-gray-700 bg-gray-800/50">
+        {onChapterRename && chapterInfo ? (
+          <EditableText
+            value={chapterInfo.title}
+            onSave={(newTitle) => onChapterRename(chapterInfo.id, newTitle)}
+            placeholder="Chapter title"
+            className="text-2xl font-bold text-white text-center"
+            maxLength={200}
+          />
+        ) : (
+          <h1 className="text-2xl font-bold text-white text-center">
+            {section.title}
+          </h1>
+        )}
+
+        <p className="text-gray-400 text-center mt-2">
+          Chapter view • {aggregatedContent.totalWordCount.toLocaleString()}{" "}
+          words • {section.scenes.length} scenes
+        </p>
+      </div>
+    );
+  }
+
+  if (viewMode === "act") {
+    const actInfo = findActFromSection(novel, section);
+
+    // Extract act name from section title
+    const firstSectionTitle = section.title || "";
+    const actNameMatch = firstSectionTitle.match(/^([^:]+:[^:]+)/);
+    const actName = actNameMatch ? actNameMatch[1] : section.title || "Act";
+
+    return (
+      <div className="mb-8 p-6 border-b border-gray-700 bg-gray-800/50">
+        {onActRename && actInfo ? (
+          <EditableText
+            value={actInfo.title}
+            onSave={(newTitle) => onActRename(actInfo.id, newTitle)}
+            placeholder="Act title"
+            className="text-3xl font-bold text-red-400 text-center"
+            maxLength={200}
+          />
+        ) : (
+          <h1 className="text-3xl font-bold text-red-400 text-center">
+            {actName}
+          </h1>
+        )}
+
+        <p className="text-gray-400 text-center mt-2">
+          Act view • {aggregatedContent.totalWordCount.toLocaleString()} words •{" "}
+          {aggregatedContent.sections.length} chapters
+        </p>
+      </div>
+    );
+  }
+
+  return null;
+};
+
 // ✨ Enhanced Chapter Header Component with Rename Functionality
 const ChapterHeader: React.FC<{
   chapter: Chapter;
@@ -106,19 +227,40 @@ const ChapterHeader: React.FC<{
   );
 };
 
-// ✨ Scene Header Component with Click to Edit
+// ✨ ENHANCED: Scene Header Component with Rename and Focus Button
 const SceneHeader: React.FC<{
   scene: Scene;
   showChapterContext?: boolean;
   chapterTitle?: string;
   onSceneClick: (sceneId: string, scene: Scene) => void;
-}> = ({ scene, showChapterContext, chapterTitle, onSceneClick }) => {
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>;
+}> = ({
+  scene,
+  showChapterContext,
+  chapterTitle,
+  onSceneClick,
+  onSceneRename,
+}) => {
   return (
     <div className="flex items-center justify-between py-3 px-4 bg-gray-800 border border-gray-600 rounded-t-lg">
-      <div>
-        <h3 className="text-lg font-medium text-white">
-          {scene.title || `Scene ${scene.order}`}
-        </h3>
+      <div className="flex-1">
+        {/* ✨ NEW: Editable Scene Title */}
+        {onSceneRename ? (
+          <div className="mb-1">
+            <EditableText
+              value={scene.title || `Scene ${scene.order}`}
+              onSave={(newTitle) => onSceneRename(scene.id, newTitle)}
+              placeholder={`Scene ${scene.order}`}
+              className="text-lg font-medium text-white"
+              maxLength={100}
+            />
+          </div>
+        ) : (
+          <h3 className="text-lg font-medium text-white mb-1">
+            {scene.title || `Scene ${scene.order}`}
+          </h3>
+        )}
+
         {showChapterContext && chapterTitle && (
           <p className="text-sm text-blue-400">{chapterTitle}</p>
         )}
@@ -126,11 +268,13 @@ const SceneHeader: React.FC<{
           {scene.wordCount} words • {scene.status}
         </p>
       </div>
+
+      {/* ✨ UPDATED: Changed "Edit" to "Focus" */}
       <button
         onClick={() => onSceneClick(scene.id, scene)}
-        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors ml-4"
       >
-        Edit
+        Focus
       </button>
     </div>
   );
@@ -151,12 +295,13 @@ const useSceneContentHandler = (
   );
 };
 
-// ✨ Individual Scene Editor Component for Document View
+// ✨ ENHANCED: Individual Scene Editor Component for Document View
 const SceneEditor: React.FC<{
   scene: Scene;
   onSceneClick: (sceneId: string, scene: Scene) => void;
   onContentChange?: (sceneId: string, content: string) => void;
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>;
   chapterInfo?: Chapter;
   showChapterContext?: boolean;
   chapterTitle?: string;
@@ -165,6 +310,7 @@ const SceneEditor: React.FC<{
   onSceneClick,
   onContentChange,
   onAddScene,
+  onSceneRename,
   chapterInfo,
   showChapterContext = false,
   chapterTitle,
@@ -173,12 +319,13 @@ const SceneEditor: React.FC<{
 
   return (
     <div>
-      {/* Scene Header with Edit Button */}
+      {/* ✨ ENHANCED: Scene Header with Rename and Focus Button */}
       <SceneHeader
         scene={scene}
         showChapterContext={showChapterContext}
         chapterTitle={chapterTitle}
         onSceneClick={onSceneClick}
+        onSceneRename={onSceneRename}
       />
 
       {/* Scene Editor */}
@@ -186,7 +333,7 @@ const SceneEditor: React.FC<{
         <SceneTextEditor
           content={scene.content}
           onContentChange={handleContentChange}
-          placeholder={`Scene ${scene.order} content...`}
+          placeholder={`${scene.title || `Scene ${scene.order}`} content...`}
           readOnly={false}
         />
       </div>
@@ -209,15 +356,16 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
   contentDisplayMode,
   onContentChange,
   onSceneClick,
-  onSceneRename, // ✨ Scene rename handler
-  onChapterRename, // ✨ NEW: Chapter rename handler
+  onSceneRename,
+  onChapterRename,
+  onActRename, // ✨ NEW: Act rename handler
   onAddScene,
   onAddChapter,
   novel,
   marginLeft,
   marginRight,
 }) => {
-  // ✨ NEW: Handler for individual scene changes in multi-scene views
+  // ✨ Handler for individual scene changes in multi-scene views
   const handleIndividualSceneChange = React.useCallback(
     async (sceneId: string, content: string) => {
       if (!novel) return;
@@ -275,9 +423,9 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           aggregatedContent={aggregatedContent}
           viewMode={viewMode}
           onSceneClick={onSceneClick}
-          onSceneRename={onSceneRename} // ✨ Scene rename handler
-          onChapterRename={onChapterRename} // ✨ NEW: Chapter rename handler
-          novel={novel} // ✨ NEW: Pass novel data for chapter lookup
+          onSceneRename={onSceneRename}
+          onChapterRename={onChapterRename}
+          novel={novel}
         />
       </div>
     );
@@ -301,7 +449,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✨ Chapter Document View - Separate Scene Editors
+  // ✨ ENHANCED: Chapter Document View - With Title Header and Scene Renaming
   if (viewMode === "chapter") {
     const section = aggregatedContent.sections[0];
     const scenes = section.scenes;
@@ -315,7 +463,6 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         )
       );
 
-    // ✨ FIX: Find actId using helper function
     const actId = chapterInfo
       ? findActIdForChapter(novel, chapterInfo.id)
       : null;
@@ -326,13 +473,14 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         style={{ marginLeft, marginRight }}
       >
         <div className="p-6 space-y-8">
-          {/* Chapter Header */}
-          {chapterInfo && (
-            <ChapterHeader
-              chapter={chapterInfo}
-              onChapterRename={onChapterRename}
-            />
-          )}
+          {/* ✨ NEW: Document View Title Header with Rename */}
+          <DocumentViewTitleHeader
+            viewMode={viewMode}
+            aggregatedContent={aggregatedContent}
+            novel={novel}
+            onChapterRename={onChapterRename}
+            onActRename={onActRename}
+          />
 
           {/* Individual Scene Editors */}
           {scenes.map((scene) => (
@@ -342,6 +490,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
               onSceneClick={onSceneClick}
               onContentChange={handleIndividualSceneChange}
               onAddScene={onAddScene}
+              onSceneRename={onSceneRename} // ✨ NEW: Scene rename in document view
               chapterInfo={chapterInfo}
               showChapterContext={false}
             />
@@ -360,7 +509,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✨ Act Document View - All scenes with chapter context
+  // ✨ ENHANCED: Act Document View - With Title Header and Scene Renaming
   if (viewMode === "act") {
     return (
       <div
@@ -368,6 +517,15 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         style={{ marginLeft, marginRight }}
       >
         <div className="p-6 space-y-8">
+          {/* ✨ NEW: Document View Title Header with Rename */}
+          <DocumentViewTitleHeader
+            viewMode={viewMode}
+            aggregatedContent={aggregatedContent}
+            novel={novel}
+            onChapterRename={onChapterRename}
+            onActRename={onActRename}
+          />
+
           {aggregatedContent.sections.map((section) => {
             const scenes = section.scenes;
 
@@ -386,7 +544,6 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                 )
               );
 
-            // ✨ FIX: Find actId using helper function
             const actId = chapterInfo
               ? findActIdForChapter(novel, chapterInfo.id)
               : null;
@@ -409,6 +566,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                     onSceneClick={onSceneClick}
                     onContentChange={handleIndividualSceneChange}
                     onAddScene={onAddScene}
+                    onSceneRename={onSceneRename} // ✨ NEW: Scene rename in document view
                     chapterInfo={chapterInfo}
                     showChapterContext={true}
                     chapterTitle={chapterTitle}

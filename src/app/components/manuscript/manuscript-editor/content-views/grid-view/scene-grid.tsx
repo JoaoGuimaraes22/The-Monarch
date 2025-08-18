@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-grid.tsx
-// ✨ ENHANCED: Added scene and chapter rename functionality
+// ✨ ENHANCED: Added chapter rename functionality in chapter view
 
 import React from "react";
 import { Scene, NovelWithStructure, Chapter, Act } from "@/lib/novels";
@@ -13,11 +13,11 @@ interface SceneGridProps {
   viewMode: ViewMode;
   onSceneClick: (sceneId: string, scene: Scene) => void;
   onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ Scene rename handler
-  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ NEW: Chapter rename handler
-  novel?: NovelWithStructure | null | undefined; // ✨ NEW: Access to novel data for finding chapters
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ Chapter rename handler
+  novel?: NovelWithStructure | null | undefined; // ✨ Access to novel data for finding chapters
 }
 
-// ✨ NEW: Helper function to find chapter object from novel structure
+// ✨ Helper function to find chapter object from novel structure
 const findChapterFromSection = (
   novel: NovelWithStructure | null | undefined,
   section: { scenes: Scene[]; id: string; title: string; wordCount: number }
@@ -47,8 +47,8 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
   viewMode,
   onSceneClick,
   onSceneRename,
-  onChapterRename, // ✨ NEW: Chapter rename handler
-  novel, // ✨ NEW: Novel data
+  onChapterRename, // ✨ Chapter rename handler
+  novel, // ✨ Novel data
 }) => {
   if (!aggregatedContent || aggregatedContent.sections.length === 0) {
     return (
@@ -61,17 +61,34 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
     );
   }
 
-  // For chapter view: show all scenes in the chapter (single section)
+  // ✨ ENHANCED: For chapter view - show all scenes in the chapter with editable title
   if (viewMode === "chapter") {
     const section = aggregatedContent.sections[0];
     const scenes = section.scenes;
 
+    // ✨ NEW: Find the actual chapter object for editing
+    const chapterInfo = findChapterFromSection(novel, section);
+
     return (
       <div className="p-6">
         <div className="mb-4">
-          <h2 className="text-xl text-white font-medium mb-2">
-            {section.title}
-          </h2>
+          {/* ✨ ENHANCED: Chapter header with rename capability */}
+          {onChapterRename && chapterInfo ? (
+            <div className="mb-2">
+              <EditableText
+                value={chapterInfo.title}
+                onSave={(newTitle) => onChapterRename(chapterInfo.id, newTitle)}
+                placeholder="Chapter title"
+                className="text-xl text-white font-medium"
+                maxLength={200}
+              />
+            </div>
+          ) : (
+            <h2 className="text-xl text-white font-medium mb-2">
+              {section.title}
+            </h2>
+          )}
+
           <p className="text-gray-400 text-sm">
             {scenes.length} scene{scenes.length !== 1 ? "s" : ""} •{" "}
             {aggregatedContent.totalWordCount.toLocaleString()} words
@@ -127,7 +144,7 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
               ? chapterMatch[1].trim()
               : `Chapter ${sectionIndex + 1}`;
 
-            // ✨ NEW: Find the actual chapter object
+            // ✨ Find the actual chapter object
             const chapterInfo = findChapterFromSection(novel, section);
 
             return (

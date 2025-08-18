@@ -1,4 +1,6 @@
 // src/app/components/manuscript/manuscript-editor/manuscript-editor.tsx
+// ✅ CORRECTED: Fixed sidebar positioning to prevent clipping
+
 import React, { useState, useCallback, useMemo } from "react";
 import {
   ManuscriptHeader,
@@ -61,7 +63,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onUpdateSceneName,
   isMainSidebarCollapsed,
 }) => {
-  // State management
+  // State management - these are for the MANUSCRIPT sidebars, separate from main workspace sidebar
   const [isStructureSidebarCollapsed, setIsStructureSidebarCollapsed] =
     useState(false);
   const [isMetadataSidebarCollapsed, setIsMetadataSidebarCollapsed] =
@@ -139,13 +141,18 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     console.log("Scene content changed:", content.length, "characters");
   }, []);
 
-  // Calculate sidebar positions and dimensions
-  const structureSidebarLeft = isMainSidebarCollapsed ? "64px" : "256px";
+  // ✅ CORRECTED: Account for workspace sidebar + manuscript sidebar positioning
+  // The manuscript structure sidebar needs to start AFTER the workspace sidebar
+  const workspaceSidebarWidth = isMainSidebarCollapsed ? "64px" : "256px"; // Workspace sidebar
+  const structureSidebarLeft = workspaceSidebarWidth; // Start after workspace sidebar
   const structureSidebarWidth = isStructureSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarWidth = isMetadataSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarRight = "0px";
-  const contentLeft = isStructureSidebarCollapsed ? "65px" : "321px";
-  const contentRight = isMetadataSidebarCollapsed ? "65px" : "321px";
+
+  // ✅ FIXED: Content area should only account for manuscript sidebar width, not both
+  // Since manuscript sidebar already positioned after workspace sidebar
+  const contentLeft = isStructureSidebarCollapsed ? "64px" : "320px"; // Just manuscript sidebar width
+  const contentRight = isMetadataSidebarCollapsed ? "64px" : "320px";
 
   // Create formatted subtitle with word count and scene count
   const formattedSubtitle = `${
@@ -179,7 +186,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onToggleCollapse={() =>
           setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
         }
-        left={structureSidebarLeft}
+        left={structureSidebarLeft} // ✅ CORRECTED: Start after workspace sidebar
         width={structureSidebarWidth}
       />
 
@@ -187,7 +194,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       <div
         className="flex flex-col transition-all duration-300"
         style={{
-          marginLeft: contentLeft,
+          marginLeft: contentLeft, // ✅ FIXED: Only account for manuscript sidebar width
           marginRight: contentRight,
         }}
       >
@@ -211,11 +218,12 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           onContentChange={handleSceneContentChange}
           onSceneClick={onSceneSelect}
           onSceneRename={onUpdateSceneName} // ✨ Scene rename handler
-          onChapterRename={onUpdateChapterName} // ✨ NEW: Chapter rename handler
+          onChapterRename={onUpdateChapterName} // ✨ Chapter rename handler
+          onActRename={onUpdateActName} // ✨ Act rename handler
           onAddScene={onAddScene}
           onAddChapter={onAddChapter}
           novel={novel}
-          marginLeft="0"
+          marginLeft="0" // ✅ No additional margin needed
           marginRight="0"
         />
       </div>
@@ -229,7 +237,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onToggleCollapse={() =>
           setIsMetadataSidebarCollapsed(!isMetadataSidebarCollapsed)
         }
-        right={metadataSidebarRight}
+        right={metadataSidebarRight} // ✅ CORRECTED: Start at 0px from right
         width={metadataSidebarWidth}
       />
     </div>
