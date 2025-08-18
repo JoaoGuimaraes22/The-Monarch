@@ -1,10 +1,10 @@
 // src/app/components/manuscript/chapter-tree/draggable-scene-item.tsx
-// ✨ ENHANCED: Added inline editing, better actions, improved UX, and view density control
+// ✨ UPDATED: Replaced Edit3 button with + button for adding scenes
 
 import React, { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FileText, GripVertical, Trash2, Edit3 } from "lucide-react";
+import { FileText, GripVertical, Trash2, Plus } from "lucide-react"; // ✨ UPDATED: Removed Edit3, added Plus
 import { Scene } from "@/lib/novels";
 import {
   StatusIndicator,
@@ -17,10 +17,11 @@ interface DraggableSceneItemProps {
   chapterId: string;
   actId: string;
   isSelected: boolean;
-  viewDensity?: "clean" | "detailed"; // ✨ NEW: Control metadata display
+  viewDensity?: "clean" | "detailed";
   onSelect: (sceneId: string, scene: Scene) => void;
   onDelete: (sceneId: string, title: string) => void;
-  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Inline editing
+  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
+  onAddScene?: (chapterId: string, afterSceneId?: string) => void; // ✨ NEW: Add scene handler
 }
 
 export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
@@ -28,12 +29,13 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   chapterId,
   actId,
   isSelected,
-  viewDensity = "detailed", // ✨ NEW: Default to detailed view
+  viewDensity = "detailed",
   onSelect,
   onDelete,
   onUpdateSceneName,
+  onAddScene, // ✨ NEW: Add scene handler
 }) => {
-  const [isHovered, setIsHovered] = useState(false); // ✨ NEW: Hover state
+  const [isHovered, setIsHovered] = useState(false);
 
   const {
     attributes,
@@ -59,14 +61,14 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     transition,
   };
 
-  // ✨ NEW: Handle scene name update
+  // Handle scene name update
   const handleUpdateSceneName = async (newTitle: string) => {
     if (onUpdateSceneName) {
       await onUpdateSceneName(scene.id, newTitle);
     }
   };
 
-  // ✨ NEW: Handle delete with confirmation
+  // Handle delete with confirmation
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     const sceneTitle = scene.title || `Scene ${scene.order}`;
@@ -75,10 +77,20 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     }
   };
 
+  // ✨ NEW: Handle add scene after this scene
+  const handleAddScene = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddScene) {
+      onAddScene(chapterId, scene.id); // Add scene after this scene
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`
         group relative flex items-center space-x-2 py-2 px-3 rounded-md transition-all duration-200
         ${
@@ -92,18 +104,15 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
             ? "bg-red-900/30 border-l-2 border-red-500 text-white"
             : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
         }
-        cursor-pointer select-none
       `}
       onClick={() => onSelect(scene.id, scene)}
-      onMouseEnter={() => setIsHovered(true)} // ✨ NEW: Track hover
-      onMouseLeave={() => setIsHovered(false)} // ✨ NEW: Track hover
     >
-      {/* ✨ ENHANCED: Drag Handle - Show on hover or when selected */}
+      {/* Drag Handle */}
       <div
         {...attributes}
         {...listeners}
         className={`
-          transition-opacity cursor-grab active:cursor-grabbing
+          drag-handle transition-opacity cursor-grab active:cursor-grabbing
           ${
             isDragging || isSelected || isHovered
               ? "opacity-100"
@@ -117,7 +126,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         <GripVertical className="w-3 h-3 text-gray-400" />
       </div>
 
-      {/* ✨ ENHANCED: Scene Status Icon */}
+      {/* Scene Status Icon */}
       <StatusIndicator
         status={scene.status}
         variant="compact"
@@ -126,14 +135,14 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         className="flex-shrink-0"
       />
 
-      {/* ✨ ENHANCED: Scene Content with Inline Editing */}
+      {/* Scene Content with Inline Editing */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">
           <span className="text-xs font-medium text-gray-400">
             SC{scene.order}
           </span>
 
-          {/* ✨ NEW: Editable Scene Title */}
+          {/* Editable Scene Title */}
           <div className="flex-1 min-w-0">
             <EditableText
               value={scene.title || `Scene ${scene.order}`}
@@ -145,7 +154,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
           </div>
         </div>
 
-        {/* ✨ ENHANCED: Scene metadata - Only show in detailed view */}
+        {/* Scene metadata - Only show in detailed view */}
         {viewDensity === "detailed" && (
           <div className="flex items-center space-x-2 text-xs mt-1">
             <WordCountDisplay
@@ -175,7 +184,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         )}
       </div>
 
-      {/* ✨ ENHANCED: Action Buttons - Show on hover or when selected */}
+      {/* ✨ UPDATED: Action Buttons - Replaced Edit3 with Add Scene */}
       <div
         className={`
         flex items-center space-x-1 transition-opacity
@@ -186,17 +195,14 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         }
       `}
       >
-        {/* Edit button - only show if editing is enabled */}
-        {onUpdateSceneName && (
+        {/* ✨ NEW: Add Scene Button (replaces Edit3 button) */}
+        {onAddScene && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // The EditableText component handles editing, so this could trigger focus
-            }}
-            className="p-1 hover:bg-blue-600 rounded text-gray-400 hover:text-blue-300 transition-colors"
-            title="Edit scene name"
+            onClick={handleAddScene}
+            className="p-1 hover:bg-green-600 rounded text-gray-400 hover:text-green-300 transition-colors"
+            title="Add scene after this"
           >
-            <Edit3 className="w-3 h-3" />
+            <Plus className="w-3 h-3" />
           </button>
         )}
 

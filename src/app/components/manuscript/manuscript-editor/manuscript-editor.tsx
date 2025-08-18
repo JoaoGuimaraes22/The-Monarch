@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/manuscript-editor.tsx
-// ✅ CORRECTED: Fixed sidebar positioning to prevent clipping
+// ✨ UPDATED: Fixed props to match new positioned adding system
 
 import React, { useState, useCallback, useMemo } from "react";
 import {
@@ -27,8 +27,9 @@ interface ManuscriptEditorProps {
   onChapterSelect?: (chapter: Chapter) => void;
   onActSelect?: (act: Act) => void;
   onRefresh: () => void;
-  onAddScene: (chapterId: string) => Promise<void>;
-  onAddChapter: (actId: string) => Promise<void>;
+  // ✨ UPDATED: Fixed function signatures to support positioned adding
+  onAddScene: (chapterId: string, afterSceneId?: string) => Promise<void>;
+  onAddChapter: (actId: string, afterChapterId?: string) => Promise<void>;
   onDeleteScene: (sceneId: string) => Promise<void>;
   onDeleteChapter: (chapterId: string) => Promise<void>;
   onDeleteAct: (actId: string) => Promise<void>;
@@ -141,17 +142,15 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     console.log("Scene content changed:", content.length, "characters");
   }, []);
 
-  // ✅ CORRECTED: Account for workspace sidebar + manuscript sidebar positioning
-  // The manuscript structure sidebar needs to start AFTER the workspace sidebar
-  const workspaceSidebarWidth = isMainSidebarCollapsed ? "64px" : "256px"; // Workspace sidebar
+  // Calculate sidebar positions and dimensions
+  const workspaceSidebarWidth = isMainSidebarCollapsed ? "64px" : "256px";
   const structureSidebarLeft = workspaceSidebarWidth; // Start after workspace sidebar
   const structureSidebarWidth = isStructureSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarWidth = isMetadataSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarRight = "0px";
 
-  // ✅ FIXED: Content area should only account for manuscript sidebar width, not both
-  // Since manuscript sidebar already positioned after workspace sidebar
-  const contentLeft = isStructureSidebarCollapsed ? "64px" : "320px"; // Just manuscript sidebar width
+  // Content area should only account for manuscript sidebar width
+  const contentLeft = isStructureSidebarCollapsed ? "64px" : "320px";
   const contentRight = isMetadataSidebarCollapsed ? "64px" : "320px";
 
   // Create formatted subtitle with word count and scene count
@@ -173,8 +172,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onChapterSelect={onChapterSelect}
         onActSelect={onActSelect}
         onRefresh={onRefresh}
-        onAddScene={onAddScene}
-        onAddChapter={onAddChapter}
+        onAddScene={onAddScene} // ✨ UPDATED: Now supports positioned adding
+        onAddChapter={onAddChapter} // ✨ UPDATED: Now supports positioned adding
         onDeleteScene={onDeleteScene}
         onDeleteChapter={onDeleteChapter}
         onDeleteAct={onDeleteAct}
@@ -186,7 +185,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onToggleCollapse={() =>
           setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
         }
-        left={structureSidebarLeft} // ✅ CORRECTED: Start after workspace sidebar
+        left={structureSidebarLeft}
         width={structureSidebarWidth}
       />
 
@@ -194,7 +193,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       <div
         className="flex flex-col transition-all duration-300"
         style={{
-          marginLeft: contentLeft, // ✅ FIXED: Only account for manuscript sidebar width
+          marginLeft: contentLeft,
           marginRight: contentRight,
         }}
       >
@@ -217,13 +216,13 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           contentDisplayMode={contentDisplayMode}
           onContentChange={handleSceneContentChange}
           onSceneClick={onSceneSelect}
-          onSceneRename={onUpdateSceneName} // ✨ Scene rename handler
-          onChapterRename={onUpdateChapterName} // ✨ Chapter rename handler
-          onActRename={onUpdateActName} // ✨ Act rename handler
-          onAddScene={onAddScene}
-          onAddChapter={onAddChapter}
+          onSceneRename={onUpdateSceneName}
+          onChapterRename={onUpdateChapterName}
+          onActRename={onUpdateActName}
+          onAddScene={onAddScene} // ✨ UPDATED: Now supports positioned adding
+          onAddChapter={onAddChapter} // ✨ UPDATED: Now supports positioned adding
           novel={novel}
-          marginLeft="0" // ✅ No additional margin needed
+          marginLeft="0"
           marginRight="0"
         />
       </div>
@@ -237,7 +236,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onToggleCollapse={() =>
           setIsMetadataSidebarCollapsed(!isMetadataSidebarCollapsed)
         }
-        right={metadataSidebarRight} // ✅ CORRECTED: Start at 0px from right
+        right={metadataSidebarRight}
         width={metadataSidebarWidth}
       />
     </div>

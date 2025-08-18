@@ -1,5 +1,5 @@
 // src/app/components/manuscript/chapter-tree/draggable-chapter-container.tsx
-// ✨ ENHANCED: Added inline editing, add/delete buttons, and improved UX
+// ✨ UPDATED: Fixed props to match new positioned adding system
 
 import React, { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
@@ -31,15 +31,17 @@ interface DraggableChapterContainerProps {
   isSelected: boolean;
   isExpanded: boolean;
   selectedSceneId?: string;
-  viewDensity?: "clean" | "detailed"; // ✨ NEW: Control metadata display
+  viewDensity?: "clean" | "detailed";
   onToggle: () => void;
   onSelect: (chapter: Chapter) => void;
   onSceneSelect: (sceneId: string, scene: Scene) => void;
   onSceneDelete: (sceneId: string, title: string) => void;
-  onAddScene?: (chapterId: string) => void;
-  onDeleteChapter?: (chapterId: string) => void; // ✨ NEW: Delete chapter
-  onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ NEW: Inline editing
-  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Pass through to scenes
+  // ✨ UPDATED: Fixed function signatures to support positioned adding
+  onAddScene?: (chapterId: string, afterSceneId?: string) => void;
+  onAddChapter?: (actId: string, afterChapterId?: string) => void;
+  onDeleteChapter?: (chapterId: string) => void;
+  onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
+  onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
 }
 
 export const DraggableChapterContainer: React.FC<
@@ -50,27 +52,28 @@ export const DraggableChapterContainer: React.FC<
   isSelected,
   isExpanded,
   selectedSceneId,
-  viewDensity = "detailed", // ✨ NEW: Default to detailed view
+  viewDensity = "detailed",
   onToggle,
   onSelect,
   onSceneSelect,
   onSceneDelete,
   onAddScene,
+  onAddChapter,
   onDeleteChapter,
   onUpdateChapterName,
   onUpdateSceneName,
 }) => {
-  const [isHovered, setIsHovered] = useState(false); // ✨ NEW: Hover state
-  const [isAddingScene, setIsAddingScene] = useState(false); // ✨ NEW: Loading state
+  const [isHovered, setIsHovered] = useState(false);
+  const [isAddingChapter, setIsAddingChapter] = useState(false);
 
-  // ✅ Make chapter draggable
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
-    setNodeRef: setDragRef,
+    setNodeRef,
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({
     id: chapter.id,
     data: {
@@ -81,90 +84,86 @@ export const DraggableChapterContainer: React.FC<
     },
   });
 
-  // ✅ Make chapter droppable for both scenes AND chapters
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
+  const { setNodeRef: setDropNodeRef } = useDroppable({
     id: `chapter-${chapter.id}`,
     data: {
       type: "chapter",
       chapter,
       actId,
-      accepts: ["scene", "chapter"],
+      accepts: ["scene"],
     },
   });
-
-  // ✅ Combine drag and drop refs
-  const setNodeRef = (node: HTMLElement | null) => {
-    setDragRef(node);
-    setDropRef(node);
-  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
-  const sceneIds = chapter.scenes.map((scene) => scene.id);
-  const totalWords = chapter.scenes.reduce(
-    (sum, scene) => sum + scene.wordCount,
-    0
-  );
-
-  // ✨ NEW: Handle add scene with loading state
-  const handleAddScene = async (e: React.MouseEvent) => {
+  // ✨ UPDATED: Handle add chapter (changed from add scene)
+  const handleAddChapter = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!onAddScene) return;
+    if (!onAddChapter) return;
 
-    setIsAddingScene(true);
+    setIsAddingChapter(true);
     try {
-      await onAddScene(chapter.id);
+      await onAddChapter(actId, chapter.id); // ✨ Add chapter after this chapter
     } catch (error) {
-      console.error("Failed to add scene:", error);
+      console.error("Failed to add chapter:", error);
     } finally {
-      setIsAddingScene(false);
+      setIsAddingChapter(false);
     }
   };
 
-  // ✨ NEW: Handle chapter delete with confirmation
+  // Handle delete chapter
   const handleDeleteChapter = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onDeleteChapter) return;
 
-    const chapterTitle = chapter.title;
-    if (window.confirm(`Delete "${chapterTitle}" and all its scenes?`)) {
+    if (window.confirm(`Delete "${chapter.title}" and all its scenes?`)) {
       onDeleteChapter(chapter.id);
     }
   };
 
-  // ✨ NEW: Handle chapter name update
+  // Handle chapter name update
   const handleUpdateChapterName = async (newTitle: string) => {
     if (onUpdateChapterName) {
       await onUpdateChapterName(chapter.id, newTitle);
     }
   };
 
-  // ✨ NEW: Handle chapter header click (select + toggle)
-  const handleChapterHeaderClick = (e: React.MouseEvent) => {
-    // Don't trigger if clicking on action buttons or drag handle
-    if ((e.target as HTMLElement).closest(".chapter-actions, .drag-handle")) {
-      return;
-    }
-
+  // Handle chapter header click
+  const handleChapterHeaderClick = () => {
     onSelect(chapter);
-    onToggle();
+  };
+
+  // Scene IDs for sortable context
+  const sceneIds = chapter.scenes.map((scene) => scene.id);
+
+  // Calculate totals
+  const totalWords = chapter.scenes.reduce(
+    (sum, scene) => sum + scene.wordCount,
+    0
+  );
+
+  // Combine node refs
+  const combinedRef = (node: HTMLElement | null) => {
+    setNodeRef(node);
+    setDropNodeRef(node);
   };
 
   return (
     <div
-      ref={setNodeRef}
+      ref={combinedRef}
       style={style}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`
-        space-y-1 transition-all duration-200
+        transition-all duration-200
         ${isDragging ? "opacity-50 z-50" : ""}
+        ${isOver ? "bg-blue-900/20 border border-blue-500 rounded" : ""}
       `}
-      onMouseEnter={() => setIsHovered(true)} // ✨ NEW: Track hover
-      onMouseLeave={() => setIsHovered(false)} // ✨ NEW: Track hover
     >
-      {/* ✅ Enhanced Chapter Header */}
+      {/* Chapter Header */}
       <div
         className={`
           group flex items-center space-x-2 py-2 px-3 rounded-md cursor-pointer transition-all
@@ -178,7 +177,7 @@ export const DraggableChapterContainer: React.FC<
         `}
         onClick={handleChapterHeaderClick}
       >
-        {/* ✨ ENHANCED: Drag Handle - Show on hover or when selected */}
+        {/* Drag Handle */}
         <div
           {...dragAttributes}
           {...dragListeners}
@@ -197,7 +196,7 @@ export const DraggableChapterContainer: React.FC<
           <GripVertical className="w-3 h-3 text-yellow-400" />
         </div>
 
-        {/* ✨ ENHANCED: Expand/Collapse Toggle */}
+        {/* Expand/Collapse Toggle */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -215,14 +214,14 @@ export const DraggableChapterContainer: React.FC<
         {/* Chapter Icon */}
         <Book className="w-4 h-4 flex-shrink-0 text-yellow-400" />
 
-        {/* ✨ ENHANCED: Chapter Content with Inline Editing */}
+        {/* Chapter Content with Inline Editing */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-medium text-gray-400">
               CH{chapter.order}
             </span>
 
-            {/* ✨ NEW: Editable Chapter Title */}
+            {/* Editable Chapter Title */}
             <div className="flex-1 min-w-0">
               <EditableText
                 value={chapter.title}
@@ -234,7 +233,7 @@ export const DraggableChapterContainer: React.FC<
             </div>
           </div>
 
-          {/* ✨ ENHANCED: Chapter metadata - Only show in detailed view */}
+          {/* Chapter metadata - Only show in detailed view */}
           {viewDensity === "detailed" && (
             <div className="flex items-center space-x-2 text-xs mt-1">
               <span className="text-gray-500">
@@ -251,7 +250,7 @@ export const DraggableChapterContainer: React.FC<
           )}
         </div>
 
-        {/* ✨ ENHANCED: Action Buttons - Show on hover or when selected */}
+        {/* ✨ UPDATED: Action Buttons - + now adds chapter */}
         <div
           className={`
           chapter-actions flex items-center space-x-1 transition-opacity
@@ -262,15 +261,15 @@ export const DraggableChapterContainer: React.FC<
           }
         `}
         >
-          {/* Add Scene Button */}
-          {onAddScene && (
+          {/* ✨ UPDATED: Add Chapter Button (was Add Scene) */}
+          {onAddChapter && (
             <button
-              onClick={handleAddScene}
-              disabled={isAddingScene}
-              className={`p-1 rounded text-green-400 hover:bg-green-400 hover:text-white transition-colors ${
-                isAddingScene ? "opacity-50 cursor-not-allowed" : ""
+              onClick={handleAddChapter}
+              disabled={isAddingChapter}
+              className={`p-1 rounded text-blue-400 hover:bg-blue-400 hover:text-white transition-colors ${
+                isAddingChapter ? "opacity-50 cursor-not-allowed" : ""
               }`}
-              title="Add Scene"
+              title="Add Chapter After This"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -289,7 +288,7 @@ export const DraggableChapterContainer: React.FC<
         </div>
       </div>
 
-      {/* ✅ Enhanced Scenes List - Reduced indentation */}
+      {/* Scenes List */}
       {isExpanded && (
         <div className="ml-4 space-y-1">
           <SortableContext
@@ -307,27 +306,28 @@ export const DraggableChapterContainer: React.FC<
                   isSelected={selectedSceneId === scene.id}
                   onSelect={onSceneSelect}
                   onDelete={onSceneDelete}
-                  onUpdateSceneName={onUpdateSceneName} // ✨ NEW: Pass through editing
-                  viewDensity={viewDensity} // ✨ NEW: Pass view density to scenes
+                  onUpdateSceneName={onUpdateSceneName}
+                  onAddScene={onAddScene} // ✨ Pass add scene handler to scenes
+                  viewDensity={viewDensity}
                 />
               ))}
           </SortableContext>
 
-          {/* ✨ ENHANCED: Add Scene at End Button - Show when empty or always available */}
+          {/* ✨ KEPT: Add Scene at End Button - Show when empty or always available */}
           {(chapter.scenes.length === 0 || (isHovered && onAddScene)) && (
             <div className="ml-2 py-2">
               <button
-                onClick={handleAddScene}
-                disabled={isAddingScene}
-                className={`flex items-center space-x-2 text-sm text-green-400 hover:text-green-300 transition-colors ${
-                  isAddingScene ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onAddScene) {
+                    onAddScene(chapter.id); // Add at end of chapter
+                  }
+                }}
+                className="flex items-center space-x-2 text-sm text-green-400 hover:text-green-300 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>
-                  {isAddingScene
-                    ? "Adding scene..."
-                    : chapter.scenes.length === 0
+                  {chapter.scenes.length === 0
                     ? "Add first scene"
                     : "Add scene"}
                 </span>
