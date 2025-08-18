@@ -1,5 +1,5 @@
 // src/app/(app)/novels/[novelId]/manuscript/page.tsx
-// ✨ CLEAN REFACTORED: All logic extracted to custom hook!
+// ✨ UPDATED: Added auto-save functionality props
 
 "use client";
 
@@ -25,7 +25,7 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
   // Get main sidebar state from context
   const { isMainSidebarCollapsed } = useSidebar();
 
-  // ✨ ALL MANUSCRIPT LOGIC IN CUSTOM HOOK - Clean separation!
+  // ✨ ALL MANUSCRIPT LOGIC IN CUSTOM HOOK - Now with auto-save!
   const manuscript = useManuscriptLogic(novelId);
 
   // ===== COMPONENT-SPECIFIC LOGIC (Only UI and routing) =====
@@ -85,7 +85,7 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
     );
   }
 
-  // ✨ CLEAN: Main manuscript editor with all logic from hook
+  // ✨ UPDATED: Main manuscript editor with auto-save functionality
   return (
     <ManuscriptEditor
       novel={manuscript.novel!}
@@ -109,10 +109,14 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       onUpdateActName={manuscript.handleUpdateActName}
       onUpdateChapterName={manuscript.handleUpdateChapterName}
       onUpdateSceneName={manuscript.handleUpdateSceneName}
-      // ✨ NEW: Content saving functionality
+      // ✨ UPDATED: Complete auto-save functionality
       onSceneContentChange={manuscript.handleSceneContentChange}
       isSavingContent={manuscript.isSavingContent}
       lastSaved={manuscript.lastSaved}
+      autoSaveEnabled={manuscript.autoSaveEnabled}
+      setAutoSaveEnabled={manuscript.setAutoSaveEnabled}
+      handleManualSave={manuscript.handleManualSave}
+      pendingChanges={manuscript.pendingChanges}
       isMainSidebarCollapsed={isMainSidebarCollapsed}
     />
   );

@@ -35,10 +35,14 @@ interface ManuscriptEditorProps {
   onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
   onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
   onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
-  // ✨ NEW: Content saving
-  onSceneContentChange: (sceneId: string, content: string) => Promise<void>;
+  // ✨ UPDATED: Complete auto-save functionality
+  onSceneContentChange: (sceneId: string, content: string) => void;
   isSavingContent: boolean;
   lastSaved: Date | null;
+  autoSaveEnabled: boolean;
+  setAutoSaveEnabled: (enabled: boolean) => void;
+  handleManualSave: () => Promise<void>;
+  pendingChanges: boolean;
   isMainSidebarCollapsed: boolean;
   onAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
 }
@@ -65,10 +69,14 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onUpdateActName,
   onUpdateChapterName,
   onUpdateSceneName,
-  // ✨ NEW: Content saving props
+  // ✨ UPDATED: All auto-save props
   onSceneContentChange,
   isSavingContent,
   lastSaved,
+  autoSaveEnabled,
+  setAutoSaveEnabled,
+  handleManualSave,
+  pendingChanges,
   isMainSidebarCollapsed,
 }) => {
   // State management - these are for the MANUSCRIPT sidebars, separate from main workspace sidebar
@@ -143,7 +151,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     };
   }, [viewMode, selectedScene, selectedChapter, selectedAct]);
 
-  // ✨ UPDATED: Handle scene content changes with proper saving
+  // ✨ UPDATED: Handle scene content changes (now non-async)
   const handleSceneContentChange = useCallback(
     (content: string) => {
       if (!selectedScene) return;
@@ -152,7 +160,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     [selectedScene, onSceneContentChange]
   );
 
-  // ✨ NEW: Handler for individual scene changes in document views
+  // ✨ UPDATED: Handler for individual scene changes in document views (now non-async)
   const handleIndividualSceneChange = useCallback(
     (sceneId: string, content: string) => {
       onSceneContentChange(sceneId, content);
@@ -196,6 +204,13 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onUpdateChapterName={onUpdateChapterName}
         onUpdateSceneName={onUpdateSceneName}
         onRefresh={onRefresh}
+        // ✨ NEW: Auto-save props passed to sidebar
+        autoSaveEnabled={autoSaveEnabled}
+        setAutoSaveEnabled={setAutoSaveEnabled}
+        handleManualSave={handleManualSave}
+        pendingChanges={pendingChanges}
+        isSavingContent={isSavingContent}
+        lastSaved={lastSaved}
         isCollapsed={isStructureSidebarCollapsed}
         onToggleCollapse={() =>
           setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)

@@ -1,7 +1,7 @@
 // src/hooks/manuscript/useManuscriptLogic.ts
-// ✨ FIXED: Proper real-time state updates for positioned adding
+// ✨ UPDATED: Added complete auto-save system with toggle and manual save
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/view-mode-selector";
 
@@ -14,8 +14,12 @@ export interface ManuscriptLogicReturn {
   selectedAct: Act | null;
   viewMode: ViewMode;
   contentDisplayMode: "document" | "grid";
+
+  // ✨ NEW: Auto-save state
   isSavingContent: boolean;
   lastSaved: Date | null;
+  autoSaveEnabled: boolean;
+  pendingChanges: boolean;
 
   // UI Actions
   setViewMode: (mode: ViewMode) => void;
@@ -28,7 +32,7 @@ export interface ManuscriptLogicReturn {
   handleChapterSelect: (chapter: Chapter) => void;
   handleActSelect: (act: Act) => void;
 
-  // ✨ FIXED: CRUD Handlers with proper signatures
+  // CRUD Handlers with proper signatures
   handleAddScene: (chapterId: string, afterSceneId?: string) => Promise<void>;
   handleAddChapter: (actId: string, afterChapterId?: string) => Promise<void>;
   handleAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
@@ -43,7 +47,11 @@ export interface ManuscriptLogicReturn {
     newTitle: string
   ) => Promise<void>;
   handleUpdateSceneName: (sceneId: string, newTitle: string) => Promise<void>;
-  handleSceneContentChange: (sceneId: string, content: string) => Promise<void>;
+
+  // ✨ NEW: Content saving handlers
+  handleSceneContentChange: (sceneId: string, content: string) => void;
+  setAutoSaveEnabled: (enabled: boolean) => void;
+  handleManualSave: () => Promise<void>;
 
   // Utility
   handleRefresh: () => void;
@@ -62,12 +70,18 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   const [contentDisplayMode, setContentDisplayMode] = useState<
     "document" | "grid"
   >("document");
-  // ✨ NEW: Content saving state
+
+  // ✨ NEW: Auto-save state
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [saveTimeoutRef, setSaveTimeoutRef] = useState<NodeJS.Timeout | null>(
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true); // Default ON
+  const [pendingChanges, setPendingChanges] = useState(false);
+
+  // Track pending content changes and timeouts
+  const pendingContentRef = useRef<{ sceneId: string; content: string } | null>(
     null
   );
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ===== CORE API OPERATIONS =====
   const loadNovelStructure = useCallback(
@@ -120,6 +134,126 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     },
     [selectedScene]
   );
+
+  // ✨ CORE SAVE FUNCTION (used by both auto-save and manual save)
+  const saveSceneContent = useCallback(
+    async (sceneId: string, content: string) => {
+      if (!novelId) return false;
+
+      try {
+        setIsSavingContent(true);
+        console.log("💾 Saving scene content...", sceneId);
+
+        const response = await fetch(
+          `/api/novels/${novelId}/scenes/${sceneId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content }),
+          }
+        );
+
+        if (response.ok) {
+          const updatedScene = await response.json();
+          console.log("✅ Scene content saved successfully");
+
+          // Update local state - NO PAGE REFRESH
+          setNovel((prevNovel) => {
+            if (!prevNovel) return prevNovel;
+
+            return {
+              ...prevNovel,
+              acts: prevNovel.acts.map((act) => ({
+                ...act,
+                chapters: act.chapters.map((chapter) => ({
+                  ...chapter,
+                  scenes: chapter.scenes.map((scene) =>
+                    scene.id === sceneId
+                      ? {
+                          ...scene,
+                          content,
+                          wordCount: updatedScene.wordCount || scene.wordCount,
+                        }
+                      : scene
+                  ),
+                })),
+              })),
+            };
+          });
+
+          // Update selected scene if it's the one being edited
+          if (selectedScene?.id === sceneId) {
+            setSelectedScene((prevScene) =>
+              prevScene
+                ? {
+                    ...prevScene,
+                    content,
+                    wordCount: updatedScene.wordCount || prevScene.wordCount,
+                  }
+                : prevScene
+            );
+          }
+
+          setLastSaved(new Date());
+          setPendingChanges(false);
+          return true;
+        } else {
+          console.error("❌ Failed to save scene content");
+          return false;
+        }
+      } catch (error) {
+        console.error("❌ Error saving scene content:", error);
+        return false;
+      } finally {
+        setIsSavingContent(false);
+      }
+    },
+    [novelId, selectedScene]
+  );
+
+  // ✨ AUTO-SAVE: Debounced content saving (2 second delay)
+  const handleSceneContentChange = useCallback(
+    (sceneId: string, content: string) => {
+      // Always update pending changes
+      pendingContentRef.current = { sceneId, content };
+      setPendingChanges(true);
+
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Only auto-save if enabled
+      if (autoSaveEnabled) {
+        saveTimeoutRef.current = setTimeout(() => {
+          if (pendingContentRef.current) {
+            saveSceneContent(
+              pendingContentRef.current.sceneId,
+              pendingContentRef.current.content
+            );
+          }
+        }, 2000); // 2 second delay
+      }
+    },
+    [autoSaveEnabled, saveSceneContent]
+  );
+
+  // ✨ MANUAL SAVE: Save immediately
+  const handleManualSave = useCallback(async () => {
+    if (!pendingContentRef.current) {
+      console.log("📝 No pending changes to save");
+      return;
+    }
+
+    const { sceneId, content } = pendingContentRef.current;
+    const success = await saveSceneContent(sceneId, content);
+
+    if (success) {
+      console.log("💾 Manual save completed");
+    } else {
+      console.error("❌ Manual save failed");
+    }
+  }, [saveSceneContent]);
 
   // ===== UI ACTION HANDLERS =====
   const handleContentDisplayModeChange = useCallback(
@@ -214,7 +348,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     [selectedScene]
   );
 
-  // ===== ✨ FIXED: CREATE HANDLERS WITH PROPER STATE UPDATES =====
+  // ===== CREATE HANDLERS WITH PROPER STATE UPDATES =====
 
   const handleAddScene = useCallback(
     async (chapterId: string, afterSceneId?: string) => {
@@ -237,31 +371,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           const result = await response.json();
           console.log("✅ Scene created:", result.scene);
-
-          // ✨ CRITICAL FIX: Reload the entire structure to get proper ordering
           await loadNovelStructure(novelId);
-
-          // Alternative: If you prefer optimistic updates, use this instead:
-          /*
-        setNovel((prevNovel) => {
-          if (!prevNovel) return prevNovel;
-
-          return {
-            ...prevNovel,
-            acts: prevNovel.acts.map((act) => ({
-              ...act,
-              chapters: act.chapters.map((chapter) => {
-                if (chapter.id === chapterId) {
-                  const updatedScenes = [...chapter.scenes, result.scene];
-                  updatedScenes.sort((a, b) => a.order - b.order);
-                  return { ...chapter, scenes: updatedScenes };
-                }
-                return chapter;
-              }),
-            })),
-          };
-        });
-        */
         } else {
           const error = await response.json();
           console.error("Failed to create scene:", error);
@@ -296,28 +406,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           const result = await response.json();
           console.log("✅ Chapter created:", result.chapter);
-
-          // ✨ CRITICAL FIX: Reload the entire structure to get proper ordering
           await loadNovelStructure(novelId);
-
-          // Alternative: If you prefer optimistic updates, use this instead:
-          /*
-        setNovel((prevNovel) => {
-          if (!prevNovel) return prevNovel;
-
-          return {
-            ...prevNovel,
-            acts: prevNovel.acts.map((act) => {
-              if (act.id === actId) {
-                const updatedChapters = [...act.chapters, result.chapter];
-                updatedChapters.sort((a, b) => a.order - b.order);
-                return { ...act, chapters: updatedChapters };
-              }
-              return act;
-            }),
-          };
-        });
-        */
         } else {
           const error = await response.json();
           console.error("Failed to create chapter:", error);
@@ -352,8 +441,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           const result = await response.json();
           console.log("✅ Act created:", result.act);
-
-          // ✨ CRITICAL FIX: Reload the entire structure
           await loadNovelStructure(novelId);
         } else {
           const error = await response.json();
@@ -385,12 +472,10 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           console.log("✅ Scene deleted:", sceneId);
 
-          // Clear selected scene if it was deleted
           if (selectedScene?.id === sceneId) {
             setSelectedScene(null);
           }
 
-          // ✨ RELOAD: Ensure consistent state
           await loadNovelStructure(novelId);
         } else {
           console.error("Failed to delete scene");
@@ -419,12 +504,10 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           console.log("✅ Chapter deleted:", chapterId);
 
-          // Clear selected chapter if it was deleted
           if (selectedChapter?.id === chapterId) {
             setSelectedChapter(null);
           }
 
-          // ✨ RELOAD: Ensure consistent state
           await loadNovelStructure(novelId);
         } else {
           console.error("Failed to delete chapter");
@@ -450,12 +533,10 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           console.log("✅ Act deleted:", actId);
 
-          // Clear selected act if it was deleted
           if (selectedAct?.id === actId) {
             setSelectedAct(null);
           }
 
-          // ✨ RELOAD: Ensure consistent state
           await loadNovelStructure(novelId);
         } else {
           console.error("Failed to delete act");
@@ -469,7 +550,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     [novelId, selectedAct, loadNovelStructure]
   );
 
-  // ===== UPDATE HANDLERS (These work fine with optimistic updates) =====
+  // ===== UPDATE HANDLERS =====
 
   const handleUpdateActName = useCallback(
     async (actId: string, newTitle: string) => {
@@ -585,7 +666,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
             };
           });
 
-          // Update selected scene if it's the one being renamed
           if (selectedScene?.id === sceneId) {
             setSelectedScene((prevScene) =>
               prevScene ? { ...prevScene, title: newTitle } : prevScene
@@ -603,90 +683,24 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     [novelId, selectedScene]
   );
 
-  // ✨ NEW: Debounced content saving (saves 2 seconds after user stops typing)
-  const handleSceneContentChange = useCallback(
-    async (sceneId: string, content: string) => {
-      if (!novelId) return;
+  // ===== CLEANUP AND EFFECTS =====
 
-      // Clear existing timeout
-      if (saveTimeoutRef) {
-        clearTimeout(saveTimeoutRef);
-      }
-
-      // Set new timeout for 2 seconds
-      const timeoutId = setTimeout(async () => {
-        try {
-          setIsSavingContent(true);
-          console.log("💾 Auto-saving scene content...", sceneId);
-
-          const response = await fetch(
-            `/api/novels/${novelId}/scenes/${sceneId}`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ content }),
-            }
-          );
-
-          if (response.ok) {
-            const updatedScene = await response.json();
-            console.log("✅ Scene content saved successfully");
-
-            // Update local state
-            setNovel((prevNovel) => {
-              if (!prevNovel) return prevNovel;
-
-              return {
-                ...prevNovel,
-                acts: prevNovel.acts.map((act) => ({
-                  ...act,
-                  chapters: act.chapters.map((chapter) => ({
-                    ...chapter,
-                    scenes: chapter.scenes.map((scene) =>
-                      scene.id === sceneId
-                        ? {
-                            ...scene,
-                            content,
-                            wordCount: updatedScene.wordCount,
-                          }
-                        : scene
-                    ),
-                  })),
-                })),
-              };
-            });
-
-            // Update selected scene if it's the one being edited
-            setSelectedScene((prevScene) =>
-              prevScene?.id === sceneId
-                ? { ...prevScene, content, wordCount: updatedScene.wordCount }
-                : prevScene
-            );
-
-            setLastSaved(new Date());
-          } else {
-            console.error("❌ Failed to save scene content");
-          }
-        } catch (error) {
-          console.error("❌ Error saving scene content:", error);
-        } finally {
-          setIsSavingContent(false);
-        }
-      }, 2000); // 2 second delay
-
-      setSaveTimeoutRef(timeoutId);
-    },
-    [novelId, saveTimeoutRef]
-  );
-
-  // ✨ NEW: Cleanup timeout on unmount
+  // Cleanup timeout on unmount or when auto-save is disabled
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef) {
-        clearTimeout(saveTimeoutRef);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [saveTimeoutRef]);
+  }, []);
+
+  // Clear timeout when auto-save is disabled
+  useEffect(() => {
+    if (!autoSaveEnabled && saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+  }, [autoSaveEnabled]);
 
   // ===== UTILITY FUNCTIONS =====
 
@@ -718,8 +732,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     selectedAct,
     viewMode,
     contentDisplayMode,
+
+    // ✨ NEW: Auto-save state
     isSavingContent,
     lastSaved,
+    autoSaveEnabled,
+    pendingChanges,
 
     // UI Actions
     setViewMode,
@@ -731,7 +749,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     handleSceneSelect,
     handleChapterSelect,
     handleActSelect,
-    handleSceneContentChange,
 
     // CRUD Handlers
     handleAddScene,
@@ -745,6 +762,11 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     handleUpdateActName,
     handleUpdateChapterName,
     handleUpdateSceneName,
+
+    // ✨ NEW: Content saving handlers
+    handleSceneContentChange,
+    setAutoSaveEnabled,
+    handleManualSave,
 
     // Utility
     handleRefresh,
