@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/manuscript-editor.tsx
-// ✨ UPDATED: Fixed props to match new positioned adding system
+// ✨ COMPLETE: Fixed props and added content saving functionality
 
 import React, { useState, useCallback, useMemo } from "react";
 import {
@@ -27,7 +27,6 @@ interface ManuscriptEditorProps {
   onChapterSelect?: (chapter: Chapter) => void;
   onActSelect?: (act: Act) => void;
   onRefresh: () => void;
-  // ✨ UPDATED: Fixed function signatures to support positioned adding
   onAddScene: (chapterId: string, afterSceneId?: string) => Promise<void>;
   onAddChapter: (actId: string, afterChapterId?: string) => Promise<void>;
   onDeleteScene: (sceneId: string) => Promise<void>;
@@ -36,6 +35,10 @@ interface ManuscriptEditorProps {
   onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
   onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
   onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
+  // ✨ NEW: Content saving
+  onSceneContentChange: (sceneId: string, content: string) => Promise<void>;
+  isSavingContent: boolean;
+  lastSaved: Date | null;
   isMainSidebarCollapsed: boolean;
   onAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
 }
@@ -62,6 +65,10 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onUpdateActName,
   onUpdateChapterName,
   onUpdateSceneName,
+  // ✨ NEW: Content saving props
+  onSceneContentChange,
+  isSavingContent,
+  lastSaved,
   isMainSidebarCollapsed,
 }) => {
   // State management - these are for the MANUSCRIPT sidebars, separate from main workspace sidebar
@@ -136,11 +143,22 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     };
   }, [viewMode, selectedScene, selectedChapter, selectedAct]);
 
-  // Handle scene content changes
-  const handleSceneContentChange = useCallback((content: string) => {
-    // This would typically call an API to save the content
-    console.log("Scene content changed:", content.length, "characters");
-  }, []);
+  // ✨ UPDATED: Handle scene content changes with proper saving
+  const handleSceneContentChange = useCallback(
+    (content: string) => {
+      if (!selectedScene) return;
+      onSceneContentChange(selectedScene.id, content);
+    },
+    [selectedScene, onSceneContentChange]
+  );
+
+  // ✨ NEW: Handler for individual scene changes in document views
+  const handleIndividualSceneChange = useCallback(
+    (sceneId: string, content: string) => {
+      onSceneContentChange(sceneId, content);
+    },
+    [onSceneContentChange]
+  );
 
   // Calculate sidebar positions and dimensions
   const workspaceSidebarWidth = isMainSidebarCollapsed ? "64px" : "256px";
@@ -148,10 +166,6 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   const structureSidebarWidth = isStructureSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarWidth = isMetadataSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarRight = "0px";
-
-  // Content area should only account for manuscript sidebar width
-  const contentLeft = isStructureSidebarCollapsed ? "64px" : "320px";
-  const contentRight = isMetadataSidebarCollapsed ? "64px" : "320px";
 
   // Create formatted subtitle with word count and scene count
   const formattedSubtitle = `${
@@ -161,26 +175,27 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   }`;
 
   return (
-    <div className="h-screen flex bg-gray-900 relative">
-      {/* Left Sidebar - Manuscript Structure */}
+    <div className="flex h-full bg-gray-900">
+      {/* Left Sidebar - Structure */}
       <ManuscriptStructureSidebar
         novel={novel}
+        // ✅ FIXED: Use the correct prop names that match the interface
         selectedScene={selectedScene}
         selectedChapterId={selectedChapter?.id}
         selectedActId={selectedAct?.id}
         onSceneSelect={onSceneSelect}
         onChapterSelect={onChapterSelect}
         onActSelect={onActSelect}
-        onRefresh={onRefresh}
-        onAddScene={onAddScene} // ✨ UPDATED: Now supports positioned adding
-        onAddChapter={onAddChapter} // ✨ UPDATED: Now supports positioned adding
+        onAddScene={onAddScene}
+        onAddChapter={onAddChapter}
+        onAddAct={onAddAct}
         onDeleteScene={onDeleteScene}
         onDeleteChapter={onDeleteChapter}
         onDeleteAct={onDeleteAct}
-        onAddAct={onAddAct}
         onUpdateActName={onUpdateActName}
         onUpdateChapterName={onUpdateChapterName}
         onUpdateSceneName={onUpdateSceneName}
+        onRefresh={onRefresh}
         isCollapsed={isStructureSidebarCollapsed}
         onToggleCollapse={() =>
           setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
@@ -189,14 +204,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         width={structureSidebarWidth}
       />
 
-      {/* Center Panel - Header + Content */}
-      <div
-        className="flex flex-col transition-all duration-300"
-        style={{
-          marginLeft: contentLeft,
-          marginRight: contentRight,
-        }}
-      >
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
         {/* Header */}
         <ManuscriptHeader
           viewMode={viewMode}
@@ -219,9 +228,11 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           onSceneRename={onUpdateSceneName}
           onChapterRename={onUpdateChapterName}
           onActRename={onUpdateActName}
-          onAddScene={onAddScene} // ✨ UPDATED: Now supports positioned adding
-          onAddChapter={onAddChapter} // ✨ UPDATED: Now supports positioned adding
+          onAddScene={onAddScene}
+          onAddChapter={onAddChapter}
           novel={novel}
+          // ✨ NEW: Pass the individual scene change handler
+          onIndividualSceneChange={handleIndividualSceneChange}
           marginLeft="0"
           marginRight="0"
         />

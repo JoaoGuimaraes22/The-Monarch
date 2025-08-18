@@ -14,6 +14,8 @@ export interface ManuscriptLogicReturn {
   selectedAct: Act | null;
   viewMode: ViewMode;
   contentDisplayMode: "document" | "grid";
+  isSavingContent: boolean;
+  lastSaved: Date | null;
 
   // UI Actions
   setViewMode: (mode: ViewMode) => void;
@@ -41,6 +43,7 @@ export interface ManuscriptLogicReturn {
     newTitle: string
   ) => Promise<void>;
   handleUpdateSceneName: (sceneId: string, newTitle: string) => Promise<void>;
+  handleSceneContentChange: (sceneId: string, content: string) => Promise<void>;
 
   // Utility
   handleRefresh: () => void;
@@ -59,6 +62,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   const [contentDisplayMode, setContentDisplayMode] = useState<
     "document" | "grid"
   >("document");
+  // ✨ NEW: Content saving state
+  const [isSavingContent, setIsSavingContent] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveTimeoutRef, setSaveTimeoutRef] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   // ===== CORE API OPERATIONS =====
   const loadNovelStructure = useCallback(
@@ -594,6 +603,91 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     [novelId, selectedScene]
   );
 
+  // ✨ NEW: Debounced content saving (saves 2 seconds after user stops typing)
+  const handleSceneContentChange = useCallback(
+    async (sceneId: string, content: string) => {
+      if (!novelId) return;
+
+      // Clear existing timeout
+      if (saveTimeoutRef) {
+        clearTimeout(saveTimeoutRef);
+      }
+
+      // Set new timeout for 2 seconds
+      const timeoutId = setTimeout(async () => {
+        try {
+          setIsSavingContent(true);
+          console.log("💾 Auto-saving scene content...", sceneId);
+
+          const response = await fetch(
+            `/api/novels/${novelId}/scenes/${sceneId}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content }),
+            }
+          );
+
+          if (response.ok) {
+            const updatedScene = await response.json();
+            console.log("✅ Scene content saved successfully");
+
+            // Update local state
+            setNovel((prevNovel) => {
+              if (!prevNovel) return prevNovel;
+
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => ({
+                  ...act,
+                  chapters: act.chapters.map((chapter) => ({
+                    ...chapter,
+                    scenes: chapter.scenes.map((scene) =>
+                      scene.id === sceneId
+                        ? {
+                            ...scene,
+                            content,
+                            wordCount: updatedScene.wordCount,
+                          }
+                        : scene
+                    ),
+                  })),
+                })),
+              };
+            });
+
+            // Update selected scene if it's the one being edited
+            setSelectedScene((prevScene) =>
+              prevScene?.id === sceneId
+                ? { ...prevScene, content, wordCount: updatedScene.wordCount }
+                : prevScene
+            );
+
+            setLastSaved(new Date());
+          } else {
+            console.error("❌ Failed to save scene content");
+          }
+        } catch (error) {
+          console.error("❌ Error saving scene content:", error);
+        } finally {
+          setIsSavingContent(false);
+        }
+      }, 2000); // 2 second delay
+
+      setSaveTimeoutRef(timeoutId);
+    },
+    [novelId, saveTimeoutRef]
+  );
+
+  // ✨ NEW: Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef) {
+        clearTimeout(saveTimeoutRef);
+      }
+    };
+  }, [saveTimeoutRef]);
+
   // ===== UTILITY FUNCTIONS =====
 
   const handleRefresh = useCallback(() => {
@@ -624,6 +718,8 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     selectedAct,
     viewMode,
     contentDisplayMode,
+    isSavingContent,
+    lastSaved,
 
     // UI Actions
     setViewMode,
@@ -635,6 +731,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     handleSceneSelect,
     handleChapterSelect,
     handleActSelect,
+    handleSceneContentChange,
 
     // CRUD Handlers
     handleAddScene,

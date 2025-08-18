@@ -108,7 +108,11 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       onDeleteAct={manuscript.handleDeleteAct}
       onUpdateActName={manuscript.handleUpdateActName}
       onUpdateChapterName={manuscript.handleUpdateChapterName}
-      onUpdateSceneName={manuscript.handleUpdateSceneName} // ✨ ADD THIS LINE
+      onUpdateSceneName={manuscript.handleUpdateSceneName}
+      // ✨ NEW: Content saving functionality
+      onSceneContentChange={manuscript.handleSceneContentChange}
+      isSavingContent={manuscript.isSavingContent}
+      lastSaved={manuscript.lastSaved}
       isMainSidebarCollapsed={isMainSidebarCollapsed}
     />
   );
