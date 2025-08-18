@@ -8,6 +8,7 @@ import { SceneGrid } from "./grid-view/";
 import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/services/";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
 import { Scene, Chapter, Act, NovelWithStructure } from "@/lib/novels";
+import { EditableText } from "@/app/components/ui"; // ✨ NEW: Import EditableText
 
 export type ContentDisplayMode = "document" | "grid";
 
@@ -20,6 +21,7 @@ interface ManuscriptContentAreaProps {
   onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Scene rename handler
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
   onAddChapter?: (actId: string, afterChapterId?: string) => void;
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ NEW: Chapter rename handler
   novel?: NovelWithStructure | null;
   marginLeft: string;
   marginRight: string;
@@ -78,13 +80,28 @@ const AddChapterButton: React.FC<{
   );
 };
 
-// ✨ Chapter Header Component
-const ChapterHeader: React.FC<{ chapter: Chapter }> = ({ chapter }) => {
+// ✨ Enhanced Chapter Header Component with Rename Functionality
+const ChapterHeader: React.FC<{
+  chapter: Chapter;
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
+}> = ({ chapter, onChapterRename }) => {
   return (
     <div className="my-8 py-4 px-6 border-t-2 border-b-2 border-red-600 bg-red-900/10 rounded-lg">
-      <h2 className="text-xl font-bold text-red-400 text-center">
-        {chapter.title}
-      </h2>
+      {onChapterRename ? (
+        <div className="flex justify-center">
+          <EditableText
+            value={chapter.title}
+            onSave={(newTitle) => onChapterRename(chapter.id, newTitle)}
+            placeholder="Chapter title"
+            className="text-xl font-bold text-red-400 text-center"
+            maxLength={200}
+          />
+        </div>
+      ) : (
+        <h2 className="text-xl font-bold text-red-400 text-center">
+          {chapter.title}
+        </h2>
+      )}
     </div>
   );
 };
@@ -192,7 +209,8 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
   contentDisplayMode,
   onContentChange,
   onSceneClick,
-  onSceneRename, // ✨ NEW: Scene rename handler
+  onSceneRename, // ✨ Scene rename handler
+  onChapterRename, // ✨ NEW: Chapter rename handler
   onAddScene,
   onAddChapter,
   novel,
@@ -307,7 +325,12 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
       >
         <div className="p-6 space-y-8">
           {/* Chapter Header */}
-          {chapterInfo && <ChapterHeader chapter={chapterInfo} />}
+          {chapterInfo && (
+            <ChapterHeader
+              chapter={chapterInfo}
+              onChapterRename={onChapterRename}
+            />
+          )}
 
           {/* Individual Scene Editors */}
           {scenes.map((scene) => (
@@ -369,7 +392,12 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
             return (
               <div key={section.id} className="space-y-6">
                 {/* Chapter Header */}
-                {chapterInfo && <ChapterHeader chapter={chapterInfo} />}
+                {chapterInfo && (
+                  <ChapterHeader
+                    chapter={chapterInfo}
+                    onChapterRename={onChapterRename}
+                  />
+                )}
 
                 {/* Scenes in this chapter */}
                 {scenes.map((scene) => (
