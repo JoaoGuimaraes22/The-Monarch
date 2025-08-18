@@ -20,6 +20,7 @@ interface DraggableSceneItemProps {
   isSelected: boolean;
   onSelect: (sceneId: string, scene: Scene) => void;
   onDelete: (sceneId: string, title: string) => void;
+  onEditName?: (sceneId: string, currentTitle: string) => void;
 }
 
 export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
@@ -28,6 +29,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   isSelected,
   onSelect,
   onDelete,
+  onEditName,
 }) => {
   const {
     attributes,
@@ -36,12 +38,14 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({
     id: scene.id,
     data: {
       type: "scene",
       scene,
       chapterId,
+      sourceIndex: scene.order,
     },
   });
 
@@ -50,7 +54,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     transition,
   };
 
-  const sceneStatus = getSceneStatus(scene.status);
+  const sceneStatus = getSceneStatus(scene);
 
   return (
     <div
@@ -58,7 +62,12 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
       style={style}
       className={`
         group relative flex items-center space-x-2 py-2 px-3 rounded-md transition-all duration-200
-        ${isDragging ? "opacity-50 bg-gray-700/50 shadow-lg z-50" : ""}
+        ${
+          isDragging
+            ? "opacity-50 bg-gray-700/50 shadow-lg z-50 ring-2 ring-blue-500"
+            : ""
+        }
+        ${isOver ? "bg-blue-900/20 border-l-2 border-blue-400" : ""}
         ${
           isSelected
             ? "bg-red-900/30 border-l-2 border-red-500 text-white"
@@ -66,7 +75,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         }
         cursor-pointer select-none
       `}
-      onClick={() => onSelect(scene.id, scene)}
+      onClick={() => onSelect(scene.id, scene)} // ✅ Fixed: Pass scene object, not scene.id
     >
       {/* Drag Handle */}
       <div
@@ -75,15 +84,21 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         className={`
           opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing
           ${isDragging ? "opacity-100" : ""}
+          ${isSelected ? "opacity-100" : ""}
           p-1 hover:bg-gray-600 rounded
         `}
         onClick={(e) => e.stopPropagation()}
+        title="Drag to reorder"
       >
         <GripVertical className="w-3 h-3 text-gray-400" />
       </div>
 
       {/* Scene Icon */}
-      <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+      <FileText
+        className={`w-4 h-4 flex-shrink-0 ${
+          isDragging ? "text-blue-400" : "text-blue-400"
+        }`}
+      />
 
       {/* Scene Content */}
       <div className="flex-1 min-w-0">
@@ -94,7 +109,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
           </span>
 
           {/* Scene Title */}
-          <span className="text-sm truncate">
+          <span className="text-sm truncate font-medium">
             {scene.title || `Scene ${scene.order}`}
           </span>
 
@@ -112,23 +127,25 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
 
       {/* Actions Menu */}
       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            // TODO: Implement scene name editing
-          }}
-          className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white"
-          title="Edit scene name"
-        >
-          <Edit3 className="w-3 h-3" />
-        </button>
+        {onEditName && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditName(scene.id, scene.title || `Scene ${scene.order}`);
+            }}
+            className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-colors"
+            title="Edit scene name"
+          >
+            <Edit3 className="w-3 h-3" />
+          </button>
+        )}
 
         <button
           onClick={(e) => {
             e.stopPropagation();
             onDelete(scene.id, scene.title || `Scene ${scene.order}`);
           }}
-          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300"
+          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300 transition-colors"
           title="Delete scene"
         >
           <Trash2 className="w-3 h-3" />
@@ -136,16 +153,21 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
 
         <button
           onClick={(e) => e.stopPropagation()}
-          className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white"
+          className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-colors"
           title="More options"
         >
           <MoreHorizontal className="w-3 h-3" />
         </button>
       </div>
 
-      {/* Drag Overlay Indicator */}
+      {/* Enhanced Drag Visual Indicators */}
       {isDragging && (
-        <div className="absolute inset-0 bg-blue-500/20 border border-blue-500 rounded-md pointer-events-none" />
+        <div className="absolute inset-0 bg-blue-500/10 border border-blue-500 rounded-md pointer-events-none" />
+      )}
+
+      {/* Drop Indicator */}
+      {isOver && !isDragging && (
+        <div className="absolute left-0 top-0 w-1 h-full bg-blue-400 rounded-r" />
       )}
     </div>
   );

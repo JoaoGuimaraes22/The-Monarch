@@ -8,7 +8,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Book, Plus, ChevronDown, ChevronRight } from "lucide-react";
-import { Chapter, Scene } from "@/lib/novels";
+import { Chapter, Scene } from "@/lib/novels/";
 import { DraggableSceneItem } from "./draggable-scene-item";
 import { formatWordCount } from "./utils";
 

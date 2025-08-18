@@ -4,7 +4,7 @@
 
 import React from "react";
 import { Edit, Trash2 } from "lucide-react";
-import { Scene } from "@/lib/novels";
+import { Scene } from "@/lib/novels/";
 import { formatWordCount, getSceneStatus } from "./utils";
 import { EditableText } from "@/app/components/ui/editable-text";
 
