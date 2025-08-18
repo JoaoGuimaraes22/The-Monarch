@@ -1,9 +1,10 @@
 // src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-grid.tsx
-// ✨ ENHANCED: Added scene rename functionality
+// ✨ ENHANCED: Added scene and chapter rename functionality
 
 import React from "react";
-import { Scene } from "@/lib/novels";
+import { Scene, NovelWithStructure, Chapter, Act } from "@/lib/novels";
 import { SceneCard } from "./";
+import { EditableText } from "@/app/components/ui";
 import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/services/";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
 
@@ -11,14 +12,43 @@ interface SceneGridProps {
   aggregatedContent: AggregatedContent;
   viewMode: ViewMode;
   onSceneClick: (sceneId: string, scene: Scene) => void;
-  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Rename handler
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ Scene rename handler
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ NEW: Chapter rename handler
+  novel?: NovelWithStructure | null; // ✨ NEW: Access to novel data for finding chapters
 }
+
+// ✨ NEW: Helper function to find chapter object from novel structure
+const findChapterFromSection = (
+  novel: NovelWithStructure | null,
+  section: any
+): Chapter | null => {
+  if (!novel?.acts) return null;
+
+  // Find chapter by matching scenes
+  for (const act of novel.acts) {
+    for (const chapter of act.chapters) {
+      // Check if this chapter contains the scenes from this section
+      if (
+        section.scenes.some((sectionScene: Scene) =>
+          chapter.scenes.some(
+            (chapterScene) => chapterScene.id === sectionScene.id
+          )
+        )
+      ) {
+        return chapter;
+      }
+    }
+  }
+  return null;
+};
 
 export const SceneGrid: React.FC<SceneGridProps> = ({
   aggregatedContent,
   viewMode,
   onSceneClick,
   onSceneRename,
+  onChapterRename, // ✨ NEW: Chapter rename handler
+  novel, // ✨ NEW: Novel data
 }) => {
   if (!aggregatedContent || aggregatedContent.sections.length === 0) {
     return (
@@ -54,7 +84,7 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
               key={scene.id}
               scene={scene}
               onClick={() => onSceneClick(scene.id, scene)}
-              onRename={onSceneRename} // ✨ NEW: Pass rename handler
+              onRename={onSceneRename}
               showChapterContext={false}
             />
           ))}
@@ -69,11 +99,10 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
     );
   }
 
-  // For act view: each section represents a chapter
+  // ✨ ENHANCED: Act view with chapter rename functionality
   if (viewMode === "act") {
-    // ✨ FIXED: Extract full act name (including subtitle) from the first section title
+    // Extract act name from first section title
     const firstSectionTitle = aggregatedContent.sections[0]?.title || "";
-    // Extract "ACT I: The Island" from "ACT I: The Island: Chapter 1 — A Taste of Lightning"
     const actNameMatch = firstSectionTitle.match(/^([^:]+:[^:]+)/);
     const actName = actNameMatch
       ? actNameMatch[1]
@@ -93,18 +122,36 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
         <div className="space-y-8">
           {aggregatedContent.sections.map((section, sectionIndex) => {
             // Extract chapter name from section title
-            // For "ACT I: The Island: Chapter 1 — A Taste of Lightning", extract "Chapter 1 — A Taste of Lightning"
             const chapterMatch = section.title.match(/:([^:]+)$/);
             const chapterName = chapterMatch
               ? chapterMatch[1].trim()
               : `Chapter ${sectionIndex + 1}`;
 
+            // ✨ NEW: Find the actual chapter object
+            const chapterInfo = findChapterFromSection(novel, section);
+
             return (
               <div key={section.id} className="space-y-4">
+                {/* ✨ ENHANCED: Chapter header with rename capability */}
                 <div className="border-b border-gray-700 pb-2">
-                  <h3 className="text-lg text-white font-medium">
-                    {chapterName}
-                  </h3>
+                  {onChapterRename && chapterInfo ? (
+                    <div className="mb-1">
+                      <EditableText
+                        value={chapterInfo.title}
+                        onSave={(newTitle) =>
+                          onChapterRename(chapterInfo.id, newTitle)
+                        }
+                        placeholder="Chapter title"
+                        className="text-lg text-white font-medium"
+                        maxLength={200}
+                      />
+                    </div>
+                  ) : (
+                    <h3 className="text-lg text-white font-medium mb-1">
+                      {chapterName}
+                    </h3>
+                  )}
+
                   <p className="text-gray-400 text-sm">
                     {section.scenes.length} scene
                     {section.scenes.length !== 1 ? "s" : ""} •{" "}
@@ -119,8 +166,8 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                       key={scene.id}
                       scene={scene}
                       onClick={() => onSceneClick(scene.id, scene)}
-                      onRename={onSceneRename} // ✨ NEW: Pass rename handler
-                      showChapterContext={false} // Don't show chapter context when already grouped
+                      onRename={onSceneRename}
+                      showChapterContext={false}
                     />
                   ))}
                 </div>

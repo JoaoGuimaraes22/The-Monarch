@@ -45,20 +45,29 @@
 │   │   │   └── 📁 novels/
 │   │   │       ├── 📁 [id]/
 │   │   │       │   ├── 📁 acts/
-│   │   │       │   │   └── 📁 [actId]/
-│   │   │       │   │       ├── 📁 chapters/
-│   │   │       │   │       │   └── ⚛️  route.ts
-│   │   │       │   │       └── ⚛️  route.ts
+│   │   │       │   │   ├── 📁 [actId]/
+│   │   │       │   │   │   ├── 📁 chapters/
+│   │   │       │   │   │   │   └── ⚛️  route.ts
+│   │   │       │   │   │   └── ⚛️  route.ts
+│   │   │       │   │   └── ⚛️  route.ts
+│   │   │       │   ├── 📁 auto-fix/
+│   │   │       │   │   └── ⚛️  route.ts
 │   │   │       │   ├── 📁 chapters/
 │   │   │       │   │   └── 📁 [chapterId]/
+│   │   │       │   │       ├── 📁 reorder/
+│   │   │       │   │       │   └── ⚛️  route.tsx
 │   │   │       │   │       ├── ⚛️  route.ts
 │   │   │       │   │       └── 📁 scenes/
 │   │   │       │   │           └── ⚛️  route.ts
 │   │   │       │   ├── 📁 import/
 │   │   │       │   │   └── ⚛️  route.ts
+│   │   │       │   ├── 📁 import-fixed/
+│   │   │       │   │   └── ⚛️  route.ts
 │   │   │       │   ├── ⚛️  route.ts
 │   │   │       │   ├── 📁 scenes/
 │   │   │       │   │   └── 📁 [sceneId]/
+│   │   │       │   │       ├── 📁 reorder/
+│   │   │       │   │       │   └── ⚛️  route.ts
 │   │   │       │   │       └── ⚛️  route.ts
 │   │   │       │   └── 📁 structure/
 │   │   │       │       └── ⚛️  route.ts
@@ -66,31 +75,42 @@
 │   │   ├── 📁 components/
 │   │   │   ├── 📁 manuscript/
 │   │   │   │   ├── 📁 chapter-tree/
-│   │   │   │   │   ├── ⚛️  editable-act-item.tsx
-│   │   │   │   │   ├── ⚛️  editable-chapter-item.tsx
-│   │   │   │   │   ├── ⚛️  editable-scene-item.tsx
-│   │   │   │   │   ├── ⚛️  enhanced-act-item.tsx
-│   │   │   │   │   ├── ⚛️  enhanced-chapter-item.tsx
-│   │   │   │   │   ├── ⚛️  enhanced-chapter-tree.tsx
-│   │   │   │   │   ├── ⚛️  enhanced-scene-item.tsx
+│   │   │   │   │   ├── ⚛️  add-act-interface.tsx
+│   │   │   │   │   ├── ⚛️  draggable-chapter-container.tsx
+│   │   │   │   │   ├── ⚛️  draggable-manuscript-tree.tsx
+│   │   │   │   │   ├── ⚛️  draggable-scene-item.tsx
 │   │   │   │   │   ├── ⚛️  index.ts
 │   │   │   │   │   ├── ⚛️  types.ts
 │   │   │   │   │   └── ⚛️  utils.ts
-│   │   │   │   ├── ⚛️  content-aggregation-service.ts
-│   │   │   │   ├── ⚛️  delete-confirmation-dialog.tsx
-│   │   │   │   ├── ⚛️  docx-uploader.tsx
-│   │   │   │   ├── 📁 manuscript-editor/
+│   │   │   │   ├── 📁 import-system/
+│   │   │   │   │   ├── ⚛️  docx-uploader.tsx
 │   │   │   │   │   ├── ⚛️  index.ts
-│   │   │   │   │   ├── ⚛️  manuscript-content-area.tsx
-│   │   │   │   │   ├── ⚛️  manuscript-editor.tsx
-│   │   │   │   │   ├── ⚛️  manuscript-header.tsx
-│   │   │   │   │   ├── ⚛️  manuscript-metadata-sidebar.tsx
-│   │   │   │   │   ├── ⚛️  manuscript-structure-sidebar.tsx
-│   │   │   │   │   ├── ⚛️  scene-card.tsx
-│   │   │   │   │   └── ⚛️  scene-grid.tsx
-│   │   │   │   ├── ⚛️  manuscript-empty-state.tsx
-│   │   │   │   ├── ⚛️  scene-text-editor.tsx
-│   │   │   │   └── ⚛️  view-mode-selector.tsx
+│   │   │   │   │   ├── ⚛️  manuscript-empty-state.tsx
+│   │   │   │   │   └── ⚛️  structure-preview.tsx
+│   │   │   │   └── 📁 manuscript-editor/
+│   │   │   │       ├── 📁 content-views/
+│   │   │   │       │   ├── 📁 grid-view/
+│   │   │   │       │   │   ├── ⚛️  index.ts
+│   │   │   │       │   │   ├── ⚛️  scene-card.tsx
+│   │   │   │       │   │   └── ⚛️  scene-grid.tsx
+│   │   │   │       │   ├── ⚛️  index.ts
+│   │   │   │       │   ├── ⚛️  manuscript-content-area.tsx
+│   │   │   │       │   └── ⚛️  types.ts
+│   │   │   │       ├── 📁 controls/
+│   │   │   │       │   ├── ⚛️  index.ts
+│   │   │   │       │   └── ⚛️  view-mode-selector.tsx
+│   │   │   │       ├── ⚛️  index.ts
+│   │   │   │       ├── 📁 layout/
+│   │   │   │       │   ├── ⚛️  delete-all-button.tsx
+│   │   │   │       │   ├── ⚛️  index.ts
+│   │   │   │       │   ├── ⚛️  manuscript-header.tsx
+│   │   │   │       │   ├── ⚛️  manuscript-metadata-sidebar.tsx
+│   │   │   │       │   └── ⚛️  manuscript-structure-sidebar.tsx
+│   │   │   │       ├── ⚛️  manuscript-editor.tsx
+│   │   │   │       ├── ⚛️  scene-text-editor.tsx
+│   │   │   │       └── 📁 services/
+│   │   │   │           ├── ⚛️  content-aggregation-service.ts
+│   │   │   │           └── ⚛️  index.ts
 │   │   │   ├── 📁 novel-selection-page/
 │   │   │   │   ├── ⚛️  create-novel-form.tsx
 │   │   │   │   ├── ⚛️  delete-confirmation-dialog.tsx
@@ -103,10 +123,15 @@
 │   │   │   │   ├── ⚛️  badge.tsx
 │   │   │   │   ├── ⚛️  button.tsx
 │   │   │   │   ├── ⚛️  card.tsx
+│   │   │   │   ├── ⚛️  collapsible-sidebar.tsx
+│   │   │   │   ├── ⚛️  delete-confirmation-dialog.tsx
 │   │   │   │   ├── ⚛️  editable-text.tsx
 │   │   │   │   ├── ⚛️  index.ts
 │   │   │   │   ├── ⚛️  input.tsx
-│   │   │   │   └── ⚛️  logo.tsx
+│   │   │   │   ├── ⚛️  logo.tsx
+│   │   │   │   ├── ⚛️  status-indicator.tsx
+│   │   │   │   ├── ⚛️  toggle-button.tsx
+│   │   │   │   └── ⚛️  word-count-display.tsx
 │   │   │   └── 📁 workspace/
 │   │   │       ├── ⚛️  dashboard-page.tsx
 │   │   │       ├── ⚛️  sidebar.tsx
@@ -121,16 +146,39 @@
 │   │   ├── ⚛️  layout.tsx
 │   │   └── ⚛️  page.tsx
 │   ├── 📁 hooks/
+│   │   ├── 📁 manuscript/
+│   │   │   └── ⚛️  useManuscriptLogic.ts
+│   │   ├── 📁 novels/
 │   │   └── ⚛️  useNovels.ts
-│   ├── 📁 lib/
-│   │   ├── ⚛️  docx-parser.ts
-│   │   ├── ⚛️  novels.ts
-│   │   └── ⚛️  prisma.ts
-│   ├── 📁 types/
-│   └── 📁 utils/
+│   └── 📁 lib/
+│       ├── 📁 doc-parse/
+│       │   ├── ⚛️  auto-fix-service.ts
+│       │   ├── 📁 detectors/
+│       │   │   ├── ⚛️  act-detector.ts
+│       │   │   ├── ⚛️  chapter-detector.ts
+│       │   │   └── ⚛️  scene-detector.ts
+│       │   ├── ⚛️  enhanced-docx-parser.ts
+│       │   ├── ⚛️  index.ts
+│       │   ├── ⚛️  structure-analyzer.ts
+│       │   ├── ⚛️  types.ts
+│       │   └── 📁 utils/
+│       │       ├── ⚛️  html-converter.ts
+│       │       ├── ⚛️  text-extractors.ts
+│       │       └── ⚛️  validators.ts
+│       ├── 📁 novels/
+│       │   ├── ⚛️  act-service.ts
+│       │   ├── ⚛️  chapter-service.ts
+│       │   ├── ⚛️  index.ts
+│       │   ├── ⚛️  novel-service.ts
+│       │   ├── ⚛️  scene-service.ts
+│       │   ├── ⚛️  types.ts
+│       │   └── 📁 utils/
+│       │       ├── ⚛️  order-management.ts
+│       │       └── ⚛️  word-count.ts
+│       └── ⚛️  prisma.ts
 └── 📋 tsconfig.json
 
-Generated on: Sun, Aug 17, 2025  2:56:50 PM
+Generated on: Mon, Aug 18, 2025  4:57:13 PM
 Directory: /c/Users/jssgm/Dev/Projects/ProdMonarch/themonarch
 Max depth: 14
 Include hidden: false

@@ -275,7 +275,9 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           aggregatedContent={aggregatedContent}
           viewMode={viewMode}
           onSceneClick={onSceneClick}
-          onSceneRename={onSceneRename} // ✨ NEW: Pass rename handler to grid
+          onSceneRename={onSceneRename} // ✨ Scene rename handler
+          onChapterRename={onChapterRename} // ✨ NEW: Chapter rename handler
+          novel={novel} // ✨ NEW: Pass novel data for chapter lookup
         />
       </div>
     );
