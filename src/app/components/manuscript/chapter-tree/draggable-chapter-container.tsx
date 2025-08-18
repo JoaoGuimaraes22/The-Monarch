@@ -59,14 +59,14 @@ export const DraggableChapterContainer: React.FC<
     },
   });
 
-  // ✅ Make chapter droppable for scenes
+  // ✅ Make chapter droppable for both scenes AND chapters
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `chapter-${chapter.id}`,
     data: {
       type: "chapter",
       chapter,
       actId,
-      accepts: ["scene"], // This chapter accepts scene drops
+      accepts: ["scene", "chapter"], // ✅ Accept both scenes and chapters
     },
   });
 
@@ -106,7 +106,7 @@ export const DraggableChapterContainer: React.FC<
               : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
           }
           ${isOver ? "bg-blue-900/20 border border-blue-500" : ""}
-          ${isDragging ? "ring-2 ring-yellow-500 bg-gray-700" : ""}
+          ${isDragging ? "ring-2 ring-yellow-500 bg-yellow-900/20" : ""}
         `}
         onClick={() => onSelect(chapter)}
       >

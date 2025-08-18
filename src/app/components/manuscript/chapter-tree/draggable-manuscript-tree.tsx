@@ -14,6 +14,10 @@ import {
   closestCenter,
   useDroppable,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { FileText, Book } from "lucide-react";
 import { NovelWithStructure, Scene, Chapter } from "@/lib/novels";
 import { DraggableChapterContainer } from "./draggable-chapter-container";
@@ -86,6 +90,7 @@ export const DraggableManuscriptTree: React.FC<
   const [activeScene, setActiveScene] = useState<Scene | null>(null);
   const [activeChapter, setActiveChapter] = useState<Chapter | null>(null);
   const [isReordering, setIsReordering] = useState(false);
+  const [dragType, setDragType] = useState<"scene" | "chapter" | null>(null);
 
   // Configure drag sensors
   const sensors = useSensors(
@@ -102,14 +107,30 @@ export const DraggableManuscriptTree: React.FC<
     if (active.data.current?.type === "scene") {
       setActiveScene(active.data.current.scene);
       setActiveChapter(null);
+      setDragType("scene");
     } else if (active.data.current?.type === "chapter") {
       setActiveChapter(active.data.current.chapter);
       setActiveScene(null);
+      setDragType("chapter");
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    // Visual feedback during drag
+    const { active, over } = event;
+
+    if (!over || !active.data.current) return;
+
+    const activeType = active.data.current.type;
+    const overType = over.data.current?.type;
+
+    // Add visual feedback based on drag type
+    if (activeType === "chapter" && overType === "chapter") {
+      // Chapter-to-chapter hover - show yellow feedback
+      console.log("Chapter hovering over chapter");
+    } else if (activeType === "scene" && overType === "scene") {
+      // Scene-to-scene hover - show blue feedback
+      console.log("Scene hovering over scene");
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -117,6 +138,7 @@ export const DraggableManuscriptTree: React.FC<
 
     setActiveScene(null);
     setActiveChapter(null);
+    setDragType(null);
 
     if (!over || active.id === over.id) {
       return; // No change needed
@@ -302,7 +324,8 @@ export const DraggableManuscriptTree: React.FC<
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-4">
+      {/* ✅ Drag Type Context - helps components know what's being dragged */}
+      <div data-drag-type={dragType} className="space-y-4">
         {novel.acts.map((act) => (
           <div key={act.id} className="space-y-2">
             {/* ✅ Act Header - Now droppable for chapters */}
@@ -317,23 +340,28 @@ export const DraggableManuscriptTree: React.FC<
               </div>
             </ActDropContainer>
 
-            {/* ✅ Chapters - Now draggable */}
+            {/* ✅ Chapters - Now in SortableContext for proper chapter dragging */}
             <div className="ml-4 space-y-1">
-              {act.chapters.map((chapter) => (
-                <DraggableChapterContainer
-                  key={chapter.id}
-                  chapter={chapter}
-                  actId={act.id}
-                  isSelected={selectedChapterId === chapter.id}
-                  isExpanded={expandedChapters.has(chapter.id)}
-                  selectedSceneId={selectedSceneId}
-                  onToggle={() => onChapterToggle(chapter.id)}
-                  onSelect={onChapterSelect}
-                  onSceneSelect={onSceneSelect}
-                  onSceneDelete={onSceneDelete}
-                  onAddScene={onAddScene}
-                />
-              ))}
+              <SortableContext
+                items={act.chapters.map((chapter) => chapter.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {act.chapters.map((chapter) => (
+                  <DraggableChapterContainer
+                    key={chapter.id}
+                    chapter={chapter}
+                    actId={act.id}
+                    isSelected={selectedChapterId === chapter.id}
+                    isExpanded={expandedChapters.has(chapter.id)}
+                    selectedSceneId={selectedSceneId}
+                    onToggle={() => onChapterToggle(chapter.id)}
+                    onSelect={onChapterSelect}
+                    onSceneSelect={onSceneSelect}
+                    onSceneDelete={onSceneDelete}
+                    onAddScene={onAddScene}
+                  />
+                ))}
+              </SortableContext>
             </div>
           </div>
         ))}
