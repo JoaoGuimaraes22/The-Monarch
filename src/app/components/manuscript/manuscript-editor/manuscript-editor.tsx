@@ -30,7 +30,6 @@ interface ManuscriptEditorProps {
   onDeleteScene: (sceneId: string) => Promise<void>;
   onDeleteChapter: (chapterId: string) => Promise<void>;
   onDeleteAct: (actId: string) => Promise<void>;
-  // ✨ NEW: Add these name editing handler props
   onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
   onUpdateChapterName?: (chapterId: string, newTitle: string) => Promise<void>;
   onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
@@ -57,7 +56,6 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onDeleteScene,
   onDeleteChapter,
   onDeleteAct,
-  // ✨ NEW: Destructure the name editing handlers
   onUpdateActName,
   onUpdateChapterName,
   onUpdateSceneName,
@@ -68,11 +66,6 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     useState(false);
   const [isMetadataSidebarCollapsed, setIsMetadataSidebarCollapsed] =
     useState(false);
-
-  // ✨ DEBUG: Log when view mode prop changes
-  React.useEffect(() => {
-    console.log("ManuscriptEditor: View mode prop updated to:", viewMode);
-  }, [viewMode]);
 
   // Generate aggregated content based on current view mode and selection
   const aggregatedContent = useMemo(() => {
@@ -85,89 +78,72 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     );
   }, [novel, viewMode, selectedScene, contentDisplayMode]);
 
-  // Calculate view-specific display information
-  const viewInfo: ViewInfo = useMemo(() => {
-    if (!aggregatedContent || !selectedScene) {
+  // Generate view info based on current view mode and selection
+  const viewInfo = useMemo((): ViewInfo => {
+    if (viewMode === "scene" && selectedScene) {
       return {
-        title: "Content Editor",
-        subtitle: "Select a scene to view content",
-        wordCount: 0,
-        sceneCount: 0,
+        title: selectedScene.title || `Scene ${selectedScene.order}`,
+        subtitle: "Scene view",
+        wordCount: selectedScene.wordCount,
+        sceneCount: 1,
       };
     }
 
-    const section = aggregatedContent.sections[0];
-    const sceneCount = section.scenes.length;
-
-    switch (viewMode) {
-      case "scene":
-        return {
-          title: `Scene ${selectedScene.order}`,
-          subtitle: selectedScene.status,
-          wordCount: selectedScene.wordCount,
-          sceneCount: 1,
-        };
-      case "chapter":
-        return {
-          title: section.title,
-          subtitle: `Chapter with ${sceneCount} scenes`,
-          wordCount: aggregatedContent.totalWordCount,
-          sceneCount,
-        };
-      case "act":
-        return {
-          title: section.title,
-          subtitle: `Act with ${sceneCount} scenes`,
-          wordCount: aggregatedContent.totalWordCount,
-          sceneCount,
-        };
-      default:
-        return {
-          title: "Content Editor",
-          subtitle: "Select content to view",
-          wordCount: 0,
-          sceneCount: 0,
-        };
+    if (viewMode === "chapter" && selectedChapter) {
+      return {
+        title: selectedChapter.title,
+        subtitle: "Chapter view",
+        wordCount: selectedChapter.scenes.reduce(
+          (sum, scene) => sum + scene.wordCount,
+          0
+        ),
+        sceneCount: selectedChapter.scenes.length,
+      };
     }
-  }, [aggregatedContent, selectedScene, viewMode]);
 
-  // Event handlers
-  const handleSceneContentChange = useCallback(
-    async (newContent: string) => {
-      if (!selectedScene || viewMode !== "scene") return;
+    if (viewMode === "act" && selectedAct) {
+      const totalScenes = selectedAct.chapters.reduce(
+        (sum, chapter) => sum + chapter.scenes.length,
+        0
+      );
+      const totalWords = selectedAct.chapters.reduce(
+        (sum, chapter) =>
+          sum +
+          chapter.scenes.reduce(
+            (sceneSum, scene) => sceneSum + scene.wordCount,
+            0
+          ),
+        0
+      );
 
-      // ✨ Skip saving for temporary scenes (optimistic updates)
-      if (selectedScene.id.startsWith("temp_")) {
-        console.log("Skipping save for temporary scene:", selectedScene.id);
-        return;
-      }
+      return {
+        title: selectedAct.title,
+        subtitle: "Act view",
+        wordCount: totalWords,
+        sceneCount: totalScenes,
+      };
+    }
 
-      try {
-        const response = await fetch(
-          `/api/novels/${novel.id}/scenes/${selectedScene.id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: newContent }),
-          }
-        );
+    // Default fallback
+    return {
+      title: "Manuscript",
+      subtitle: "No selection",
+      wordCount: 0,
+      sceneCount: 0,
+    };
+  }, [viewMode, selectedScene, selectedChapter, selectedAct]);
 
-        if (response.ok) {
-          console.log("Scene saved successfully");
-        } else {
-          console.error("Failed to save scene content");
-        }
-      } catch (error) {
-        console.error("Error saving scene content:", error);
-      }
-    },
-    [selectedScene, novel.id, viewMode]
-  );
+  // Handle scene content changes
+  const handleSceneContentChange = useCallback((content: string) => {
+    // This would typically call an API to save the content
+    console.log("Scene content changed:", content.length, "characters");
+  }, []);
 
-  // Calculate layout positioning
+  // Calculate sidebar positions and dimensions
   const structureSidebarLeft = isMainSidebarCollapsed ? "64px" : "256px";
   const structureSidebarWidth = isStructureSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarWidth = isMetadataSidebarCollapsed ? "64px" : "320px";
+  const metadataSidebarRight = "0px"; // ✅ FIX: Calculate right position
   const contentLeft = isStructureSidebarCollapsed ? "65px" : "321px";
   const contentRight = isMetadataSidebarCollapsed ? "65px" : "321px";
 
@@ -196,7 +172,6 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onDeleteChapter={onDeleteChapter}
         onDeleteAct={onDeleteAct}
         onAddAct={onAddAct}
-        // ✨ NEW: Pass through the name editing handlers
         onUpdateActName={onUpdateActName}
         onUpdateChapterName={onUpdateChapterName}
         onUpdateSceneName={onUpdateSceneName}
@@ -252,6 +227,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onToggleCollapse={() =>
           setIsMetadataSidebarCollapsed(!isMetadataSidebarCollapsed)
         }
+        right={metadataSidebarRight} // ✅ FIX: Add missing right prop
         width={metadataSidebarWidth}
       />
     </div>

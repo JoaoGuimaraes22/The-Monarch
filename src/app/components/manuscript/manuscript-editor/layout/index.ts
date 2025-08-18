@@ -6,3 +6,4 @@ export { ManuscriptStructureSidebar } from "./manuscript-structure-sidebar";
 export { ManuscriptMetadataSidebar } from "./manuscript-metadata-sidebar";
 
 // Components don't export prop types
+export type { ContentDisplayMode } from "./manuscript-header";

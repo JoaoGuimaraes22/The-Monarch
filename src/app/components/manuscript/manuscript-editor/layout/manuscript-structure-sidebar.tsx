@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { BookOpen, FileText } from "lucide-react";
 import { CollapsibleSidebar } from "@/app/components/ui";
+import { DeleteAllManuscriptButton } from "./delete-all-button";
 import { DraggableManuscriptTree } from "../../chapter-tree/draggable-manuscript-tree";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
@@ -148,6 +149,20 @@ export const ManuscriptStructureSidebar: React.FC<
     >
       {/* Main content when expanded - WITH SMART CHAPTER EXPANSION */}
       <div className="p-4">
+        {/* ✅ NEW: Toolbar Section */}
+        <div className="mb-4 pb-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+              Tools
+            </span>
+            <DeleteAllManuscriptButton
+              novelId={novel.id}
+              onSuccess={onRefresh}
+              className=""
+            />
+          </div>
+        </div>
+
         {/* ✨ Quick Expand/Collapse All Button */}
         <div className="mb-4 flex items-center justify-between">
           <span className="text-xs text-gray-500">
