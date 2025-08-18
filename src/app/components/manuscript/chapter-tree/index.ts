@@ -1,15 +1,25 @@
-// chapter-tree/index.ts
+// src/app/components/manuscript/chapter-tree/index.ts
+// Updated barrel exports for chapter-tree components
 
-// Main component (default export)
+// Main components
 export { EnhancedChapterTree as default } from "./enhanced-chapter-tree";
 export { EnhancedChapterTree } from "./enhanced-chapter-tree";
 
-// Sub-components (if needed elsewhere)
+// ✅ NEW: Drag-and-drop components
+export { DraggableManuscriptTree } from "./draggable-manuscript-tree";
+export { DraggableChapterContainer } from "./draggable-chapter-container";
+export { DraggableSceneItem } from "./draggable-scene-item";
+
+// Legacy components (if still needed)
 export { EnhancedSceneItem } from "./enhanced-scene-item";
 export { EnhancedChapterItem } from "./enhanced-chapter-item";
 export { EnhancedActItem } from "./enhanced-act-item";
+export { SortableChapterContainer } from "./sortable-chapter-container";
 
-// Types (if needed elsewhere)
+// Other components
+export { AddActInterface } from "./add-act-interface";
+
+// Types
 export type {
   ChapterTreeProps,
   DeleteDialogState,
@@ -21,5 +31,5 @@ export type {
   SceneStatus,
 } from "./types";
 
-// Utility functions (if needed elsewhere)
+// Utility functions
 export { formatWordCount, getSceneStatus } from "./utils";

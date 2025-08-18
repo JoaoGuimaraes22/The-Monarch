@@ -1,7 +1,7 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// Updated to use DraggableManuscriptTree for drag-and-drop functionality
+// Updated with smart chapter expansion - start with first chapter expanded
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BookOpen, FileText } from "lucide-react";
 import { CollapsibleSidebar } from "@/app/components/ui";
 import { DraggableManuscriptTree } from "../../chapter-tree/draggable-manuscript-tree";
@@ -56,6 +56,61 @@ export const ManuscriptStructureSidebar: React.FC<
   left,
   width,
 }) => {
+  // ✅ Smart chapter expansion state management
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
+    new Set()
+  );
+
+  // ✅ Initialize with smart defaults
+  useEffect(() => {
+    const allChapterIds = novel.acts.flatMap((act) =>
+      act.chapters.map((chapter) => chapter.id)
+    );
+
+    // Smart initialization strategy:
+    // 1. If there's a selected scene, expand its chapter
+    // 2. If there's a selected chapter, expand it
+    // 3. Otherwise, expand the first chapter (for discoverability)
+    const initialExpanded = new Set<string>();
+
+    if (selectedScene && selectedChapterId) {
+      // Expand the chapter containing the selected scene
+      initialExpanded.add(selectedChapterId);
+    } else if (selectedChapterId) {
+      // Expand the selected chapter
+      initialExpanded.add(selectedChapterId);
+    } else if (allChapterIds.length > 0) {
+      // Expand the first chapter for discoverability
+      initialExpanded.add(allChapterIds[0]);
+    }
+
+    setExpandedChapters(initialExpanded);
+  }, [novel.acts, selectedScene, selectedChapterId]);
+
+  // ✅ Handle chapter toggle
+  const handleChapterToggle = (chapterId: string) => {
+    setExpandedChapters((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(chapterId)) {
+        newSet.delete(chapterId);
+      } else {
+        newSet.add(chapterId);
+      }
+      return newSet;
+    });
+  };
+
+  // ✅ Auto-expand chapter when scene is selected from elsewhere
+  useEffect(() => {
+    if (
+      selectedScene &&
+      selectedChapterId &&
+      !expandedChapters.has(selectedChapterId)
+    ) {
+      setExpandedChapters((prev) => new Set([...prev, selectedChapterId]));
+    }
+  }, [selectedScene, selectedChapterId, expandedChapters]);
+
   // Collapsed content - show when sidebar is collapsed
   const collapsedContent = (
     <button
@@ -66,6 +121,17 @@ export const ManuscriptStructureSidebar: React.FC<
       <FileText className="w-5 h-5" />
     </button>
   );
+
+  // ✅ Provide a default function for onChapterSelect if it's undefined
+  const handleChapterSelect =
+    onChapterSelect ||
+    ((chapter: Chapter) => {
+      console.log("Chapter selected:", chapter.title);
+      // Auto-expand when selected
+      if (!expandedChapters.has(chapter.id)) {
+        handleChapterToggle(chapter.id);
+      }
+    });
 
   return (
     <CollapsibleSidebar
@@ -80,20 +146,47 @@ export const ManuscriptStructureSidebar: React.FC<
       collapsedContent={collapsedContent}
       className="z-20"
     >
-      {/* Main content when expanded - NOW WITH DRAG-AND-DROP */}
+      {/* Main content when expanded - WITH SMART CHAPTER EXPANSION */}
       <div className="p-4">
+        {/* ✨ Quick Expand/Collapse All Button */}
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-xs text-gray-500">
+            {expandedChapters.size} of{" "}
+            {novel.acts.flatMap((act) => act.chapters).length} chapters expanded
+          </span>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                const allChapterIds = novel.acts.flatMap((act) =>
+                  act.chapters.map((chapter) => chapter.id)
+                );
+                setExpandedChapters(new Set(allChapterIds));
+              }}
+              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+              title="Expand all chapters"
+            >
+              Expand All
+            </button>
+            <span className="text-xs text-gray-600">•</span>
+            <button
+              onClick={() => setExpandedChapters(new Set())}
+              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+              title="Collapse all chapters"
+            >
+              Collapse All
+            </button>
+          </div>
+        </div>
+
         <DraggableManuscriptTree
           novel={novel}
           selectedSceneId={selectedScene?.id}
           selectedChapterId={selectedChapterId}
           selectedActId={selectedActId}
-          expandedChapters={new Set()} // You might want to manage this state
+          expandedChapters={expandedChapters} // ✅ Now properly managed
           onSceneSelect={onSceneSelect}
-          onChapterSelect={onChapterSelect}
-          onChapterToggle={(chapterId: string) => {
-            // Handle chapter expand/collapse - you might want to manage this state
-            console.log("Toggle chapter:", chapterId);
-          }}
+          onChapterSelect={handleChapterSelect}
+          onChapterToggle={handleChapterToggle} // ✅ Now properly handled
           onSceneDelete={async (sceneId: string, title: string) => {
             if (
               window.confirm(`Delete scene "${title}"? This cannot be undone.`)

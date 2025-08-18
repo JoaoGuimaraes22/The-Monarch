@@ -1,20 +1,22 @@
-// src/app/components/manuscript/chapter-tree/sortable-chapter-container.tsx
-// Updated so clicking anywhere on chapter header toggles expand/collapse
+// src/app/components/manuscript/chapter-tree/draggable-chapter-container.tsx
+// Chapter container with drag handles and scene drop support
 
 import React from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Book, Plus } from "lucide-react";
+import { CSS } from "@dnd-kit/utilities";
+import { Book, Plus, GripVertical } from "lucide-react";
 import { Chapter, Scene } from "@/lib/novels";
 import { DraggableSceneItem } from "./draggable-scene-item";
 import { ToggleButton, WordCountDisplay } from "@/app/components/ui";
 
-interface SortableChapterContainerProps {
+interface DraggableChapterContainerProps {
   chapter: Chapter;
-  actId: string; // ✅ ADD: actId prop
+  actId: string;
   isSelected: boolean;
   isExpanded: boolean;
   selectedSceneId?: string;
@@ -25,11 +27,11 @@ interface SortableChapterContainerProps {
   onAddScene?: (chapterId: string) => void;
 }
 
-export const SortableChapterContainer: React.FC<
-  SortableChapterContainerProps
+export const DraggableChapterContainer: React.FC<
+  DraggableChapterContainerProps
 > = ({
   chapter,
-  actId, // ✅ ADD: destructure actId
+  actId,
   isSelected,
   isExpanded,
   selectedSceneId,
@@ -39,14 +41,45 @@ export const SortableChapterContainer: React.FC<
   onSceneDelete,
   onAddScene,
 }) => {
-  const { setNodeRef, isOver } = useDroppable({
+  // ✅ Make chapter draggable
+  const {
+    attributes: dragAttributes,
+    listeners: dragListeners,
+    setNodeRef: setDragRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: chapter.id,
+    data: {
+      type: "chapter",
+      chapter,
+      actId,
+      sourceIndex: chapter.order,
+    },
+  });
+
+  // ✅ Make chapter droppable for scenes
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `chapter-${chapter.id}`,
     data: {
       type: "chapter",
       chapter,
+      actId,
       accepts: ["scene"], // This chapter accepts scene drops
     },
   });
+
+  // ✅ Combine drag and drop refs
+  const setNodeRef = (node: HTMLElement | null) => {
+    setDragRef(node);
+    setDropRef(node);
+  };
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   const sceneIds = chapter.scenes.map((scene) => scene.id);
   const totalWords = chapter.scenes.reduce(
@@ -55,8 +88,15 @@ export const SortableChapterContainer: React.FC<
   );
 
   return (
-    <div className="space-y-1">
-      {/* Chapter Header */}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        space-y-1 transition-all duration-200
+        ${isDragging ? "opacity-50 z-50" : ""}
+      `}
+    >
+      {/* ✅ Chapter Header - Now with drag handle */}
       <div
         className={`
           group flex items-center space-x-2 py-2 px-3 rounded-md cursor-pointer transition-all
@@ -66,10 +106,27 @@ export const SortableChapterContainer: React.FC<
               : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
           }
           ${isOver ? "bg-blue-900/20 border border-blue-500" : ""}
+          ${isDragging ? "ring-2 ring-yellow-500 bg-gray-700" : ""}
         `}
         onClick={() => onSelect(chapter)}
       >
-        {/* Expand/Collapse Button - Using shared component */}
+        {/* ✅ Chapter Drag Handle */}
+        <div
+          {...dragAttributes}
+          {...dragListeners}
+          className={`
+            opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing
+            ${isDragging ? "opacity-100" : ""}
+            ${isSelected ? "opacity-100" : ""}
+            p-1 hover:bg-gray-600 rounded
+          `}
+          onClick={(e) => e.stopPropagation()}
+          title="Drag to reorder chapter"
+        >
+          <GripVertical className="w-3 h-3 text-gray-400" />
+        </div>
+
+        {/* Expand/Collapse Button */}
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -128,10 +185,9 @@ export const SortableChapterContainer: React.FC<
         )}
       </div>
 
-      {/* Scenes Container */}
+      {/* ✅ Scenes Container - Only visible when expanded */}
       {isExpanded && (
         <div
-          ref={setNodeRef}
           className={`
             ml-6 space-y-1 min-h-[2rem] transition-all
             ${
@@ -150,7 +206,7 @@ export const SortableChapterContainer: React.FC<
                 key={scene.id}
                 scene={scene}
                 chapterId={chapter.id}
-                actId={actId} // ✅ ADD: pass actId prop
+                actId={actId} // ✅ Pass actId for boundary checking
                 isSelected={selectedSceneId === scene.id}
                 onSelect={onSceneSelect}
                 onDelete={onSceneDelete}

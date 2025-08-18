@@ -1,5 +1,5 @@
 // src/app/components/manuscript/chapter-tree/draggable-scene-item.tsx
-// Updated to use shared components for consistency
+// Updated to include actId for boundary checking
 
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -17,6 +17,7 @@ import { StatusIndicator, WordCountDisplay } from "@/app/components/ui";
 interface DraggableSceneItemProps {
   scene: Scene;
   chapterId: string;
+  actId: string; // ✅ NEW: For act boundary checking
   isSelected: boolean;
   onSelect: (sceneId: string, scene: Scene) => void;
   onDelete: (sceneId: string, title: string) => void;
@@ -26,6 +27,7 @@ interface DraggableSceneItemProps {
 export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   scene,
   chapterId,
+  actId,
   isSelected,
   onSelect,
   onDelete,
@@ -45,6 +47,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
       type: "scene",
       scene,
       chapterId,
+      actId, // ✅ Include actId in drag data
       sourceIndex: scene.order,
     },
   });
@@ -86,57 +89,54 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
           p-1 hover:bg-gray-600 rounded
         `}
         onClick={(e) => e.stopPropagation()}
-        title="Drag to reorder"
+        title="Drag to reorder scene"
       >
         <GripVertical className="w-3 h-3 text-gray-400" />
       </div>
 
       {/* Scene Icon */}
-      <FileText
-        className={`w-4 h-4 flex-shrink-0 ${
-          isDragging ? "text-blue-400" : "text-blue-400"
-        }`}
-      />
+      <FileText className="w-4 h-4 flex-shrink-0 text-blue-400" />
 
       {/* Scene Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center space-x-2">
-          {/* Scene Number */}
           <span className="text-xs font-medium text-gray-400">
             SC{scene.order}
           </span>
-
-          {/* Scene Title */}
-          <span className="text-sm truncate font-medium">
+          <span className="text-sm truncate">
             {scene.title || `Scene ${scene.order}`}
           </span>
-
-          {/* Status Indicator - Using shared component */}
-          <StatusIndicator
-            status={scene.status}
-            variant="compact"
-            showText={false}
-            className="flex-shrink-0"
-          />
         </div>
 
-        {/* Word Count - Using shared component */}
-        <WordCountDisplay
-          count={scene.wordCount}
-          variant="compact"
-          className="mt-1"
-        />
+        {/* Scene metadata */}
+        <div className="flex items-center space-x-2 text-xs">
+          <StatusIndicator status={scene.status} variant="compact" />
+          <span className="text-gray-500">•</span>
+          <WordCountDisplay
+            count={scene.wordCount}
+            variant="compact"
+            className="text-gray-500"
+          />
+          {scene.povCharacter && (
+            <>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-500 truncate">
+                {scene.povCharacter}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Actions Menu */}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
+      {/* Scene Actions */}
+      <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1">
         {onEditName && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEditName(scene.id, scene.title || `Scene ${scene.order}`);
+              onEditName(scene.id, scene.title);
             }}
-            className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-colors"
+            className="p-1 hover:bg-blue-600 rounded text-gray-400 hover:text-blue-300"
             title="Edit scene name"
           >
             <Edit3 className="w-3 h-3" />
@@ -148,30 +148,12 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
             e.stopPropagation();
             onDelete(scene.id, scene.title || `Scene ${scene.order}`);
           }}
-          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300 transition-colors"
+          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300"
           title="Delete scene"
         >
           <Trash2 className="w-3 h-3" />
         </button>
-
-        <button
-          onClick={(e) => e.stopPropagation()}
-          className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-colors"
-          title="More options"
-        >
-          <MoreHorizontal className="w-3 h-3" />
-        </button>
       </div>
-
-      {/* Enhanced Drag Visual Indicators */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-blue-500/10 border border-blue-500 rounded-md pointer-events-none" />
-      )}
-
-      {/* Drop Indicator */}
-      {isOver && !isDragging && (
-        <div className="absolute left-0 top-0 w-1 h-full bg-blue-400 rounded-r" />
-      )}
     </div>
   );
 };
