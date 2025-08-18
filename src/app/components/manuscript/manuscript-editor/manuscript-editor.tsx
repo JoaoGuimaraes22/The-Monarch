@@ -94,7 +94,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       return {
         title: selectedScene.title || `Scene ${selectedScene.order}`,
         subtitle: "Scene view",
-        wordCount: selectedScene.wordCount,
+        wordCount: selectedScene.wordCount || 0,
         sceneCount: 1,
       };
     }
@@ -104,7 +104,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         title: selectedChapter.title,
         subtitle: "Chapter view",
         wordCount: selectedChapter.scenes.reduce(
-          (sum, scene) => sum + scene.wordCount,
+          (sum, scene) => sum + (scene.wordCount || 0),
           0
         ),
         sceneCount: selectedChapter.scenes.length,
@@ -113,16 +113,16 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
 
     if (viewMode === "act" && selectedAct) {
       const totalScenes = selectedAct.chapters.reduce(
-        (sum, chapter) => sum + chapter.scenes.length,
+        (sum, chapter) => sum + (chapter.scenes?.length || 0),
         0
       );
       const totalWords = selectedAct.chapters.reduce(
         (sum, chapter) =>
           sum +
-          chapter.scenes.reduce(
-            (sceneSum, scene) => sceneSum + scene.wordCount,
+          (chapter.scenes?.reduce(
+            (chapterSum, scene) => chapterSum + (scene.wordCount || 0),
             0
-          ),
+          ) || 0),
         0
       );
 
@@ -168,9 +168,9 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   const metadataSidebarRight = "0px";
 
   // Create formatted subtitle with word count and scene count
-  const formattedSubtitle = `${
-    viewInfo.subtitle
-  } • ${viewInfo.wordCount.toLocaleString()} words${
+  const formattedSubtitle = `${viewInfo.subtitle} • ${(
+    viewInfo.wordCount || 0
+  ).toLocaleString()} words${
     viewInfo.sceneCount > 1 ? ` • ${viewInfo.sceneCount} scenes` : ""
   }`;
 
@@ -205,7 +205,13 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div
+        className="flex-1 flex flex-col"
+        style={{
+          marginLeft: structureSidebarWidth,
+          marginRight: metadataSidebarWidth,
+        }}
+      >
         {/* Header */}
         <ManuscriptHeader
           viewMode={viewMode}
