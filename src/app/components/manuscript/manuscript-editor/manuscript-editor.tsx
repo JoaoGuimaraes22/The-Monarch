@@ -9,7 +9,7 @@ import {
   ViewInfo,
   ContentDisplayMode,
 } from "@/app/components/manuscript/manuscript-editor";
-import { contentAggregationService } from "@/app/components/manuscript/manuscript-editor/content-aggregation-service";
+import { contentAggregationService } from "@/app/components/manuscript/manuscript-editor/services/content-aggregation-service";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
 interface ManuscriptEditorProps {

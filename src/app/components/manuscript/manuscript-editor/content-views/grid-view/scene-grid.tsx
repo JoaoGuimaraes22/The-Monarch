@@ -1,8 +1,8 @@
 import React from "react";
 import { Scene } from "@/lib/novels";
-import { SceneCard } from "./scene-card";
-import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/content-aggregation-service";
-import { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
+import { SceneCard } from "./";
+import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/services/";
+import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
 
 interface SceneGridProps {
   aggregatedContent: AggregatedContent;

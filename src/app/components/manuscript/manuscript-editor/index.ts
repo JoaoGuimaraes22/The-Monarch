@@ -1,29 +1,32 @@
-// Barrel exports for manuscript-editor components
+// src/app/components/manuscript/manuscript-editor/index.ts
+// Barrel exports for manuscript-editor components - organized by category
 
 // Main component (default export)
 export { ManuscriptEditor as default } from "./manuscript-editor";
 export { ManuscriptEditor } from "./manuscript-editor";
 
-// Sub-components (if needed elsewhere)
-export { ManuscriptHeader } from "./manuscript-header";
-export { ManuscriptStructureSidebar } from "./manuscript-structure-sidebar";
-export { ManuscriptMetadataSidebar } from "./manuscript-metadata-sidebar";
-export { ManuscriptContentArea } from "./manuscript-content-area";
+// Layout components
+export * from "./layout";
 
-// ✨ NEW: Export grid view components
-export { SceneCard } from "./scene-card";
-export { SceneGrid } from "./scene-grid";
+// Content view components
+export * from "./content-views";
 
-// Re-export the ViewMode type from the view-mode-selector
-export type { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
+// UI controls
+export * from "./controls";
 
-// ✨ NEW: Export ContentDisplayMode type
-export type { ContentDisplayMode } from "./manuscript-header";
+// Services (business logic)
+export * from "./services";
 
-// Re-export types that components need
-export type ViewInfo = {
-  title: string;
-  subtitle: string;
-  wordCount: number;
-  sceneCount: number;
-};
+// Direct exports for backward compatibility (if needed)
+export { ManuscriptHeader } from "./layout/manuscript-header";
+export { ManuscriptStructureSidebar } from "./layout/manuscript-structure-sidebar";
+export { ManuscriptMetadataSidebar } from "./layout/manuscript-metadata-sidebar";
+export { ManuscriptContentArea } from "./content-views/manuscript-content-area";
+export { SceneCard } from "./content-views/grid-view/scene-card";
+export { SceneGrid } from "./content-views/grid-view/scene-grid";
+export { ViewModeSelector } from "./controls/view-mode-selector";
+
+// Re-export key types
+export type { ViewMode } from "./controls/view-mode-selector";
+// export type { ContentDisplayMode } from "./content-views";
+export type { ViewInfo } from "./content-views";

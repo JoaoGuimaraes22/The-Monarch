@@ -1,5 +1,5 @@
 // src/app/components/manuscript/chapter-tree/draggable-scene-item.tsx
-// Enhanced scene item with drag-and-drop functionality
+// Updated to use shared components for consistency
 
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -12,7 +12,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { Scene } from "@/lib/novels";
-import { formatWordCount, getSceneStatus } from "./utils";
+import { StatusIndicator, WordCountDisplay } from "@/app/components/ui";
 
 interface DraggableSceneItemProps {
   scene: Scene;
@@ -54,8 +54,6 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     transition,
   };
 
-  const sceneStatus = getSceneStatus(scene);
-
   return (
     <div
       ref={setNodeRef}
@@ -75,7 +73,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         }
         cursor-pointer select-none
       `}
-      onClick={() => onSelect(scene.id, scene)} // ✅ Fixed: Pass scene object, not scene.id
+      onClick={() => onSelect(scene.id, scene)}
     >
       {/* Drag Handle */}
       <div
@@ -113,16 +111,21 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
             {scene.title || `Scene ${scene.order}`}
           </span>
 
-          {/* Status Indicator */}
-          <span className={`text-xs ${sceneStatus.color}`}>
-            {sceneStatus.icon}
-          </span>
+          {/* Status Indicator - Using shared component */}
+          <StatusIndicator
+            status={scene.status}
+            variant="compact"
+            showText={false}
+            className="flex-shrink-0"
+          />
         </div>
 
-        {/* Word Count */}
-        <div className="text-xs text-gray-500">
-          {formatWordCount(scene.wordCount)}
-        </div>
+        {/* Word Count - Using shared component */}
+        <WordCountDisplay
+          count={scene.wordCount}
+          variant="compact"
+          className="mt-1"
+        />
       </div>
 
       {/* Actions Menu */}

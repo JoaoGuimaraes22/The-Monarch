@@ -1,5 +1,5 @@
 // src/app/components/manuscript/chapter-tree/sortable-chapter-container.tsx
-// Chapter container that supports scene drag-and-drop
+// Updated to use shared components
 
 import React from "react";
 import { useDroppable } from "@dnd-kit/core";
@@ -7,10 +7,10 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Book, Plus, ChevronDown, ChevronRight } from "lucide-react";
-import { Chapter, Scene } from "@/lib/novels/";
+import { Book, Plus } from "lucide-react";
+import { Chapter, Scene } from "@/lib/novels";
 import { DraggableSceneItem } from "./draggable-scene-item";
-import { formatWordCount } from "./utils";
+import { ToggleButton, WordCountDisplay } from "@/app/components/ui";
 
 interface SortableChapterContainerProps {
   chapter: Chapter;
@@ -67,20 +67,21 @@ export const SortableChapterContainer: React.FC<
         `}
         onClick={() => onSelect(chapter)}
       >
-        {/* Expand/Collapse Button */}
-        <button
+        {/* Expand/Collapse Button - Using shared component */}
+        <div
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
           }}
-          className="p-1 hover:bg-gray-600 rounded"
         >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
-        </button>
+          <ToggleButton
+            isExpanded={isExpanded}
+            onToggle={onToggle}
+            size="sm"
+            variant="ghost"
+            className="flex-shrink-0"
+          />
+        </div>
 
         {/* Chapter Icon */}
         <Book className="w-4 h-4 text-yellow-400 flex-shrink-0" />
@@ -95,8 +96,18 @@ export const SortableChapterContainer: React.FC<
               {chapter.title}
             </span>
           </div>
-          <div className="text-xs text-gray-500">
-            {chapter.scenes.length} scenes • {formatWordCount(totalWords)}
+
+          {/* Chapter Stats - Using shared component */}
+          <div className="flex items-center space-x-2 text-xs">
+            <span className="text-gray-500">
+              {chapter.scenes.length} scenes
+            </span>
+            <span className="text-gray-500">•</span>
+            <WordCountDisplay
+              count={totalWords}
+              variant="compact"
+              className="text-gray-500"
+            />
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   ViewModeSelector,
   ViewMode,
-} from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
+} from "@/app/components/manuscript/manuscript-editor/controls/";
 import { LayoutGrid, FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 export type ContentDisplayMode = "document" | "grid";

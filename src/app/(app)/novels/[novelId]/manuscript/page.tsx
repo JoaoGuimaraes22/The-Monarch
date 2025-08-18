@@ -6,7 +6,7 @@ import {
   DocxUploader,
 } from "@/app/components/manuscript/import-system/";
 import { ManuscriptEditor } from "@/app/components/manuscript/manuscript-editor";
-import { ViewMode } from "@/app/components/manuscript/manuscript-editor/view-mode-selector";
+import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/view-mode-selector";
 import { NovelWithStructure, Scene, Act, Chapter } from "@/lib/novels";
 import { useSidebar } from "@/app/components/workspace/sidebar-context";
 
