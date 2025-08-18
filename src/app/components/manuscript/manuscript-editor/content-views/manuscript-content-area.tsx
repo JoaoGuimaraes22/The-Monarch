@@ -1,3 +1,6 @@
+// src/app/components/manuscript/manuscript-editor/content-views/manuscript-content-area.tsx
+// ✨ ENHANCED: Added scene rename functionality in grid view
+
 import React from "react";
 import { FileText, Plus } from "lucide-react";
 import { SceneTextEditor } from "@/app/components/manuscript/manuscript-editor/scene-text-editor";
@@ -14,9 +17,10 @@ interface ManuscriptContentAreaProps {
   contentDisplayMode: ContentDisplayMode;
   onContentChange: (content: string) => void;
   onSceneClick: (sceneId: string, scene: Scene) => void;
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Scene rename handler
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
   onAddChapter?: (actId: string, afterChapterId?: string) => void;
-  novel?: NovelWithStructure | null; // ✅ FIXED: Proper typing instead of any
+  novel?: NovelWithStructure | null;
   marginLeft: string;
   marginRight: string;
 }
@@ -75,54 +79,50 @@ const SceneHeader: React.FC<{
   scene: Scene;
   showChapterContext?: boolean;
   chapterTitle?: string;
-  onSceneClick?: (sceneId: string, scene: Scene) => void;
-}> = ({ scene, showChapterContext = false, chapterTitle, onSceneClick }) => {
+  onSceneClick: (sceneId: string, scene: Scene) => void;
+}> = ({ scene, showChapterContext, chapterTitle, onSceneClick }) => {
   return (
-    <div className="my-4 py-2 px-4 border-t border-b border-gray-600 bg-gray-800/50 rounded">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="text-gray-300 font-medium">Scene {scene.order}</span>
-          {showChapterContext && chapterTitle && (
-            <span className="text-gray-500 text-sm">• {chapterTitle}</span>
-          )}
-          {onSceneClick && (
-            <button
-              onClick={() => onSceneClick(scene.id, scene)}
-              className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Edit
-            </button>
-          )}
-        </div>
-        <div className="text-xs text-gray-400">
+    <div className="flex items-center justify-between py-3 px-4 bg-gray-800 border border-gray-600 rounded-t-lg">
+      <div>
+        <h3 className="text-lg font-medium text-white">
+          {scene.title || `Scene ${scene.order}`}
+        </h3>
+        {showChapterContext && chapterTitle && (
+          <p className="text-sm text-blue-400">{chapterTitle}</p>
+        )}
+        <p className="text-sm text-gray-400">
           {scene.wordCount} words • {scene.status}
-        </div>
+        </p>
       </div>
+      <button
+        onClick={() => onSceneClick(scene.id, scene)}
+        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+      >
+        Edit
+      </button>
     </div>
   );
 };
 
-// ✨ NEW: Individual Scene Content Change Handler
+// ✨ Custom hook for scene content handling
 const useSceneContentHandler = (
   sceneId: string,
-  onIndividualSceneChange?: (sceneId: string, content: string) => void
+  onContentChange?: (sceneId: string, content: string) => void
 ) => {
   return React.useCallback(
-    (newContent: string) => {
-      if (onIndividualSceneChange) {
-        onIndividualSceneChange(sceneId, newContent);
-      } else {
-        console.log("Scene content changed:", sceneId, newContent);
+    (content: string) => {
+      if (onContentChange) {
+        onContentChange(sceneId, content);
       }
     },
-    [sceneId, onIndividualSceneChange]
+    [sceneId, onContentChange]
   );
 };
 
-// ✨ NEW: Scene Block Component - Handles individual scene editing
-const SceneBlock: React.FC<{
+// ✨ Individual Scene Editor Component for Document View
+const SceneEditor: React.FC<{
   scene: Scene;
-  onSceneClick?: (sceneId: string, scene: Scene) => void;
+  onSceneClick: (sceneId: string, scene: Scene) => void;
   onContentChange?: (sceneId: string, content: string) => void;
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
   chapterInfo?: Chapter;
@@ -177,6 +177,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
   contentDisplayMode,
   onContentChange,
   onSceneClick,
+  onSceneRename, // ✨ NEW: Scene rename handler
   onAddScene,
   onAddChapter,
   novel,
@@ -227,7 +228,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✨ Grid view (unchanged)
+  // ✨ Grid view - Enhanced with rename functionality
   if (
     (viewMode === "chapter" || viewMode === "act") &&
     contentDisplayMode === "grid"
@@ -241,6 +242,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           aggregatedContent={aggregatedContent}
           viewMode={viewMode}
           onSceneClick={onSceneClick}
+          onSceneRename={onSceneRename} // ✨ NEW: Pass rename handler to grid
         />
       </div>
     );
@@ -283,23 +285,29 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
-        <div className="p-6 space-y-6">
-          {scenes.map((scene) => (
-            <SceneBlock
+        <div className="p-6 space-y-8">
+          {/* Chapter Header */}
+          {chapterInfo && <ChapterHeader chapter={chapterInfo} />}
+
+          {/* Individual Scene Editors */}
+          {scenes.map((scene, index) => (
+            <SceneEditor
               key={scene.id}
               scene={scene}
               onSceneClick={onSceneClick}
               onContentChange={handleIndividualSceneChange}
               onAddScene={onAddScene}
               chapterInfo={chapterInfo}
+              showChapterContext={false}
             />
           ))}
 
-          {/* Add Scene Button for empty chapter */}
-          {scenes.length === 0 && onAddScene && chapterInfo && (
-            <AddSceneButton
-              chapterId={chapterInfo.id}
-              onAddScene={onAddScene}
+          {/* Add Chapter Button at the end */}
+          {onAddChapter && chapterInfo && (
+            <AddChapterButton
+              actId={chapterInfo.actId}
+              afterChapterId={chapterInfo.id}
+              onAddChapter={onAddChapter}
             />
           )}
         </div>
@@ -307,97 +315,67 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✨ Act Document View - Separate Chapter Sections
+  // ✨ Act Document View - All scenes with chapter context
   if (viewMode === "act") {
-    // Group scenes by chapter
-    const scenesByChapter = new Map<
-      string,
-      { chapter: Chapter; scenes: Scene[] }
-    >();
-
-    // Find act info from novel data
-    const actInfo = novel?.acts?.find((act: Act) =>
-      aggregatedContent.sections[0].scenes.some((s: Scene) =>
-        act.chapters.some((chapter: Chapter) =>
-          chapter.scenes.some((cs: Scene) => cs.id === s.id)
-        )
-      )
-    );
-
-    // Group scenes by their chapters
-    if (actInfo) {
-      actInfo.chapters.forEach((chapter: Chapter) => {
-        const chapterScenes = chapter.scenes.filter((scene: Scene) =>
-          aggregatedContent.sections[0].scenes.some(
-            (s: Scene) => s.id === scene.id
-          )
-        );
-        if (chapterScenes.length > 0) {
-          scenesByChapter.set(chapter.id, { chapter, scenes: chapterScenes });
-        } else {
-          // Include empty chapters
-          scenesByChapter.set(chapter.id, { chapter, scenes: [] });
-        }
-      });
-    }
-
     return (
       <div
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
         <div className="p-6 space-y-8">
-          {Array.from(scenesByChapter.entries()).map(
-            ([chapterId, { chapter, scenes }], chapterIndex) => (
-              <div key={chapterId}>
+          {aggregatedContent.sections.map((section) => {
+            const scenes = section.scenes;
+
+            // Extract chapter name from section title
+            const chapterMatch = section.title.match(/:([^:]+)$/);
+            const chapterTitle = chapterMatch
+              ? chapterMatch[1].trim()
+              : "Chapter";
+
+            // Find chapter info for this section
+            const chapterInfo = novel?.acts
+              ?.flatMap((act: Act) => act.chapters)
+              ?.find((chapter: Chapter) =>
+                section.scenes.some((s: Scene) =>
+                  chapter.scenes.some((cs: Scene) => cs.id === s.id)
+                )
+              );
+
+            return (
+              <div key={section.id} className="space-y-6">
                 {/* Chapter Header */}
-                {chapterIndex > 0 && <ChapterHeader chapter={chapter} />}
+                {chapterInfo && <ChapterHeader chapter={chapterInfo} />}
 
-                {/* Chapter Scenes */}
-                <div className="space-y-6">
-                  {scenes.map((scene) => (
-                    <SceneBlock
-                      key={scene.id}
-                      scene={scene}
-                      onSceneClick={onSceneClick}
-                      onContentChange={handleIndividualSceneChange}
-                      onAddScene={onAddScene}
-                      chapterInfo={chapter}
-                      showChapterContext={chapterIndex === 0}
-                      chapterTitle={chapter.title}
-                    />
-                  ))}
-
-                  {/* Add Scene Button for empty chapter */}
-                  {scenes.length === 0 && onAddScene && (
-                    <AddSceneButton
-                      chapterId={chapter.id}
-                      onAddScene={onAddScene}
-                    />
-                  )}
-                </div>
+                {/* Scenes in this chapter */}
+                {scenes.map((scene) => (
+                  <SceneEditor
+                    key={scene.id}
+                    scene={scene}
+                    onSceneClick={onSceneClick}
+                    onContentChange={handleIndividualSceneChange}
+                    onAddScene={onAddScene}
+                    chapterInfo={chapterInfo}
+                    showChapterContext={true}
+                    chapterTitle={chapterTitle}
+                  />
+                ))}
 
                 {/* Add Chapter Button */}
-                {onAddChapter && actInfo && (
+                {onAddChapter && chapterInfo && (
                   <AddChapterButton
-                    actId={actInfo.id}
-                    afterChapterId={chapter.id}
+                    actId={chapterInfo.actId}
+                    afterChapterId={chapterInfo.id}
                     onAddChapter={onAddChapter}
                   />
                 )}
               </div>
-            )
-          )}
-
-          {/* Add Chapter Button for empty act */}
-          {scenesByChapter.size === 0 && onAddChapter && actInfo && (
-            <AddChapterButton actId={actInfo.id} onAddChapter={onAddChapter} />
-          )}
+            );
+          })}
         </div>
       </div>
     );
   }
 
-  // Fallback - shouldn't reach here
+  // Fallback
   return null;
 };

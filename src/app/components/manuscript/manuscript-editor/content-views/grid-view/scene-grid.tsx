@@ -1,3 +1,6 @@
+// src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-grid.tsx
+// ✨ ENHANCED: Added scene rename functionality
+
 import React from "react";
 import { Scene } from "@/lib/novels";
 import { SceneCard } from "./";
@@ -8,12 +11,14 @@ interface SceneGridProps {
   aggregatedContent: AggregatedContent;
   viewMode: ViewMode;
   onSceneClick: (sceneId: string, scene: Scene) => void;
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Rename handler
 }
 
 export const SceneGrid: React.FC<SceneGridProps> = ({
   aggregatedContent,
   viewMode,
   onSceneClick,
+  onSceneRename,
 }) => {
   if (!aggregatedContent || aggregatedContent.sections.length === 0) {
     return (
@@ -49,6 +54,7 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
               key={scene.id}
               scene={scene}
               onClick={() => onSceneClick(scene.id, scene)}
+              onRename={onSceneRename} // ✨ NEW: Pass rename handler
               showChapterContext={false}
             />
           ))}
@@ -71,53 +77,35 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
     const actNameMatch = firstSectionTitle.match(/^([^:]+:[^:]+)/);
     const actName = actNameMatch
       ? actNameMatch[1]
-      : firstSectionTitle.split(":")[0] || "Act Overview";
-
-    // Calculate total scenes across all chapters
-    const totalScenes = aggregatedContent.sections.reduce(
-      (total, section) => total + section.scenes.length,
-      0
-    );
+      : aggregatedContent.sections[0]?.title || "Act";
 
     return (
       <div className="p-6">
-        {/* ✨ FIXED: Show act overview once at the top */}
         <div className="mb-6">
-          <h2 className="text-xl text-white font-medium mb-2">{actName}</h2>
+          <h1 className="text-2xl text-white font-medium mb-2">{actName}</h1>
           <p className="text-gray-400 text-sm">
             {aggregatedContent.sections.length} chapter
-            {aggregatedContent.sections.length !== 1 ? "s" : ""} • {totalScenes}{" "}
-            scene{totalScenes !== 1 ? "s" : ""} •{" "}
+            {aggregatedContent.sections.length !== 1 ? "s" : ""} •{" "}
             {aggregatedContent.totalWordCount.toLocaleString()} words
           </p>
         </div>
 
-        {/* ✨ FIXED: Display each section as a chapter */}
         <div className="space-y-8">
-          {aggregatedContent.sections.map((section, index) => {
-            // ✨ EXTRACT: Get just the chapter part from "ACT I: The Island: Chapter 1 — A Taste of Lightning"
-            const fullTitle = section.title;
-            let chapterTitle = fullTitle;
-
-            // Remove act prefix if present (everything before and including the second colon)
-            const colonCount = (fullTitle.match(/:/g) || []).length;
-            if (colonCount >= 2) {
-              const parts = fullTitle.split(":");
-              // Take everything after the second colon
-              chapterTitle = parts.slice(2).join(":").trim();
-            } else if (colonCount === 1) {
-              // If only one colon, take everything after it
-              chapterTitle = fullTitle.split(":")[1]?.trim() || fullTitle;
-            }
+          {aggregatedContent.sections.map((section, sectionIndex) => {
+            // Extract chapter name from section title
+            // For "ACT I: The Island: Chapter 1 — A Taste of Lightning", extract "Chapter 1 — A Taste of Lightning"
+            const chapterMatch = section.title.match(/:([^:]+)$/);
+            const chapterName = chapterMatch
+              ? chapterMatch[1].trim()
+              : `Chapter ${sectionIndex + 1}`;
 
             return (
-              <div key={section.id}>
-                {/* Chapter header */}
-                <div className="mb-4 pb-2 border-b border-gray-700">
-                  <h3 className="text-lg font-semibold text-white">
-                    {chapterTitle}
+              <div key={section.id} className="space-y-4">
+                <div className="border-b border-gray-700 pb-2">
+                  <h3 className="text-lg text-white font-medium">
+                    {chapterName}
                   </h3>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-gray-400 text-sm">
                     {section.scenes.length} scene
                     {section.scenes.length !== 1 ? "s" : ""} •{" "}
                     {section.wordCount.toLocaleString()} words
@@ -131,6 +119,7 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                       key={scene.id}
                       scene={scene}
                       onClick={() => onSceneClick(scene.id, scene)}
+                      onRename={onSceneRename} // ✨ NEW: Pass rename handler
                       showChapterContext={false} // Don't show chapter context when already grouped
                     />
                   ))}
