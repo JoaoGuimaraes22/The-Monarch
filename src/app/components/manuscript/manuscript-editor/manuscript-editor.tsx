@@ -143,7 +143,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   const structureSidebarLeft = isMainSidebarCollapsed ? "64px" : "256px";
   const structureSidebarWidth = isStructureSidebarCollapsed ? "64px" : "320px";
   const metadataSidebarWidth = isMetadataSidebarCollapsed ? "64px" : "320px";
-  const metadataSidebarRight = "0px"; // ✅ FIX: Calculate right position
+  const metadataSidebarRight = "0px";
   const contentLeft = isStructureSidebarCollapsed ? "65px" : "321px";
   const contentRight = isMetadataSidebarCollapsed ? "65px" : "321px";
 
@@ -210,6 +210,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           contentDisplayMode={contentDisplayMode}
           onContentChange={handleSceneContentChange}
           onSceneClick={onSceneSelect}
+          onSceneRename={onUpdateSceneName} // ✨ ADD THIS LINE
           onAddScene={onAddScene}
           onAddChapter={onAddChapter}
           novel={novel}
@@ -227,7 +228,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         onToggleCollapse={() =>
           setIsMetadataSidebarCollapsed(!isMetadataSidebarCollapsed)
         }
-        right={metadataSidebarRight} // ✅ FIX: Add missing right prop
+        right={metadataSidebarRight}
         width={metadataSidebarWidth}
       />
     </div>

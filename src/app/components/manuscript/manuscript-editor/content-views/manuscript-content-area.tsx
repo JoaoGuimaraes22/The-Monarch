@@ -25,6 +25,21 @@ interface ManuscriptContentAreaProps {
   marginRight: string;
 }
 
+// ✨ Helper function to find the actId for a given chapter
+const findActIdForChapter = (
+  novel: NovelWithStructure | null | undefined,
+  chapterId: string
+): string | null => {
+  if (!novel?.acts) return null;
+
+  for (const act of novel.acts) {
+    if (act.chapters.some((chapter) => chapter.id === chapterId)) {
+      return act.id;
+    }
+  }
+  return null;
+};
+
 // ✨ Add Scene Button Component
 const AddSceneButton: React.FC<{
   chapterId: string;
@@ -280,6 +295,11 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         )
       );
 
+    // ✨ FIX: Find actId using helper function
+    const actId = chapterInfo
+      ? findActIdForChapter(novel, chapterInfo.id)
+      : null;
+
     return (
       <div
         className="flex-1 transition-all duration-300 overflow-y-auto"
@@ -290,7 +310,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           {chapterInfo && <ChapterHeader chapter={chapterInfo} />}
 
           {/* Individual Scene Editors */}
-          {scenes.map((scene, index) => (
+          {scenes.map((scene) => (
             <SceneEditor
               key={scene.id}
               scene={scene}
@@ -303,9 +323,9 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           ))}
 
           {/* Add Chapter Button at the end */}
-          {onAddChapter && chapterInfo && (
+          {onAddChapter && chapterInfo && actId && (
             <AddChapterButton
-              actId={chapterInfo.actId}
+              actId={actId}
               afterChapterId={chapterInfo.id}
               onAddChapter={onAddChapter}
             />
@@ -341,6 +361,11 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                 )
               );
 
+            // ✨ FIX: Find actId using helper function
+            const actId = chapterInfo
+              ? findActIdForChapter(novel, chapterInfo.id)
+              : null;
+
             return (
               <div key={section.id} className="space-y-6">
                 {/* Chapter Header */}
@@ -361,9 +386,9 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                 ))}
 
                 {/* Add Chapter Button */}
-                {onAddChapter && chapterInfo && (
+                {onAddChapter && chapterInfo && actId && (
                   <AddChapterButton
-                    actId={chapterInfo.actId}
+                    actId={actId}
                     afterChapterId={chapterInfo.id}
                     onAddChapter={onAddChapter}
                   />

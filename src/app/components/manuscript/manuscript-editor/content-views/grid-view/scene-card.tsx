@@ -1,19 +1,19 @@
 // src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-card.tsx
-// ✨ ENHANCED: Added inline scene name editing functionality
+// ✨ ENHANCED: Custom editing layout with buttons on word count line
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Scene } from "@/lib/novels";
+import { Check, X, Edit2 } from "lucide-react";
 import {
   formatWordCount,
   getSceneStatus,
 } from "@/app/components/manuscript/chapter-tree/utils";
-import { EditableText } from "@/app/components/ui";
 
 interface SceneCardProps {
   scene: Scene;
   onClick: () => void;
-  onRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ NEW: Rename handler
-  showChapterContext?: boolean; // For act view - show which chapter this scene belongs to
+  onRename?: (sceneId: string, newTitle: string) => Promise<void>;
+  showChapterContext?: boolean;
   chapterTitle?: string;
 }
 
@@ -25,14 +25,16 @@ export const SceneCard: React.FC<SceneCardProps> = ({
   chapterTitle,
 }) => {
   const status = getSceneStatus(scene);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Get a preview of the scene content (first ~100 characters)
   const getContentPreview = (content: string): string => {
-    // Strip HTML tags and get plain text
     const plainText = content.replace(/<[^>]*>/g, " ").trim();
     if (plainText.length <= 100) return plainText;
 
-    // Find a good break point (end of sentence or word)
     const truncated = plainText.substring(0, 100);
     const lastSpace = truncated.lastIndexOf(" ");
     const lastPeriod = truncated.lastIndexOf(".");
@@ -43,21 +45,74 @@ export const SceneCard: React.FC<SceneCardProps> = ({
   };
 
   const preview = getContentPreview(scene.content);
+  const displayTitle = scene.title?.trim() || `Scene ${scene.order}`;
 
-  // ✨ NEW: Handle scene rename
-  const handleRename = async (newTitle: string) => {
-    if (onRename) {
-      await onRename(scene.id, newTitle);
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  // Handle edit start
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onRename) return;
+
+    setIsEditing(true);
+    setEditValue(displayTitle);
+  };
+
+  // Handle save
+  const handleSave = async () => {
+    if (!onRename) return;
+
+    if (editValue.trim() === displayTitle.trim()) {
+      setIsEditing(false);
+      return;
+    }
+
+    if (editValue.trim() === "") {
+      setEditValue(displayTitle);
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onRename(scene.id, editValue.trim());
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to save:", error);
+      setEditValue(displayTitle);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // ✨ NEW: Handle card click (prevent propagation if editing title)
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't trigger onClick if user is interacting with the editable text
-    const target = e.target as HTMLElement;
-    if (target.closest(".scene-title-editor")) {
-      return;
+  // Handle cancel
+  const handleCancel = () => {
+    setEditValue(displayTitle);
+    setIsEditing(false);
+  };
+
+  // Handle key events
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
     }
+  };
+
+  // Handle card click
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isEditing) return;
+    const target = e.target as HTMLElement;
+    if (target.closest(".edit-controls")) return;
     onClick();
   };
 
@@ -67,30 +122,75 @@ export const SceneCard: React.FC<SceneCardProps> = ({
       className="bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:border-red-500 hover:bg-gray-750 group"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2 flex-1 min-w-0">
-          <span className={`text-lg ${status.color}`}>{status.icon}</span>
+      <div className="mb-3">
+        {/* Title Row */}
+        <div className="flex items-center space-x-2 mb-1">
+          {/* ✨ SMALLER ICON */}
+          <span className={`text-xs ${status.color} flex-shrink-0`}>
+            {status.icon}
+          </span>
 
-          {/* ✨ ENHANCED: Editable Scene Title */}
-          <div className="scene-title-editor flex-1 min-w-0">
-            {onRename ? (
-              <EditableText
-                value={scene.title || `Scene ${scene.order}`}
-                onSave={handleRename}
-                placeholder={`Scene ${scene.order}`}
-                className="text-white font-medium text-sm"
+          {/* Title Area */}
+          <div className="flex-1 min-w-0">
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleKeyDown}
                 maxLength={100}
+                className="w-full px-2 py-1 text-sm bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-red-500"
+                placeholder={`Scene ${scene.order}`}
+                disabled={isSaving}
               />
             ) : (
-              <h4 className="text-white font-medium text-sm truncate">
-                {scene.title || `Scene ${scene.order}`}
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-white font-medium text-sm truncate">
+                  {displayTitle}
+                </h4>
+                {onRename && (
+                  <button
+                    onClick={handleStartEdit}
+                    className="edit-controls opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-white transition-all ml-2"
+                    title="Edit name"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
 
-        <div className="text-xs text-gray-400 flex-shrink-0 ml-2">
-          {formatWordCount(scene.wordCount)} words
+        {/* ✨ WORD COUNT + BUTTONS ROW */}
+        <div className="flex items-center justify-between">
+          {/* ✨ SMALLER WORD COUNT */}
+          <div className="text-xs text-gray-400">
+            {formatWordCount(scene.wordCount)} words
+          </div>
+
+          {/* ✨ EDIT BUTTONS ON WORD COUNT LINE */}
+          {isEditing && (
+            <div className="edit-controls flex items-center space-x-1">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="p-1 text-green-400 hover:text-green-300 transition-colors"
+                title="Save"
+              >
+                <Check className="w-3 h-3" />
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="p-1 text-gray-400 hover:text-white transition-colors"
+                title="Cancel"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

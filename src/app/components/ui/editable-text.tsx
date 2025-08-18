@@ -1,6 +1,5 @@
-// ==========================================
-// FILE: src/app/components/ui/editable-text.tsx
-// ==========================================
+// src/app/components/ui/editable-text.tsx
+// ✨ ENHANCED: Cleaner editing layout - buttons moved to parent control
 
 import React, { useState, useRef, useEffect } from "react";
 import { Edit2, Check, X } from "lucide-react";
@@ -8,19 +7,25 @@ import { Edit2, Check, X } from "lucide-react";
 interface EditableTextProps {
   value: string;
   onSave: (newValue: string) => Promise<void>;
+  onEditStart?: () => void;
+  onCancel?: () => void;
   placeholder?: string;
   className?: string;
   maxLength?: number;
   disabled?: boolean;
+  showButtons?: boolean; // ✨ NEW: Control whether to show inline buttons
 }
 
 export const EditableText: React.FC<EditableTextProps> = ({
   value,
   onSave,
+  onEditStart,
+  onCancel,
   placeholder = "Enter text...",
   className = "",
   maxLength = 100,
   disabled = false,
+  showButtons = true, // ✨ NEW: Default to true for backward compatibility
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -40,13 +45,20 @@ export const EditableText: React.FC<EditableTextProps> = ({
     setEditValue(value);
   }, [value]);
 
+  // ✨ ENHANCED: Handle edit start with callback
   const handleStartEdit = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent tree item selection
+    e.stopPropagation();
     if (disabled) return;
+
     setIsEditing(true);
     setEditValue(value);
+
+    if (onEditStart) {
+      onEditStart();
+    }
   };
 
+  // ✨ NEW: Expose save method for parent control
   const handleSave = async () => {
     if (editValue.trim() === value.trim()) {
       setIsEditing(false);
@@ -54,7 +66,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
     }
 
     if (editValue.trim() === "") {
-      setEditValue(value); // Reset to original if empty
+      setEditValue(value);
       setIsEditing(false);
       return;
     }
@@ -65,26 +77,43 @@ export const EditableText: React.FC<EditableTextProps> = ({
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to save:", error);
-      setEditValue(value); // Reset on error
+      setEditValue(value);
       setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // ✨ NEW: Expose cancel method for parent control
   const handleCancel = () => {
     setEditValue(value);
     setIsEditing(false);
+
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    e.stopPropagation(); // Prevent tree keyboard navigation
+    e.stopPropagation();
     if (e.key === "Enter") {
       handleSave();
     } else if (e.key === "Escape") {
       handleCancel();
     }
   };
+
+  const handleBlur = () => {
+    handleSave();
+  };
+
+  // ✨ NEW: Expose methods to parent through ref or props
+  React.useImperativeHandle(onEditStart, () => ({
+    save: handleSave,
+    cancel: handleCancel,
+    isEditing,
+    isSaving,
+  }));
 
   if (isEditing) {
     return (
@@ -95,35 +124,40 @@ export const EditableText: React.FC<EditableTextProps> = ({
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={handleSave}
+          onBlur={handleBlur}
           maxLength={maxLength}
           className="flex-1 px-2 py-1 text-sm bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-red-500 min-w-0"
           placeholder={placeholder}
           disabled={isSaving}
         />
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="p-1 text-green-400 hover:text-green-300 transition-colors"
-          title="Save"
-        >
-          <Check className="w-3 h-3" />
-        </button>
-        <button
-          onClick={handleCancel}
-          disabled={isSaving}
-          className="p-1 text-gray-400 hover:text-white transition-colors"
-          title="Cancel"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        {/* ✨ Conditional buttons - can be hidden for custom layout */}
+        {showButtons && (
+          <>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="p-1 text-green-400 hover:text-green-300 transition-colors"
+              title="Save"
+            >
+              <Check className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="p-1 text-gray-400 hover:text-white transition-colors"
+              title="Cancel"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </>
+        )}
       </div>
     );
   }
 
   return (
     <div className="flex items-center space-x-1 min-w-0 flex-1 group">
-      <span className={`truncate ${className}`}>{value}</span>
+      <span className={`truncate ${className}`}>{value || placeholder}</span>
       {!disabled && (
         <button
           onClick={handleStartEdit}

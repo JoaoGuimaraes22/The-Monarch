@@ -102,14 +102,14 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       onRefresh={manuscript.handleRefresh}
       onAddScene={manuscript.handleAddScene}
       onAddChapter={manuscript.handleAddChapter}
+      onAddAct={manuscript.handleAddAct}
       onDeleteScene={manuscript.handleDeleteScene}
       onDeleteChapter={manuscript.handleDeleteChapter}
       onDeleteAct={manuscript.handleDeleteAct}
       onUpdateActName={manuscript.handleUpdateActName}
       onUpdateChapterName={manuscript.handleUpdateChapterName}
-      onUpdateSceneName={manuscript.handleUpdateSceneName}
+      onUpdateSceneName={manuscript.handleUpdateSceneName} // ✨ ADD THIS LINE
       isMainSidebarCollapsed={isMainSidebarCollapsed}
-      onAddAct={manuscript.handleAddAct}
     />
   );
 }
