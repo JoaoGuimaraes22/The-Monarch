@@ -49,7 +49,7 @@ export const POST = composeMiddleware(
       throw new Error("Novel not found");
     }
 
-    // Create the new scene
+    // Create the new scene using the updated service method
     const newScene = await novelService.createScene(
       chapterId,
       createData.insertAfterSceneId,

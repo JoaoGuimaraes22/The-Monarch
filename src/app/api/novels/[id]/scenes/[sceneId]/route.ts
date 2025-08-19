@@ -24,7 +24,6 @@ export const GET = composeMiddleware(
     const params = await context.params;
     const { id: novelId, sceneId } = params as { id: string; sceneId: string };
 
-    // Get the scene (this will need to be implemented in your service)
     const scene = await novelService.getSceneById(sceneId);
 
     if (!scene) {
@@ -164,3 +163,4 @@ export const DELETE = composeMiddleware(
 //   "data": { "sceneId": "scene123", "deleted": true },
 //   "message": "Scene deleted successfully"
 // }
+// */
