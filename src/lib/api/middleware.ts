@@ -19,7 +19,7 @@ type RouteHandler<T = unknown> = (
 ) => Promise<NextResponse>;
 
 interface RouteContext {
-  params: Promise<Record<string, unknown>>;
+  params: Promise<Record<string, string>>;
   requestId: string;
   query?: Record<string, unknown>;
   file?: File;
@@ -115,7 +115,7 @@ export function withValidation<T>(
   return function middleware(handler: RouteHandler<T>) {
     return async function (
       req: NextRequest,
-      context: { params: Promise<Record<string, unknown>> }
+      context: { params: Promise<Record<string, string>> }
     ) {
       const requestId = generateRequestId();
       const startTime = Date.now();
@@ -198,7 +198,7 @@ export function withValidation<T>(
         // Create enriched context
         const enrichedContext: RouteContext = {
           params: validatedParams
-            ? Promise.resolve(validatedParams as Record<string, unknown>)
+            ? Promise.resolve(validatedParams as Record<string, string>)
             : context.params,
           requestId,
           query: validatedQuery as Record<string, unknown> | undefined,
