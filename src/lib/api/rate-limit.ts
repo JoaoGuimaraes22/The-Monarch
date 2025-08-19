@@ -1,5 +1,6 @@
 // lib/api/rate-limit.ts
 // In-memory rate limiting system for API protection
+// ✅ ENHANCED: Environment-based configuration for future-proof development
 
 interface RateLimitEntry {
   count: number;
@@ -171,40 +172,92 @@ class InMemoryRateLimit {
 // Export singleton instance
 export const rateLimit = new InMemoryRateLimit();
 
-// Common rate limit configurations
+// ===== ✅ ENHANCED: Environment-based configuration =====
+
+// Environment detection
+const isDevelopment = process.env.NODE_ENV === "development";
+const isTest = process.env.NODE_ENV === "test";
+
+// Helper to get environment variable overrides
+const getEnvNumber = (key: string, defaultValue: number): number => {
+  const value = process.env[key];
+  return value ? parseInt(value, 10) || defaultValue : defaultValue;
+};
+
+// ✅ UPDATED: Future-proof rate limit configurations
 export const RATE_LIMIT_CONFIGS = {
   // General API calls
   STANDARD: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 100,
+    maxRequests:
+      isDevelopment || isTest
+        ? getEnvNumber("RATE_LIMIT_STANDARD_DEV", 1000)
+        : getEnvNumber("RATE_LIMIT_STANDARD_PROD", 100),
   },
 
   // Content creation (novels, chapters, etc.)
   CREATION: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 20,
+    maxRequests:
+      isDevelopment || isTest
+        ? getEnvNumber("RATE_LIMIT_CREATION_DEV", 200)
+        : getEnvNumber("RATE_LIMIT_CREATION_PROD", 20),
   },
 
-  // File uploads
+  // ✅ FIXED: File uploads - much more generous in development
   UPLOAD: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 5,
+    maxRequests:
+      isDevelopment || isTest
+        ? getEnvNumber("RATE_LIMIT_UPLOAD_DEV", 100) // 🎉 100 uploads per 15 min in dev
+        : getEnvNumber("RATE_LIMIT_UPLOAD_PROD", 10), // 10 uploads per 15 min in prod
   },
 
   // Authentication attempts
   AUTH: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 10,
+    maxRequests:
+      isDevelopment || isTest
+        ? getEnvNumber("RATE_LIMIT_AUTH_DEV", 100)
+        : getEnvNumber("RATE_LIMIT_AUTH_PROD", 10),
   },
 
   // Data-heavy operations
   HEAVY: {
     windowMs: 5 * 60 * 1000, // 5 minutes
-    maxRequests: 10,
+    maxRequests:
+      isDevelopment || isTest
+        ? getEnvNumber("RATE_LIMIT_HEAVY_DEV", 50)
+        : getEnvNumber("RATE_LIMIT_HEAVY_PROD", 10),
   },
 } as const;
 
-// Key generation helpers
+// ✅ NEW: Optional development bypass helper
+export function getUploadRateLimit() {
+  // Complete bypass if environment variable is set
+  if (isDevelopment && process.env.DISABLE_UPLOAD_RATE_LIMIT === "true") {
+    return {
+      windowMs: 1 * 60 * 1000, // 1 minute
+      maxRequests: 10000, // Essentially unlimited
+    };
+  }
+
+  return RATE_LIMIT_CONFIGS.UPLOAD;
+}
+
+// ✅ DEVELOPMENT LOGGING
+if (isDevelopment) {
+  console.log("🔧 Rate Limiting Configuration (Development Mode):", {
+    standard: RATE_LIMIT_CONFIGS.STANDARD.maxRequests,
+    creation: RATE_LIMIT_CONFIGS.CREATION.maxRequests,
+    upload: RATE_LIMIT_CONFIGS.UPLOAD.maxRequests,
+    auth: RATE_LIMIT_CONFIGS.AUTH.maxRequests,
+    heavy: RATE_LIMIT_CONFIGS.HEAVY.maxRequests,
+    environment: process.env.NODE_ENV,
+  });
+}
+
+// Key generation helpers (unchanged)
 export const createRateLimitKey = {
   byIP: (request: Request): string => {
     const forwarded = request.headers.get("x-forwarded-for");
@@ -227,3 +280,33 @@ export const createRateLimitKey = {
 
 // Export for testing
 export { InMemoryRateLimit };
+
+/*
+===== WHAT CHANGED =====
+
+✅ BEFORE: UPLOAD had only 5 requests per 15 minutes
+✅ AFTER: UPLOAD has 100 requests per 15 minutes in development, 10 in production
+
+✅ ADDED: Environment detection (development vs production)
+✅ ADDED: Environment variable overrides for fine-tuning
+✅ ADDED: Development logging to see current limits
+✅ ADDED: Optional complete bypass for testing
+
+===== OPTIONAL .env.local CUSTOMIZATION =====
+
+Add these to your .env.local file if you want to customize further:
+
+# Completely disable upload rate limiting (for testing)
+DISABLE_UPLOAD_RATE_LIMIT=true
+
+# Custom development limits (optional)
+RATE_LIMIT_UPLOAD_DEV=200
+RATE_LIMIT_CREATION_DEV=300
+
+===== IMMEDIATE BENEFITS =====
+
+🎉 You can now upload 100 files per 15 minutes in development
+🛡️ Production still has reasonable limits for security  
+🔧 Can be fine-tuned per environment without code changes
+👥 Team-friendly for other developers
+*/

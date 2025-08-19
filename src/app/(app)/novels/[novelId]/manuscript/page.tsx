@@ -74,9 +74,14 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       </div>
     );
   }
+  console.log("🔍 RENDER CHECK:");
+  console.log("🔍 manuscript.hasStructure:", manuscript.hasStructure);
+  console.log("🔍 manuscript.novel:", manuscript.novel);
+  console.log("🔍 manuscript.loading:", manuscript.loading);
 
-  // If no structure exists, show options to import or start manually
+  // Then the existing condition:
   if (!manuscript.hasStructure) {
+    console.log("🔍 SHOWING EMPTY STATE because hasStructure is false");
     return (
       <ManuscriptEmptyState
         onShowUploader={() => setShowUploader(true)}

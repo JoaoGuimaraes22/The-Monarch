@@ -33,7 +33,7 @@ export interface ManuscriptLogicReturn {
   handleContentDisplayModeChange: (mode: ContentDisplayMode) => void;
 
   // Selection Handlers
-  handleSceneSelect: (scene: Scene) => void;
+  handleSceneSelect: (sceneId: string, scene: Scene) => void;
   handleChapterSelect: (chapter: Chapter) => void;
   handleActSelect: (act: Act) => void;
 
@@ -93,7 +93,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     null
   );
 
-  // ✅ FIXED: Create the actual load function with new API format handling
   loadNovelStructureRef.current = async (id: string) => {
     console.log("🔄 API CALL: loadNovelStructure called for novelId:", id);
     try {
@@ -101,18 +100,17 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
       const response = await fetch(`/api/novels/${id}/structure`);
 
-      // ✅ FIXED: Check response.ok first
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to load novel structure");
       }
 
-      // ✅ FIXED: Handle new standardized response format
       const result = await response.json();
 
       if (result.success && result.data) {
-        actions.updateNovel(result.data);
-        console.log("✅ Novel structure loaded:", result.data);
+        // ✅ FIX: Use result.data.novel instead of result.data
+        actions.updateNovel(() => result.data.novel);
+        console.log("✅ Novel structure loaded:", result.data.novel);
       } else {
         throw new Error(result.error || "Failed to load novel structure");
       }
@@ -134,9 +132,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   }, []); // Empty dependencies - ref is always current
 
   // ===== SELECTION HANDLERS =====
-
   const handleSceneSelect = useCallback(
-    (scene: Scene) => {
+    (sceneId: string, scene: Scene) => {
+      // ✅ Add sceneId parameter
       actions.setSelectedScene(scene);
       actions.setViewMode("scene");
 
@@ -385,8 +383,16 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   }, [novelId, loadNovelStructure]); // ✅ Stable loadNovelStructure won't cause loops
 
   // ===== COMPUTED VALUES =====
+  // Add this RIGHT BEFORE the return statement:
+  console.log("🔍 COMPUTING hasStructure:");
+  console.log("🔍 state.novel:", state.novel);
+  console.log("🔍 state.novel?.acts:", state.novel?.acts);
+  console.log("🔍 state.novel?.acts?.length:", state.novel?.acts?.length);
+
   const hasStructure =
     state.novel && state.novel.acts && state.novel.acts.length > 0;
+  console.log("🔍 hasStructure computed value:", hasStructure);
+  console.log("🔍 !!hasStructure:", !!hasStructure);
 
   // ===== RETURN INTERFACE =====
   return {

@@ -71,9 +71,19 @@ export function useManuscriptState(
     (
       updater: (prev: NovelWithStructure | null) => NovelWithStructure | null
     ) => {
-      setNovel(updater);
+      console.log("🔍 updateNovel called with updater function");
+      console.log("🔍 Current novel state before update:", novel);
+
+      const newNovel = updater(novel);
+      console.log("🔍 New novel state after updater:", newNovel);
+      console.log("🔍 New novel has acts?", newNovel?.acts?.length);
+
+      setNovel(newNovel);
+
+      // Force a log after state update (use useEffect to see final state)
+      console.log("🔍 updateNovel completed");
     },
-    []
+    [novel] // Add novel as dependency to see current state
   );
 
   // ===== STATE OBJECT =====

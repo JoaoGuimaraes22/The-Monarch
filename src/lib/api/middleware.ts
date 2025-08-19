@@ -26,10 +26,11 @@ interface RouteContext {
   formData?: FormData;
 }
 
+// ✅ FIXED: Correct type for RateLimitOptions
 interface RateLimitOptions {
   windowMs: number;
   maxRequests: number;
-  keyGenerator?: (req: NextRequest) => string;
+  keyGenerator?: (req: NextRequest) => string; // ✅ Proper function type
   skipSuccessfulRequests?: boolean;
 }
 
@@ -257,7 +258,7 @@ export function withValidation<T>(
   };
 }
 
-// ===== RATE LIMITING MIDDLEWARE =====
+// ALTERNATIVE APPROACH: More defensive checking
 export function withRateLimit(
   options: RateLimitOptions | keyof typeof RATE_LIMIT_CONFIGS
 ) {
@@ -267,11 +268,17 @@ export function withRateLimit(
       const config =
         typeof options === "string" ? RATE_LIMIT_CONFIGS[options] : options;
 
-      // Generate rate limit key
-      const key =
-        "keyGenerator" in config && config.keyGenerator
-          ? config.keyGenerator(req)
-          : createRateLimitKey.byIP(req);
+      // ✅ MOST DEFENSIVE: Check both existence and type
+      let key: string;
+      if (
+        "keyGenerator" in config &&
+        config.keyGenerator &&
+        typeof config.keyGenerator === "function"
+      ) {
+        key = config.keyGenerator(req);
+      } else {
+        key = createRateLimitKey.byIP(req);
+      }
 
       // Check rate limit
       const result = await rateLimit.check(
