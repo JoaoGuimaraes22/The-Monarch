@@ -409,6 +409,8 @@ export const DraggableManuscriptTree: React.FC<
     // Handle drag over logic if needed
   };
 
+  // Replace the handleDragEnd function with this corrected version
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -458,9 +460,31 @@ export const DraggableManuscriptTree: React.FC<
         const overData = over.data.current;
 
         if (activeData?.type === "chapter" && overData?.type === "chapter") {
-          // Chapter over chapter - reorder chapters
-          const targetOrder = overData.chapter.order;
-          await reorderChapter(activeData.chapter.id, targetOrder);
+          // ✅ FIXED: Chapter over chapter - reorder chapters within same act
+          const draggedChapter = activeData.chapter;
+          const targetChapter = overData.chapter;
+
+          // Find the act that contains the target chapter
+          const targetAct = novel.acts.find((act) =>
+            act.chapters.some((ch) => ch.id === targetChapter.id)
+          );
+
+          if (targetAct) {
+            const targetOrder = targetChapter.order;
+            const targetActId = targetAct.id;
+
+            // ✅ FIXED: Now calling with all 3 required parameters
+            await reorderChapter(draggedChapter.id, targetActId, targetOrder);
+          }
+        }
+      } else if (dragType === "act") {
+        const activeData = active.data.current;
+        const overData = over.data.current;
+
+        if (activeData?.type === "act" && overData?.type === "act") {
+          // Act over act - reorder acts
+          const targetOrder = overData.act.order;
+          await reorderAct(activeData.act.id, targetOrder);
         }
       }
 

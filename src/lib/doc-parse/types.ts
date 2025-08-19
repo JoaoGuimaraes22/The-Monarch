@@ -1,10 +1,16 @@
 // src/lib/doc-parse/types.ts
 // Centralized type definitions for document parsing
 
+// ===== FIRST: ADD PROPER TYPE DEFINITIONS =====
 export interface ParsedStructure {
   acts: ParsedAct[];
   wordCount: number;
-  issues?: StructureIssue[];
+  title?: string;
+  metadata?: {
+    filename?: string;
+    fileSize?: number;
+    parseDate?: string;
+  };
 }
 
 export interface ParsedAct {
@@ -20,9 +26,14 @@ export interface ParsedChapter {
 }
 
 export interface ParsedScene {
+  title: string;
   content: string;
   order: number;
   wordCount: number;
+  notes?: string;
+  status?: string;
+  povCharacter?: string;
+  sceneType?: string;
 }
 
 export interface StructureIssue {
