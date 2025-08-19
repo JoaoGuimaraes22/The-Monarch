@@ -413,7 +413,7 @@ export const withUploadRateLimit = () => withRateLimit("UPLOAD");
 
 export const withDocxUpload = () =>
   withFileUpload({
-    maxSizeBytes: 10 * 1024 * 1024,
+    maxSizeBytes: 50 * 1024 * 1024,
     allowedTypes: [
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],

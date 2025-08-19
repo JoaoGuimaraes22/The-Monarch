@@ -249,7 +249,7 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                     {onChapterClick && chapterInfo && (
                       <button
                         onClick={() => onChapterClick(chapterInfo)}
-                        className="ml-4 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-sm rounded-md transition-colors flex items-center space-x-2"
+                        className="ml-4 px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs rounded-md transition-colors flex items-center space-x-2"
                         title="Focus on this chapter"
                       >
                         <Eye className="w-4 h-4" />

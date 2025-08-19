@@ -1,10 +1,10 @@
-# The Monarch Story Platform - Project Handoff Document
+# The Monarch Story Platform - Updated Project Tracker
 
 ## 🎯 Project Overview
 
 **Goal**: Build a story development platform tailored for _The Monarch_ epic fantasy series, focusing on practical utility over marketing fluff.
 
-**User**: Aspiring fantasy writer building a complex narrative management system
+**User**: Aspiring fantasy writer building a complex narrative management system  
 **Philosophy**: Build what's genuinely useful, component-first architecture, dark theme matching Claude interface
 
 ## 🎨 Design System
@@ -28,7 +28,7 @@ src/
 │   │       └── [novelId]/
 │   │           ├── layout.tsx     # Workspace wrapper layout
 │   │           ├── dashboard/page.tsx # Main workspace dashboard
-│   │           ├── manuscript/page.tsx # ✅ REFACTORED: Clean with modular hooks
+│   │           ├── manuscript/page.tsx # ✅ COMPLETE: Clean with modular hooks
 │   │           └── characters/page.tsx # Placeholder
 │   ├── (marketing)/
 │   │   └── layout.tsx             # Marketing layout wrapper
@@ -67,7 +67,7 @@ src/
 │   │   │   ├── sidebar-context.tsx # Context for sidebar state management
 │   │   │   ├── workspace-layout.tsx
 │   │   │   └── dashboard-page.tsx  # Dashboard page component
-│   │   └── manuscript/            # ✅ REFACTORED: Clean organized structure
+│   │   └── manuscript/            # ✅ COMPLETE: Clean organized structure
 │   │       ├── import-system/     # ✅ COMPLETE: Import workflow components grouped
 │   │       │   ├── docx-uploader.tsx          # ✅ FULLY FIXED: New API format + response handling
 │   │       │   ├── structure-preview.tsx      # Structure preview component
@@ -86,7 +86,7 @@ src/
 │   │       │   │   ├── types.ts                          # Content view types
 │   │       │   │   ├── grid-view/
 │   │       │   │   │   ├── scene-card.tsx               # ✅ COMPLETE: Optimized inline editing
-│   │       │   │   │   ├── scene-grid.tsx               # ✅ COMPLETE: Full rename support
+│   │       │   │   │   ├── scene-grid.tsx               # ✅ COMPLETE: Full rename support + Act renaming + Chapter focus
 │   │       │   │   │   └── index.ts
 │   │       │   │   └── index.ts
 │   │       │   ├── controls/                  # UI controls
@@ -127,7 +127,7 @@ src/
 │               │       ├── reorder/route.ts # ✅ MODERNIZED: Act reordering with parameter objects
 │               │       └── chapters/
 │               │           └── route.ts # ✅ MODERNIZED: Chapter creation with parameter objects
-│               ├── import/route.ts # ✅ FIXED: Corrected middleware order + context handling
+│               ├── import/route.ts # ✅ FIXED: Corrected middleware order + context handling + ENHANCED RATE LIMITS
 │               ├── auto-fix/route.ts # ✅ COMPLETE: New standardized auto-fix with proper middleware
 │               └── import-fixed/route.ts # ✅ COMPLETE: Standardized import-fixed with typing
 ├── hooks/
@@ -143,7 +143,7 @@ src/
 │   ├── api/                      # ✅ COMPLETE: API standardization system
 │   │   ├── types.ts              # ✅ COMPLETE: All Zod schemas & TypeScript types
 │   │   ├── logger.ts             # Logging system
-│   │   ├── rate-limit.ts         # Rate limiting
+│   │   ├── rate-limit.ts         # ✅ ENHANCED: Rate limiting with environment-based configs
 │   │   ├── middleware.ts         # ✅ FIXED: Context preservation + proper file handling
 │   │   └── index.ts              # Barrel exports
 │   ├── novels/                   # ✅ MODERNIZED: Complete service layer with parameter objects
@@ -181,7 +181,7 @@ src/
 
 ## 🗄️ Database Setup
 
-**Stack**: Prisma + SQLite
+**Stack**: Prisma + SQLite  
 **Current Schema**:
 
 ```prisma
@@ -240,6 +240,28 @@ model Scene {
 ```
 
 ## ✅ Recently Completed Features
+
+### **🎉 FINALIZED: Enhanced Grid View Features**
+
+**Achievement**: Added act renaming and chapter focus buttons in grid view for complete feature parity
+
+**Implementation**:
+
+1. **✅ Act Renaming in Grid View**: Act titles are now editable with `EditableText` component in Act view grid mode
+2. **✅ Chapter Focus Buttons**: Each chapter in Act view grid mode has an orange "Focus" button to switch to chapter view
+3. **✅ Prop Passing**: Fixed missing `onActRename` and `onChapterClick` props being passed from `ManuscriptContentArea` to `SceneGrid`
+4. **✅ Complete Implementation**: Full act view implementation in `SceneGrid` with proper chapter headers, rename functionality, and focus buttons
+
+### **🎉 FINALIZED: Enhanced Rate Limiting System**
+
+**Achievement**: Improved rate limiting configuration with environment-based settings and larger file support
+
+**Implementation**:
+
+1. **✅ Environment Detection**: Development vs production rate limit configurations
+2. **✅ Configurable Limits**: Environment variable overrides for fine-tuning
+3. **✅ Development Bypass**: Optional complete bypass for testing with `DISABLE_UPLOAD_RATE_LIMIT=true`
+4. **✅ Larger File Support**: Enhanced upload limits for full-length novels (user implemented)
 
 ### **🎉 FINALIZED: Complete Document Import System - ALL ROUTES WORKING**
 
@@ -312,22 +334,6 @@ model Scene {
    - **Error Handling**: Consistent, professional error responses with proper HTTP status codes
    - **Middleware Architecture**: Composable, reusable request processing patterns
 
-### **🎉 FINALIZED: Enhanced Service Method Architecture**
-
-**Before vs After Transformation**:
-
-```typescript
-// ❌ BEFORE: Fragile individual parameters
-await createScene(chapterId, undefined, title, undefined, undefined, "draft");
-await reorderChapter(chapterId, newOrder);
-await updateAct(actId, { title: title.trim() });
-
-// ✅ AFTER: Type-safe parameter objects
-await createScene({ chapterId, title, status: "draft" });
-await reorderChapter({ chapterId, newOrder, targetActId });
-await updateAct(actId, { title });
-```
-
 ### **🎉 FINALIZED: Complete Modular Hook Architecture - All 3 Phases**
 
 **Achievement**: Successfully transformed a 600+ line monolithic hook into a clean, modular, maintainable architecture with zero page refreshes
@@ -359,15 +365,16 @@ await updateAct(actId, { title });
 
 ### **🎯 HIGH PRIORITY: Ready for Implementation**
 
-1. **📝 Enhanced Scene Text Editor** - Professional Tiptap editor with rich text formatting
-2. **👥 Character Management System** - Track characters, relationships, and scene appearances
-3. **🔍 Global Search & Find** - Search across all scenes/chapters/acts with advanced filtering
+1. **📤 Contextual Import System** - **[NEXT BIG FEATURE]** Import documents directly into specific acts/chapters/scenes from manuscript editor
+2. **📝 Enhanced Scene Text Editor** - Professional Tiptap editor with rich text formatting
+3. **👥 Character Management System** - Track characters, relationships, and scene appearances
 
 ### **📋 MEDIUM PRIORITY: Planning Phase**
 
-1. **📋 Scene Metadata Enhancement** - Extended scene properties (mood, tension, conflicts)
-2. **📤 Export & Publishing** - Clean HTML/Word export with professional formatting
-3. **🔗 Cross-Reference System** - Link scenes, characters, and plot elements
+1. **🔍 Global Search & Find** - Search across all scenes/chapters/acts with advanced filtering
+2. **📋 Scene Metadata Enhancement** - Extended scene properties (mood, tension, conflicts)
+3. **📤 Export & Publishing** - Clean HTML/Word export with professional formatting
+4. **🔗 Cross-Reference System** - Link scenes, characters, and plot elements
 
 ### **🌟 LONG-TERM: Future Enhancements**
 
@@ -380,7 +387,7 @@ await updateAct(actId, { title });
 
 ### **✅ Complete Document Import System Excellence**:
 
-- **Professional File Handling**: 10MB limit, DOCX validation, secure upload processing
+- **Professional File Handling**: Enhanced rate limits for larger files, DOCX validation, secure upload processing
 - **Auto-Import Intelligence**: Perfect documents import automatically without user intervention
 - **Advanced Issue Detection**: Structure analysis with auto-fixable issue suggestions
 - **Server-Side Auto-Fix**: Professional structure fixing with detailed feedback ✅ **WORKING**
@@ -407,6 +414,13 @@ await updateAct(actId, { title });
 - **Extensibility**: Easy to add new parameters without breaking existing code
 - **Type Safety**: Complete TypeScript coverage with proper interface alignment
 - **Performance Optimized**: Efficient database queries with proper transactions
+
+### **✅ Enhanced Grid View Excellence**:
+
+- **Act Renaming**: Full inline editing of act titles in grid view
+- **Chapter Focus Buttons**: Orange focus buttons for switching from act view to chapter view
+- **Feature Parity**: Grid view now has same capabilities as document view
+- **Consistent Design**: Matches existing design system with proper spacing and colors
 
 ### **✅ Response Format Excellence**:
 
@@ -444,6 +458,8 @@ await updateAct(actId, { title });
 
 **Your Monarch Story Platform now features:**
 
+✅ **FINALIZED: Enhanced Grid View Features** - Act renaming and chapter focus buttons in grid view for complete feature parity  
+✅ **FINALIZED: Enhanced Rate Limiting System** - Environment-based configuration with larger file support  
 ✅ **FINALIZED: Complete Document Import System** - All import routes working with fixed middleware, auto-fix functionality, and professional error handling  
 ✅ **FINALIZED: Complete API Route Modernization** - All routes use modern parameter objects, professional validation, rate limiting, and standardized responses  
 ✅ **FINALIZED: Enhanced Service Layer** - Type-safe parameter object methods with cross-entity support  
@@ -461,8 +477,25 @@ await updateAct(actId, { title });
 ✅ **Production Ready Core** - All fundamental manuscript editing features with fully modernized API  
 ✅ **Professional Import System** - Complete document import workflow with working auto-fix capabilities
 
-**The platform now provides a complete professional writing experience with fully working document import system, auto-fix functionality, standardized API architecture, modular hook system, smart auto-save, perfect UI layout, comprehensive content management, and robust error handling! Next: Enhanced scene text editor and character management system.** 🎉
+## 🚀 NEXT BIG FEATURE: Contextual Import System
+
+**Goal**: Import documents directly into specific parts of the manuscript from within the editor
+
+**Key Features**:
+
+- **Scene Import**: Add scenes to current chapter
+- **Chapter Import**: Add chapters to current act
+- **Act Import**: Add acts to novel
+- **Smart Positioning**: Append, prepend, or replace content
+- **Live Preview**: See what will be imported before committing
+- **Context Awareness**: Import options based on current view mode
+
+**Ready to Begin**: All foundation systems are in place for this major enhancement!
 
 ---
 
-_Complete story platform with working document import system (including auto-fix), modernized API routes, parameter object service methods, enhanced type safety, professional middleware architecture, modular hook system, smart auto-save functionality, universal renaming capabilities, perfect Act document view with chapter boundaries, optimized layouts, professional component library, comprehensive content management, and complete document import system with working auto-fix capabilities. Ready for enhanced scene text editor and character management features._
+**The platform now provides a complete professional writing experience with fully working document import system, auto-fix functionality, standardized API architecture, modular hook system, smart auto-save, perfect UI layout, comprehensive content management, enhanced grid view features, and robust error handling! Next: Contextual Import System for seamless manuscript expansion.** 🎉
+
+---
+
+_Complete story platform with working document import system (including auto-fix), modernized API routes, parameter object service methods, enhanced type safety, professional middleware architecture, modular hook system, smart auto-save functionality, universal renaming capabilities, perfect Act document view with chapter boundaries, enhanced grid view with act renaming and chapter focus buttons, optimized layouts, professional component library, comprehensive content management, enhanced rate limiting system, and complete document import system with working auto-fix capabilities. Ready for contextual import system implementation._
