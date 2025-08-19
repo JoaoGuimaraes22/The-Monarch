@@ -2,7 +2,7 @@
 // Middleware system for API route standardization
 
 import { NextRequest, NextResponse } from "next/server";
-import { z, ZodSchema } from "zod";
+import { ZodSchema } from "zod";
 import { APIError, APIResponse } from "./types";
 import {
   rateLimit,
@@ -12,16 +12,16 @@ import {
 import { logger } from "./logger";
 
 // ===== TYPES =====
-type RouteHandler<T = any> = (
+type RouteHandler<T = unknown> = (
   req: NextRequest,
   context: RouteContext,
   validatedData?: T
 ) => Promise<NextResponse>;
 
 interface RouteContext {
-  params: Promise<any>;
+  params: Promise<Record<string, unknown>>;
   requestId: string;
-  query?: any;
+  query?: Record<string, unknown>;
   file?: File;
   formData?: FormData;
 }
@@ -84,16 +84,23 @@ export function createErrorResponse(
   });
 
   // Add rate limiting headers if it's a rate limit error
-  if (error.code === "RATE_LIMITED" && error.details?.resetTime) {
-    nextResponse.headers.set(
-      "Retry-After",
-      Math.ceil((error.details.resetTime - Date.now()) / 1000).toString()
-    );
-    nextResponse.headers.set("X-RateLimit-Remaining", "0");
-    nextResponse.headers.set(
-      "X-RateLimit-Reset",
-      error.details.resetTime.toString()
-    );
+  if (
+    error.code === "RATE_LIMITED" &&
+    error.details &&
+    typeof error.details === "object"
+  ) {
+    const details = error.details as { resetTime?: number };
+    if (details.resetTime) {
+      nextResponse.headers.set(
+        "Retry-After",
+        Math.ceil((details.resetTime - Date.now()) / 1000).toString()
+      );
+      nextResponse.headers.set("X-RateLimit-Remaining", "0");
+      nextResponse.headers.set(
+        "X-RateLimit-Reset",
+        details.resetTime.toString()
+      );
+    }
   }
 
   return nextResponse;
@@ -108,7 +115,7 @@ export function withValidation<T>(
   return function middleware(handler: RouteHandler<T>) {
     return async function (
       req: NextRequest,
-      context: { params: Promise<any> }
+      context: { params: Promise<Record<string, unknown>> }
     ) {
       const requestId = generateRequestId();
       const startTime = Date.now();
@@ -123,7 +130,7 @@ export function withValidation<T>(
         );
 
         // Validate params if schema provided
-        let validatedParams;
+        let validatedParams: unknown;
         if (paramsSchema) {
           const params = await context.params;
           const paramResult = paramsSchema.safeParse(params);
@@ -139,7 +146,7 @@ export function withValidation<T>(
         }
 
         // Validate query parameters if schema provided
-        let validatedQuery;
+        let validatedQuery: unknown;
         if (querySchema) {
           const url = new URL(req.url);
           const query = Object.fromEntries(url.searchParams.entries());
@@ -156,7 +163,7 @@ export function withValidation<T>(
         }
 
         // Validate body if schema provided and method allows body
-        let validatedBody;
+        let validatedBody: T | undefined;
         if (bodySchema && ["POST", "PUT", "PATCH"].includes(req.method)) {
           try {
             const contentType = req.headers.get("content-type") || "";
@@ -256,9 +263,10 @@ export function withRateLimit(
         typeof options === "string" ? RATE_LIMIT_CONFIGS[options] : options;
 
       // Generate rate limit key
-      const key = config.keyGenerator
-        ? config.keyGenerator(req)
-        : createRateLimitKey.byIP(req);
+      const key =
+        "keyGenerator" in config && config.keyGenerator
+          ? config.keyGenerator(req)
+          : createRateLimitKey.byIP(req);
 
       // Check rate limit
       const result = await rateLimit.check(

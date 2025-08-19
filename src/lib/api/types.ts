@@ -4,12 +4,12 @@
 import { z } from "zod";
 
 // ===== STANDARD API RESPONSE STRUCTURE =====
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
-  details?: any;
+  details?: unknown;
   meta?: {
     timestamp: string;
     requestId: string;
@@ -23,7 +23,7 @@ export class APIError extends Error {
     message: string,
     public statusCode: number = 500,
     public code: APIErrorCode = "INTERNAL_ERROR",
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = "APIError";

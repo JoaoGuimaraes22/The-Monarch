@@ -7,7 +7,7 @@ interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  data?: any;
+  data?: unknown;
 }
 
 class APILogger {
@@ -15,7 +15,7 @@ class APILogger {
   private maxLogs = 1000; // Keep last 1000 logs in memory
   private isDevelopment = process.env.NODE_ENV === "development";
 
-  private log(level: LogLevel, message: string, data?: any): void {
+  private log(level: LogLevel, message: string, data?: unknown): void {
     const entry: LogEntry = {
       level,
       message,
@@ -47,7 +47,7 @@ class APILogger {
     }
   }
 
-  private getConsoleMethod(level: LogLevel): (...args: any[]) => void {
+  private getConsoleMethod(level: LogLevel): (...args: unknown[]) => void {
     switch (level) {
       case "error":
         return console.error;
@@ -70,19 +70,19 @@ class APILogger {
   }
 
   // Public logging methods
-  debug(message: string, data?: any): void {
+  debug(message: string, data?: unknown): void {
     this.log("debug", message, data);
   }
 
-  info(message: string, data?: any): void {
+  info(message: string, data?: unknown): void {
     this.log("info", message, data);
   }
 
-  warn(message: string, data?: any): void {
+  warn(message: string, data?: unknown): void {
     this.log("warn", message, data);
   }
 
-  error(message: string, data?: any): void {
+  error(message: string, data?: unknown): void {
     this.log("error", message, data);
   }
 
@@ -143,7 +143,7 @@ class APILogger {
     });
   }
 
-  logError(requestId: string, error: Error | string, context?: any): void {
+  logError(requestId: string, error: Error | string, context?: unknown): void {
     this.error("API Error", {
       requestId,
       error:
