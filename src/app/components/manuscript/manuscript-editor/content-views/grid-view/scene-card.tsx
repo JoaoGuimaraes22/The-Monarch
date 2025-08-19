@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-card.tsx
-// ✨ ENHANCED: Custom editing layout with buttons on word count line
+// ✨ ENHANCED: Updated text from "Click to edit" to "Click to focus"
 
 import React, { useState, useRef, useEffect } from "react";
 import { Scene } from "@/lib/novels";
@@ -147,7 +147,8 @@ export const SceneCard: React.FC<SceneCardProps> = ({
             ) : (
               <div className="flex items-center justify-between">
                 <h4 className="text-white font-medium text-sm truncate">
-                  {displayTitle}
+                  {/* ✨ UPDATED: Add SC[order] - title format */}
+                  SC{scene.order} - {displayTitle}
                 </h4>
                 {onRename && (
                   <button
@@ -210,9 +211,9 @@ export const SceneCard: React.FC<SceneCardProps> = ({
         {scene.povCharacter && <span>POV: {scene.povCharacter}</span>}
       </div>
 
-      {/* Hover effect indicator */}
+      {/* ✨ UPDATED: Changed text from "Click to edit" to "Click to focus" */}
       <div className="mt-3 text-xs text-gray-500 group-hover:text-red-400 transition-colors">
-        Click to edit →
+        Click to focus →
       </div>
     </div>
   );

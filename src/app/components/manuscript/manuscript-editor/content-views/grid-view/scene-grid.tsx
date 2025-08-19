@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-grid.tsx
-// ✨ ENHANCED: Added chapter rename functionality in chapter view
+// ✨ ENHANCED: Added act naming, chapter focus buttons, and improved titles
 
 import React from "react";
 import { Scene, NovelWithStructure, Chapter, Act } from "@/lib/novels";
@@ -7,14 +7,17 @@ import { SceneCard } from "./";
 import { EditableText } from "@/app/components/ui";
 import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/services/";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
+import { Eye } from "lucide-react";
 
 interface SceneGridProps {
   aggregatedContent: AggregatedContent;
   viewMode: ViewMode;
   onSceneClick: (sceneId: string, scene: Scene) => void;
-  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>; // ✨ Scene rename handler
-  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>; // ✨ Chapter rename handler
-  novel?: NovelWithStructure | null | undefined; // ✨ Access to novel data for finding chapters
+  onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>;
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
+  onChapterClick?: (chapter: Chapter) => void; // ✨ NEW: For focus button
+  onActRename?: (actId: string, newTitle: string) => Promise<void>; // ✨ NEW: For act renaming
+  novel?: NovelWithStructure | null | undefined;
 }
 
 // ✨ Helper function to find chapter object from novel structure
@@ -42,13 +45,30 @@ const findChapterFromSection = (
   return null;
 };
 
+// ✨ Helper function to find act from chapter ID
+const findActFromChapter = (
+  novel: NovelWithStructure | null | undefined,
+  chapterId: string
+): Act | null => {
+  if (!novel?.acts) return null;
+
+  for (const act of novel.acts) {
+    if (act.chapters.some((chapter) => chapter.id === chapterId)) {
+      return act;
+    }
+  }
+  return null;
+};
+
 export const SceneGrid: React.FC<SceneGridProps> = ({
   aggregatedContent,
   viewMode,
   onSceneClick,
   onSceneRename,
-  onChapterRename, // ✨ Chapter rename handler
-  novel, // ✨ Novel data
+  onChapterRename,
+  onChapterClick, // ✨ NEW: Chapter focus handler
+  onActRename, // ✨ NEW: Act rename handler
+  novel,
 }) => {
   if (!aggregatedContent || aggregatedContent.sections.length === 0) {
     return (
@@ -66,15 +86,23 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
     const section = aggregatedContent.sections[0];
     const scenes = section.scenes;
 
-    // ✨ NEW: Find the actual chapter object for editing
+    // ✨ Find the actual chapter object for editing
     const chapterInfo = findChapterFromSection(novel, section);
+    const actInfo = chapterInfo
+      ? findActFromChapter(novel, chapterInfo.id)
+      : null;
 
     return (
       <div className="p-6">
         <div className="mb-4">
-          {/* ✨ ENHANCED: Chapter header with rename capability */}
-          {onChapterRename && chapterInfo ? (
+          {/* ✨ ENHANCED: Chapter header with ACT and CHAPTER info */}
+          {onChapterRename && chapterInfo && actInfo ? (
             <div className="mb-2">
+              {/* ✨ Act and Chapter identifier line */}
+              <div className="text-sm text-gray-400 mb-1">
+                ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order}
+              </div>
+
               <EditableText
                 value={chapterInfo.title}
                 onSave={(newTitle) => onChapterRename(chapterInfo.id, newTitle)}
@@ -84,9 +112,17 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
               />
             </div>
           ) : (
-            <h2 className="text-xl text-white font-medium mb-2">
-              {section.title}
-            </h2>
+            <div>
+              {/* ✨ Show act and chapter info even when not editable */}
+              {chapterInfo && actInfo && (
+                <div className="text-sm text-gray-400 mb-1">
+                  ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order}
+                </div>
+              )}
+              <h2 className="text-xl text-white font-medium mb-2">
+                {section.title}
+              </h2>
+            </div>
           )}
 
           <p className="text-gray-400 text-sm">
@@ -116,19 +152,47 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
     );
   }
 
-  // ✨ ENHANCED: Act view with chapter rename functionality
+  // ✨ ENHANCED: Act view with act renaming and chapter focus functionality
   if (viewMode === "act") {
-    // Extract act name from first section title
-    const firstSectionTitle = aggregatedContent.sections[0]?.title || "";
-    const actNameMatch = firstSectionTitle.match(/^([^:]+:[^:]+)/);
-    const actName = actNameMatch
-      ? actNameMatch[1]
-      : aggregatedContent.sections[0]?.title || "Act";
+    // Find the actual act from the first section
+    const firstSection = aggregatedContent.sections[0];
+    const firstChapter = findChapterFromSection(novel, firstSection);
+    const actInfo = firstChapter
+      ? findActFromChapter(novel, firstChapter.id)
+      : null;
 
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl text-white font-medium mb-2">{actName}</h1>
+          {/* ✨ ENHANCED: Act header with rename capability */}
+          {onActRename && actInfo ? (
+            <div className="mb-2">
+              <div className="text-sm text-gray-400 mb-1">
+                ACT{actInfo.order}
+              </div>
+              <EditableText
+                value={actInfo.title}
+                onSave={(newTitle) => onActRename(actInfo.id, newTitle)}
+                placeholder="Act title"
+                className="text-2xl text-white font-medium"
+                maxLength={200}
+              />
+            </div>
+          ) : (
+            <div>
+              {actInfo && (
+                <div className="text-sm text-gray-400 mb-1">
+                  ACT{actInfo.order}
+                </div>
+              )}
+              <h1 className="text-2xl text-white font-medium mb-2">
+                {actInfo?.title ||
+                  aggregatedContent.sections[0]?.title ||
+                  "Act"}
+              </h1>
+            </div>
+          )}
+
           <p className="text-gray-400 text-sm">
             {aggregatedContent.sections.length} chapter
             {aggregatedContent.sections.length !== 1 ? "s" : ""} •{" "}
@@ -138,42 +202,64 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
 
         <div className="space-y-8">
           {aggregatedContent.sections.map((section, sectionIndex) => {
-            // Extract chapter name from section title
-            const chapterMatch = section.title.match(/:([^:]+)$/);
-            const chapterName = chapterMatch
-              ? chapterMatch[1].trim()
-              : `Chapter ${sectionIndex + 1}`;
-
             // ✨ Find the actual chapter object
             const chapterInfo = findChapterFromSection(novel, section);
 
             return (
               <div key={section.id} className="space-y-4">
-                {/* ✨ ENHANCED: Chapter header with rename capability */}
+                {/* ✨ ENHANCED: Chapter header with rename capability and focus button */}
                 <div className="border-b border-gray-700 pb-2">
-                  {onChapterRename && chapterInfo ? (
-                    <div className="mb-1">
-                      <EditableText
-                        value={chapterInfo.title}
-                        onSave={(newTitle) =>
-                          onChapterRename(chapterInfo.id, newTitle)
-                        }
-                        placeholder="Chapter title"
-                        className="text-lg text-white font-medium"
-                        maxLength={200}
-                      />
-                    </div>
-                  ) : (
-                    <h3 className="text-lg text-white font-medium mb-1">
-                      {chapterName}
-                    </h3>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      {onChapterRename && chapterInfo ? (
+                        <div className="mb-1">
+                          {/* ✨ Chapter identifier */}
+                          <div className="text-xs text-gray-400 mb-1">
+                            CH{chapterInfo.order}
+                          </div>
+                          <EditableText
+                            value={chapterInfo.title}
+                            onSave={(newTitle) =>
+                              onChapterRename(chapterInfo.id, newTitle)
+                            }
+                            placeholder="Chapter title"
+                            className="text-lg text-white font-medium"
+                            maxLength={200}
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          {chapterInfo && (
+                            <div className="text-xs text-gray-400 mb-1">
+                              CH{chapterInfo.order}
+                            </div>
+                          )}
+                          <h3 className="text-lg text-white font-medium mb-1">
+                            {chapterInfo?.title ||
+                              `Chapter ${sectionIndex + 1}`}
+                          </h3>
+                        </div>
+                      )}
 
-                  <p className="text-gray-400 text-sm">
-                    {section.scenes.length} scene
-                    {section.scenes.length !== 1 ? "s" : ""} •{" "}
-                    {section.wordCount.toLocaleString()} words
-                  </p>
+                      <p className="text-gray-400 text-sm">
+                        {section.scenes.length} scene
+                        {section.scenes.length !== 1 ? "s" : ""} •{" "}
+                        {section.wordCount.toLocaleString()} words
+                      </p>
+                    </div>
+
+                    {/* ✨ NEW: Focus button for chapters in act view */}
+                    {onChapterClick && chapterInfo && (
+                      <button
+                        onClick={() => onChapterClick(chapterInfo)}
+                        className="ml-4 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-sm rounded-md transition-colors flex items-center space-x-2"
+                        title="Focus on this chapter"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>Focus</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Scenes grid for this chapter */}
