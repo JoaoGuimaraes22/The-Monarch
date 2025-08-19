@@ -1,5 +1,5 @@
 // app/api/novels/[id]/acts/[actId]/reorder/route.ts
-// Standardized act reordering operations
+// FIXED: Updated to use modernized service methods with parameter objects
 
 import { NextRequest } from "next/server";
 import { novelService } from "@/lib/novels";
@@ -45,8 +45,11 @@ export const PUT = composeMiddleware(
       );
     }
 
-    // Perform the reordering
-    const result = await novelService.reorderAct(actId, reorderData.newOrder);
+    // ✅ FIXED: Use modern service method with parameter object
+    const result = await novelService.reorderAct({
+      actId,
+      newOrder: reorderData.newOrder,
+    });
 
     return createSuccessResponse(
       result,
@@ -59,37 +62,35 @@ export const PUT = composeMiddleware(
 });
 
 /*
-===== USAGE EXAMPLES =====
+===== CHANGES MADE =====
 
-PUT /api/novels/cm123/acts/act456/reorder
-Body: { "newOrder": 3 }
-Response:
+✅ FIXED: reorderAct() now uses parameter object:
+   OLD: reorderAct(actId, reorderData.newOrder)
+   NEW: reorderAct({ actId, newOrder: reorderData.newOrder })
+
+✅ MAINTAINED: All existing validation and error handling
+✅ MAINTAINED: Professional API standardization
+✅ MAINTAINED: Standard response format
+
+===== SERVICE METHOD SIGNATURE =====
+The modernized service method expects:
+reorderAct(options: ReorderActOptions)
+
+Where ReorderActOptions is:
+{
+  actId: string;
+  newOrder: number;
+}
+
+===== RESPONSE FORMAT =====
 {
   "success": true,
   "data": {
     "id": "act456",
     "title": "Act II: Rising Action",
     "order": 3,
-    "novelId": "cm123",
-    "chapters": [
-      {
-        "id": "ch789",
-        "title": "Chapter Four",
-        "order": 1,
-        "actId": "act456",
-        "scenes": [
-          {
-            "id": "sc123",
-            "title": "The Confrontation",
-            "order": 1,
-            "wordCount": 1250,
-            "chapterId": "ch789"
-          }
-        ],
-        "createdAt": "2025-08-19T...",
-        "updatedAt": "2025-08-19T..."
-      }
-    ],
+    "novelId": "novel123",
+    "chapters": [ full chapter and scene structure  ],
     "createdAt": "2025-08-19T...",
     "updatedAt": "2025-08-19T..."
   },
@@ -100,36 +101,4 @@ Response:
     "version": "1.0"
   }
 }
-
-===== FEATURES =====
-✅ Type-safe validation with Zod schemas
-✅ Rate limiting protection
-✅ Consistent error handling
-✅ Request tracking with unique IDs
-✅ Validates novel and act existence
-✅ Validates new order is within bounds
-✅ Standard API response format
-✅ Returns full act structure with all chapters and scenes
-✅ Security check: ensures act belongs to specified novel
-✅ Boundary validation: prevents invalid order values
-
-===== VALIDATION =====
-Request body must include:
-- newOrder: Integer >= 1 and <= total acts in novel
-
-URL params validated:
-- id: Valid CUID format (novel ID)
-- actId: Valid CUID format (act ID)
-
-Business logic validation:
-- Novel must exist
-- Act must exist within the novel
-- New order must be within valid range (1 to total acts)
-
-===== REORDERING LOGIC =====
-When an act is moved:
-1. Other acts with orders between old and new positions are shifted
-2. All affected acts get updated timestamps
-3. Database transaction ensures consistency
-4. Full structure returned to client for immediate UI update
 */

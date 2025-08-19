@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { DashboardPage } from "@/app/components/workspace/dashboard-page";
-import { useNovel } from "@/hooks/useNovels";
+import { useNovel } from "@/hooks/novels/useNovels";
 
 interface DashboardRouteProps {
   params: Promise<{

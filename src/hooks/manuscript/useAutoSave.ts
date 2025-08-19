@@ -1,5 +1,5 @@
 // src/hooks/manuscript/useAutoSave.ts
-// ✨ PHASE 1: Extract auto-save logic into dedicated hook
+// UPDATED: Fixed to work with new standardized API response format
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
@@ -40,7 +40,7 @@ export function useAutoSave(config: AutoSaveConfig): AutoSaveReturn {
   );
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ===== CORE SAVE FUNCTION =====
+  // ===== CORE SAVE FUNCTION (Updated for new API format) =====
   const saveSceneContent = useCallback(
     async (sceneId: string, content: string): Promise<boolean> => {
       if (!config.novelId) return false;
@@ -59,16 +59,25 @@ export function useAutoSave(config: AutoSaveConfig): AutoSaveReturn {
         );
 
         if (response.ok) {
-          const updatedScene = await response.json();
-          console.log("✅ Auto-save: Scene content saved successfully");
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
 
-          setLastSaved(new Date());
-          setPendingChanges(false);
-          pendingContentRef.current = null;
+          if (result.success) {
+            console.log("✅ Auto-save: Scene content saved successfully");
+            console.log("📊 Updated scene data:", result.data);
 
-          return true;
+            setLastSaved(new Date());
+            setPendingChanges(false);
+            pendingContentRef.current = null;
+
+            return true;
+          } else {
+            console.error("❌ Auto-save: API returned error:", result.error);
+            return false;
+          }
         } else {
-          console.error("❌ Auto-save: Failed to save scene content");
+          const error = await response.json();
+          console.error("❌ Auto-save: Failed to save scene content:", error);
           return false;
         }
       } catch (error) {
@@ -162,3 +171,59 @@ export function useAutoSave(config: AutoSaveConfig): AutoSaveReturn {
     },
   };
 }
+
+/*
+===== CHANGES MADE =====
+
+✅ UPDATED: saveSceneContent now handles new standardized response format
+   - Checks result.success before proceeding
+   - Uses result.data for the updated scene data
+   - Uses result.error for error messages
+   
+✅ MAINTAINED: All existing auto-save functionality
+   - 2-second debouncing
+   - Manual save override
+   - Enable/disable toggle
+   - Pending changes tracking
+   
+✅ MAINTAINED: All existing state management
+   - isSaving status
+   - lastSaved timestamp
+   - pendingChanges flag
+   - enabled toggle
+
+===== NEW RESPONSE HANDLING =====
+
+The auto-save now expects this response format:
+{
+  "success": true,
+  "data": {
+    "id": "scene123",
+    "title": "Scene Title",
+    "content": "Updated content...",
+    "wordCount": 1250,
+    // ... other scene properties
+  },
+  "message": "Scene content updated successfully",
+  "meta": {
+    "timestamp": "2025-08-19T...",
+    "requestId": "req_1692...",
+    "version": "1.0"
+  }
+}
+
+===== ERROR HANDLING =====
+
+Handles both HTTP errors and API errors:
+- HTTP errors: response.ok === false
+- API errors: result.success === false
+- Network errors: try/catch around fetch
+
+===== USAGE =====
+
+No changes needed in components using this hook:
+- Same interface and behavior
+- Same state properties
+- Same action methods
+- Automatic compatibility with new API
+*/

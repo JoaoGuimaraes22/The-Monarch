@@ -1,5 +1,5 @@
 // src/hooks/manuscript/useManuscriptCRUD.ts
-// ✨ PHASE 3: Extract CRUD operations with local state updates - NO MORE PAGE REFRESHES
+// UPDATED: Fixed to work with new standardized API response format
 
 import { useCallback } from "react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -33,7 +33,7 @@ export interface CRUDActions {
 }
 
 export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
-  // ===== ADD OPERATIONS (with local state updates - NO RELOAD) =====
+  // ===== ADD OPERATIONS (Updated for new API format) =====
 
   const handleAddScene = useCallback(
     async (chapterId: string, afterSceneId?: string) => {
@@ -42,9 +42,13 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
       try {
         console.log("➕ Adding scene to chapter:", chapterId);
 
-        const requestBody = afterSceneId
-          ? { insertAfterSceneId: afterSceneId }
-          : {};
+        // ✅ UPDATED: New API request format
+        const requestBody = {
+          title: "New Scene", // Required by new API
+          chapterId, // Required by new API
+          ...(afterSceneId && { insertAfterSceneId: afterSceneId }),
+        };
+
         const response = await fetch(
           `/api/novels/${config.novelId}/chapters/${chapterId}/scenes`,
           {
@@ -55,47 +59,54 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
         );
 
         if (response.ok) {
+          // ✅ UPDATED: Handle new standardized response format
           const result = await response.json();
-          console.log("✅ Scene created:", result.scene);
 
-          // ✅ LOCAL STATE UPDATE - NO RELOAD
-          config.onStateUpdate((prevNovel) => {
-            if (!prevNovel) return prevNovel;
+          if (result.success && result.data) {
+            const newScene = result.data;
+            console.log("✅ Scene created:", newScene);
 
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) => {
-                  if (chapter.id === chapterId) {
-                    const scenes = [...chapter.scenes];
-                    let insertIndex = scenes.length;
+            // ✅ LOCAL STATE UPDATE - NO RELOAD
+            config.onStateUpdate((prevNovel) => {
+              if (!prevNovel) return prevNovel;
 
-                    if (afterSceneId) {
-                      const afterIndex = scenes.findIndex(
-                        (s) => s.id === afterSceneId
-                      );
-                      if (afterIndex >= 0) {
-                        insertIndex = afterIndex + 1;
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => ({
+                  ...act,
+                  chapters: act.chapters.map((chapter) => {
+                    if (chapter.id === chapterId) {
+                      const scenes = [...chapter.scenes];
+                      let insertIndex = scenes.length;
+
+                      if (afterSceneId) {
+                        const afterIndex = scenes.findIndex(
+                          (s) => s.id === afterSceneId
+                        );
+                        if (afterIndex >= 0) {
+                          insertIndex = afterIndex + 1;
+                        }
                       }
+
+                      scenes.splice(insertIndex, 0, newScene);
+                      scenes.forEach((scene, index) => {
+                        scene.order = index + 1;
+                      });
+
+                      return { ...chapter, scenes };
                     }
+                    return chapter;
+                  }),
+                })),
+              };
+            });
 
-                    scenes.splice(insertIndex, 0, result.scene);
-                    scenes.forEach((scene, index) => {
-                      scene.order = index + 1;
-                    });
-
-                    return { ...chapter, scenes };
-                  }
-                  return chapter;
-                }),
-              })),
-            };
-          });
-
-          // ✅ AUTO-SELECT NEW SCENE
-          config.onSelectionUpdate.setSelectedScene(result.scene);
-          config.onSelectionUpdate.setViewMode("scene");
+            // ✅ AUTO-SELECT NEW SCENE
+            config.onSelectionUpdate.setSelectedScene(newScene);
+            config.onSelectionUpdate.setViewMode("scene");
+          } else {
+            throw new Error(result.error || "Failed to create scene");
+          }
         } else {
           const error = await response.json();
           console.error("Failed to create scene:", error);
@@ -116,9 +127,13 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
       try {
         console.log("➕ Adding chapter to act:", actId);
 
-        const requestBody = afterChapterId
-          ? { insertAfterChapterId: afterChapterId }
-          : {};
+        // ✅ UPDATED: New API request format
+        const requestBody = {
+          title: "New Chapter", // Required by new API
+          actId, // Required by new API
+          ...(afterChapterId && { insertAfterChapterId: afterChapterId }),
+        };
+
         const response = await fetch(
           `/api/novels/${config.novelId}/acts/${actId}/chapters`,
           {
@@ -129,44 +144,51 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
         );
 
         if (response.ok) {
+          // ✅ UPDATED: Handle new standardized response format
           const result = await response.json();
-          console.log("✅ Chapter created:", result.chapter);
 
-          // ✅ LOCAL STATE UPDATE - NO RELOAD
-          config.onStateUpdate((prevNovel) => {
-            if (!prevNovel) return prevNovel;
+          if (result.success && result.data) {
+            const newChapter = result.data;
+            console.log("✅ Chapter created:", newChapter);
 
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => {
-                if (act.id === actId) {
-                  const chapters = [...act.chapters];
-                  let insertIndex = chapters.length;
+            // ✅ LOCAL STATE UPDATE - NO RELOAD
+            config.onStateUpdate((prevNovel) => {
+              if (!prevNovel) return prevNovel;
 
-                  if (afterChapterId) {
-                    const afterIndex = chapters.findIndex(
-                      (c) => c.id === afterChapterId
-                    );
-                    if (afterIndex >= 0) {
-                      insertIndex = afterIndex + 1;
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => {
+                  if (act.id === actId) {
+                    const chapters = [...act.chapters];
+                    let insertIndex = chapters.length;
+
+                    if (afterChapterId) {
+                      const afterIndex = chapters.findIndex(
+                        (c) => c.id === afterChapterId
+                      );
+                      if (afterIndex >= 0) {
+                        insertIndex = afterIndex + 1;
+                      }
                     }
+
+                    chapters.splice(insertIndex, 0, newChapter);
+                    chapters.forEach((chapter, index) => {
+                      chapter.order = index + 1;
+                    });
+
+                    return { ...act, chapters };
                   }
+                  return act;
+                }),
+              };
+            });
 
-                  chapters.splice(insertIndex, 0, result.chapter);
-                  chapters.forEach((chapter, index) => {
-                    chapter.order = index + 1;
-                  });
-
-                  return { ...act, chapters };
-                }
-                return act;
-              }),
-            };
-          });
-
-          // ✅ AUTO-SELECT NEW CHAPTER
-          config.onSelectionUpdate.setSelectedChapter(result.chapter);
-          config.onSelectionUpdate.setViewMode("chapter");
+            // ✅ AUTO-SELECT NEW CHAPTER
+            config.onSelectionUpdate.setSelectedChapter(newChapter);
+            config.onSelectionUpdate.setViewMode("chapter");
+          } else {
+            throw new Error(result.error || "Failed to create chapter");
+          }
         } else {
           const error = await response.json();
           console.error("Failed to create chapter:", error);
@@ -189,10 +211,13 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
       try {
         console.log("➕ Adding act:", title);
 
+        // ✅ UPDATED: New API request format
         const requestBody = {
-          title: title || "New Act",
+          title: title || "New Act", // Required by new API
+          novelId: config.novelId, // Required by new API
           ...(insertAfterActId && { insertAfterActId }),
         };
+
         const response = await fetch(`/api/novels/${config.novelId}/acts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -200,36 +225,43 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
         });
 
         if (response.ok) {
+          // ✅ UPDATED: Handle new standardized response format
           const result = await response.json();
-          console.log("✅ Act created:", result.act);
 
-          // ✅ LOCAL STATE UPDATE - NO RELOAD
-          config.onStateUpdate((prevNovel) => {
-            if (!prevNovel) return prevNovel;
+          if (result.success && result.data) {
+            const newAct = result.data;
+            console.log("✅ Act created:", newAct);
 
-            const acts = [...prevNovel.acts];
-            let insertIndex = acts.length;
+            // ✅ LOCAL STATE UPDATE - NO RELOAD
+            config.onStateUpdate((prevNovel) => {
+              if (!prevNovel) return prevNovel;
 
-            if (insertAfterActId) {
-              const afterIndex = acts.findIndex(
-                (a) => a.id === insertAfterActId
-              );
-              if (afterIndex >= 0) {
-                insertIndex = afterIndex + 1;
+              const acts = [...prevNovel.acts];
+              let insertIndex = acts.length;
+
+              if (insertAfterActId) {
+                const afterIndex = acts.findIndex(
+                  (a) => a.id === insertAfterActId
+                );
+                if (afterIndex >= 0) {
+                  insertIndex = afterIndex + 1;
+                }
               }
-            }
 
-            acts.splice(insertIndex, 0, result.act);
-            acts.forEach((act, index) => {
-              act.order = index + 1;
+              acts.splice(insertIndex, 0, newAct);
+              acts.forEach((act, index) => {
+                act.order = index + 1;
+              });
+
+              return { ...prevNovel, acts };
             });
 
-            return { ...prevNovel, acts };
-          });
-
-          // ✅ AUTO-SELECT NEW ACT
-          config.onSelectionUpdate.setSelectedAct(result.act);
-          config.onSelectionUpdate.setViewMode("act");
+            // ✅ AUTO-SELECT NEW ACT
+            config.onSelectionUpdate.setSelectedAct(newAct);
+            config.onSelectionUpdate.setViewMode("act");
+          } else {
+            throw new Error(result.error || "Failed to create act");
+          }
         } else {
           const error = await response.json();
           console.error("Failed to create act:", error);
@@ -243,7 +275,7 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
     [config]
   );
 
-  // ===== DELETE OPERATIONS (with local state updates - NO RELOAD) =====
+  // ===== DELETE OPERATIONS (Updated for new API format) =====
 
   const handleDeleteScene = useCallback(
     async (sceneId: string) => {
@@ -260,33 +292,41 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
         );
 
         if (response.ok) {
-          console.log("✅ Scene deleted:", sceneId);
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
 
-          // ✅ LOCAL STATE UPDATE - NO RELOAD
-          config.onStateUpdate((prevNovel) => {
-            if (!prevNovel) return prevNovel;
+          if (result.success) {
+            console.log("✅ Scene deleted:", sceneId);
 
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) => ({
-                  ...chapter,
-                  scenes: chapter.scenes
-                    .filter((scene) => scene.id !== sceneId)
-                    .map((scene, index) => ({ ...scene, order: index + 1 })),
+            // ✅ LOCAL STATE UPDATE - NO RELOAD
+            config.onStateUpdate((prevNovel) => {
+              if (!prevNovel) return prevNovel;
+
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => ({
+                  ...act,
+                  chapters: act.chapters.map((chapter) => ({
+                    ...chapter,
+                    scenes: chapter.scenes
+                      .filter((scene) => scene.id !== sceneId)
+                      .map((scene, index) => ({ ...scene, order: index + 1 })),
+                  })),
                 })),
-              })),
-            };
-          });
+              };
+            });
 
-          // Clear selection if this scene was selected
-          if (config.currentSelections.selectedScene?.id === sceneId) {
-            config.onSelectionUpdate.setSelectedScene(null);
+            // Clear selection if this scene was selected
+            if (config.currentSelections.selectedScene?.id === sceneId) {
+              config.onSelectionUpdate.setSelectedScene(null);
+            }
+          } else {
+            throw new Error(result.error || "Failed to delete scene");
           }
         } else {
-          console.error("Failed to delete scene");
-          alert("Failed to delete scene. Please try again.");
+          const error = await response.json();
+          console.error("Failed to delete scene:", error);
+          alert("Failed to delete scene: " + (error.error || "Unknown error"));
         }
       } catch (error) {
         console.error("Error deleting scene:", error);
@@ -311,30 +351,43 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
         );
 
         if (response.ok) {
-          console.log("✅ Chapter deleted:", chapterId);
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
 
-          // ✅ LOCAL STATE UPDATE - NO RELOAD
-          config.onStateUpdate((prevNovel) => {
-            if (!prevNovel) return prevNovel;
+          if (result.success) {
+            console.log("✅ Chapter deleted:", chapterId);
 
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters
-                  .filter((chapter) => chapter.id !== chapterId)
-                  .map((chapter, index) => ({ ...chapter, order: index + 1 })),
-              })),
-            };
-          });
+            // ✅ LOCAL STATE UPDATE - NO RELOAD
+            config.onStateUpdate((prevNovel) => {
+              if (!prevNovel) return prevNovel;
 
-          // Clear selection if this chapter was selected
-          if (config.currentSelections.selectedChapter?.id === chapterId) {
-            config.onSelectionUpdate.setSelectedChapter(null);
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => ({
+                  ...act,
+                  chapters: act.chapters
+                    .filter((chapter) => chapter.id !== chapterId)
+                    .map((chapter, index) => ({
+                      ...chapter,
+                      order: index + 1,
+                    })),
+                })),
+              };
+            });
+
+            // Clear selection if this chapter was selected
+            if (config.currentSelections.selectedChapter?.id === chapterId) {
+              config.onSelectionUpdate.setSelectedChapter(null);
+            }
+          } else {
+            throw new Error(result.error || "Failed to delete chapter");
           }
         } else {
-          console.error("Failed to delete chapter");
-          alert("Failed to delete chapter. Please try again.");
+          const error = await response.json();
+          console.error("Failed to delete chapter:", error);
+          alert(
+            "Failed to delete chapter: " + (error.error || "Unknown error")
+          );
         }
       } catch (error) {
         console.error("Error deleting chapter:", error);
@@ -359,27 +412,35 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
         );
 
         if (response.ok) {
-          console.log("✅ Act deleted:", actId);
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
 
-          // ✅ LOCAL STATE UPDATE - NO RELOAD
-          config.onStateUpdate((prevNovel) => {
-            if (!prevNovel) return prevNovel;
+          if (result.success) {
+            console.log("✅ Act deleted:", actId);
 
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts
-                .filter((act) => act.id !== actId)
-                .map((act, index) => ({ ...act, order: index + 1 })),
-            };
-          });
+            // ✅ LOCAL STATE UPDATE - NO RELOAD
+            config.onStateUpdate((prevNovel) => {
+              if (!prevNovel) return prevNovel;
 
-          // Clear selection if this act was selected
-          if (config.currentSelections.selectedAct?.id === actId) {
-            config.onSelectionUpdate.setSelectedAct(null);
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts
+                  .filter((act) => act.id !== actId)
+                  .map((act, index) => ({ ...act, order: index + 1 })),
+              };
+            });
+
+            // Clear selection if this act was selected
+            if (config.currentSelections.selectedAct?.id === actId) {
+              config.onSelectionUpdate.setSelectedAct(null);
+            }
+          } else {
+            throw new Error(result.error || "Failed to delete act");
           }
         } else {
-          console.error("Failed to delete act");
-          alert("Failed to delete act. Please try again.");
+          const error = await response.json();
+          console.error("Failed to delete act:", error);
+          alert("Failed to delete act: " + (error.error || "Unknown error"));
         }
       } catch (error) {
         console.error("Error deleting act:", error);
@@ -399,3 +460,45 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
     handleDeleteAct,
   };
 }
+
+/*
+===== CHANGES MADE =====
+
+✅ UPDATED: All creation requests now include required fields per new API schemas
+✅ UPDATED: All responses now handle new standardized format { success, data, message, meta }
+✅ UPDATED: Error handling updated for new response structure
+✅ MAINTAINED: All existing local state update logic (no page refreshes)
+✅ MAINTAINED: Auto-selection of newly created items
+
+===== NEW REQUEST FORMATS =====
+
+Scene Creation:
+{
+  "title": "New Scene",
+  "chapterId": "ch123"
+}
+
+Chapter Creation:
+{
+  "title": "New Chapter", 
+  "actId": "act456"
+}
+
+Act Creation:
+{
+  "title": "New Act",
+  "novelId": "novel789"
+}
+
+===== NEW RESPONSE FORMAT =====
+{
+  "success": true,
+  "data": {  created item  },
+  "message": "Item created successfully",
+  "meta": {
+    "timestamp": "2025-08-19T...",
+    "requestId": "req_1692...",
+    "version": "1.0"
+  }
+}
+*/

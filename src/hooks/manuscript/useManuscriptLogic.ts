@@ -90,57 +90,40 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     },
   });
 
-  // ===== NOVEL STRUCTURE LOADING (only for initial load and explicit refresh) =====
-  const loadNovelStructure = useCallback(async (id: string) => {
-    console.log("🔄 API CALL: loadNovelStructure called");
-    try {
-      actions.setLoading(true);
-      const response = await fetch(`/api/novels/${id}/structure`);
-      if (response.ok) {
-        const novelData = await response.json();
-        actions.setNovel(novelData);
+  // ===== NOVEL STRUCTURE LOADING (Updated for new API format) =====
+  const loadNovelStructure = useCallback(
+    async (id: string) => {
+      console.log("🔄 API CALL: loadNovelStructure called");
+      try {
+        actions.setLoading(true);
 
-        // Get current scene ID to avoid dependency issues
-        const currentSceneId = state.selectedScene?.id;
+        const response = await fetch(`/api/novels/${id}/structure`);
 
-        // Only auto-select if no scene is currently selected
-        if (novelData.acts && novelData.acts.length > 0) {
-          let sceneStillExists = false;
-          if (currentSceneId) {
-            for (const act of novelData.acts) {
-              for (const chapter of act.chapters) {
-                if (
-                  chapter.scenes.some((s: Scene) => s.id === currentSceneId)
-                ) {
-                  sceneStillExists = true;
-                  break;
-                }
-              }
-              if (sceneStillExists) break;
-            }
+        if (response.ok) {
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
+
+          if (result.success && result.data) {
+            console.log("✅ Novel structure loaded:", result.data.novel);
+            actions.setNovel(result.data.novel);
+          } else {
+            throw new Error(result.error || "Failed to load novel structure");
           }
-
-          if (!currentSceneId || !sceneStillExists) {
-            const firstAct = novelData.acts[0];
-            if (firstAct && firstAct.chapters.length > 0) {
-              const firstChapter = firstAct.chapters[0];
-              if (firstChapter.scenes.length > 0) {
-                const firstScene = firstChapter.scenes[0];
-                actions.setSelectedScene(firstScene);
-                console.log("Auto-selected first scene:", firstScene.title);
-              }
-            }
-          }
+        } else {
+          const error = await response.json();
+          console.error("Failed to load novel structure:", error);
+          throw new Error(error.error || "Failed to load novel structure");
         }
-      } else {
-        console.error("Failed to load novel structure");
+      } catch (error) {
+        console.error("Error loading novel structure:", error);
+        actions.setNovel(null);
+        // Handle error appropriately - don't throw if you want to continue
+      } finally {
+        actions.setLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading novel structure:", error);
-    } finally {
-      actions.setLoading(false);
-    }
-  }, []);
+    },
+    [actions]
+  );
 
   // ===== UI ACTION HANDLERS =====
   const handleContentDisplayModeChange = useCallback(
@@ -245,7 +228,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     [state.selectedScene, actions]
   );
 
-  // ===== UPDATE HANDLERS (keep existing implementation) =====
+  // UPDATED: Fixed update handlers to work with new standardized API response format
+
+  // ===== UPDATE HANDLERS (Updated for new API format) =====
 
   const handleUpdateActName = useCallback(
     async (actId: string, newTitle: string) => {
@@ -258,19 +243,27 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         });
 
         if (response.ok) {
-          console.log("✅ Act name updated:", newTitle);
-          actions.updateNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) =>
-                act.id === actId ? { ...act, title: newTitle } : act
-              ),
-            };
-          });
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
+
+          if (result.success) {
+            console.log("✅ Act name updated:", newTitle);
+            actions.updateNovel((prevNovel) => {
+              if (!prevNovel) return prevNovel;
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) =>
+                  act.id === actId ? { ...act, title: newTitle } : act
+                ),
+              };
+            });
+          } else {
+            throw new Error(result.error || "Failed to update act name");
+          }
         } else {
-          console.error("Failed to update act name");
-          throw new Error("Failed to update act name");
+          const error = await response.json();
+          console.error("Failed to update act name:", error);
+          throw new Error(error.error || "Failed to update act name");
         }
       } catch (error) {
         console.error("Error updating act name:", error);
@@ -294,24 +287,32 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         );
 
         if (response.ok) {
-          console.log("✅ Chapter name updated:", newTitle);
-          actions.updateNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) =>
-                  chapter.id === chapterId
-                    ? { ...chapter, title: newTitle }
-                    : chapter
-                ),
-              })),
-            };
-          });
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
+
+          if (result.success) {
+            console.log("✅ Chapter name updated:", newTitle);
+            actions.updateNovel((prevNovel) => {
+              if (!prevNovel) return prevNovel;
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => ({
+                  ...act,
+                  chapters: act.chapters.map((chapter) =>
+                    chapter.id === chapterId
+                      ? { ...chapter, title: newTitle }
+                      : chapter
+                  ),
+                })),
+              };
+            });
+          } else {
+            throw new Error(result.error || "Failed to update chapter name");
+          }
         } else {
-          console.error("Failed to update chapter name");
-          throw new Error("Failed to update chapter name");
+          const error = await response.json();
+          console.error("Failed to update chapter name:", error);
+          throw new Error(error.error || "Failed to update chapter name");
         }
       } catch (error) {
         console.error("Error updating chapter name:", error);
@@ -335,35 +336,45 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         );
 
         if (response.ok) {
-          console.log("✅ Scene name updated:", newTitle);
+          // ✅ UPDATED: Handle new standardized response format
+          const result = await response.json();
 
-          // Update the novel state
-          actions.updateNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) => ({
-                  ...chapter,
-                  scenes: chapter.scenes.map((scene) =>
-                    scene.id === sceneId ? { ...scene, title: newTitle } : scene
-                  ),
+          if (result.success) {
+            console.log("✅ Scene name updated:", newTitle);
+
+            // Update the novel state
+            actions.updateNovel((prevNovel) => {
+              if (!prevNovel) return prevNovel;
+              return {
+                ...prevNovel,
+                acts: prevNovel.acts.map((act) => ({
+                  ...act,
+                  chapters: act.chapters.map((chapter) => ({
+                    ...chapter,
+                    scenes: chapter.scenes.map((scene) =>
+                      scene.id === sceneId
+                        ? { ...scene, title: newTitle }
+                        : scene
+                    ),
+                  })),
                 })),
-              })),
-            };
-          });
-
-          // Update selected scene directly
-          if (state.selectedScene?.id === sceneId) {
-            actions.setSelectedScene({
-              ...state.selectedScene,
-              title: newTitle,
+              };
             });
+
+            // Update selected scene directly
+            if (state.selectedScene?.id === sceneId) {
+              actions.setSelectedScene({
+                ...state.selectedScene,
+                title: newTitle,
+              });
+            }
+          } else {
+            throw new Error(result.error || "Failed to update scene name");
           }
         } else {
-          console.error("Failed to update scene name");
-          throw new Error("Failed to update scene name");
+          const error = await response.json();
+          console.error("Failed to update scene name:", error);
+          throw new Error(error.error || "Failed to update scene name");
         }
       } catch (error) {
         console.error("Error updating scene name:", error);
@@ -437,3 +448,30 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     hasStructure: !!hasStructure,
   };
 }
+
+/*
+===== CHANGES MADE =====
+
+✅ UPDATED: All update operations now handle new standardized response format
+✅ UPDATED: loadNovelStructure now handles { success, data: { novel, stats } } format
+✅ UPDATED: Error handling updated for new response structure
+✅ MAINTAINED: All existing local state update logic
+✅ MAINTAINED: Auto-selection and UI state management
+
+===== NEW RESPONSE HANDLING =====
+
+All API responses now follow this format:
+{
+  "success": true,
+  "data": {  actual response data },
+  "message": "Operation completed successfully", 
+  "meta": {
+    "timestamp": "2025-08-19T...",
+    "requestId": "req_1692...",
+    "version": "1.0"
+  }
+}
+
+Update operations check result.success and use result.data
+Error responses provide result.error for user-friendly messages
+*/

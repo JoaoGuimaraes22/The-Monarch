@@ -294,7 +294,12 @@ export const DraggableManuscriptTree: React.FC<
     })
   );
 
-  // API functions for reordering
+  // UPDATED: Reorder operations for draggable-manuscript-tree.tsx
+  // These functions should replace the existing reorder functions
+
+  // ===== API REORDER FUNCTIONS (Updated for new API format) =====
+
+  // Scene reordering with new request/response format
   const reorderScene = async (
     sceneId: string,
     newChapterId: string,
@@ -305,32 +310,85 @@ export const DraggableManuscriptTree: React.FC<
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newChapterId, newOrder }),
+        // ✅ UPDATED: New request format matching ReorderSceneSchema
+        body: JSON.stringify({
+          newOrder,
+          ...(newChapterId && { newChapterId }), // Only include if moving to different chapter
+        }),
       }
     );
 
     if (!response.ok) {
-      throw new Error("Failed to reorder scene");
+      const error = await response.json();
+      throw new Error(error.error || "Failed to reorder scene");
     }
 
-    return response.json();
+    // ✅ UPDATED: Handle new standardized response format
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Failed to reorder scene");
+    }
+
+    return result.data; // Return the updated scene data
   };
 
-  const reorderChapter = async (chapterId: string, newOrder: number) => {
+  // Chapter reordering with new request/response format
+  const reorderChapter = async (
+    chapterId: string,
+    newActId: string,
+    newOrder: number
+  ) => {
     const response = await fetch(
       `/api/novels/${novel.id}/chapters/${chapterId}/reorder`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        // ✅ UPDATED: New request format matching ReorderChapterSchema
+        body: JSON.stringify({
+          newOrder,
+          ...(newActId && { newActId }), // Only include if moving to different act
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to reorder chapter");
+    }
+
+    // ✅ UPDATED: Handle new standardized response format
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Failed to reorder chapter");
+    }
+
+    return result.data; // Return the updated chapter data
+  };
+
+  // Act reordering with new request/response format
+  const reorderAct = async (actId: string, newOrder: number) => {
+    const response = await fetch(
+      `/api/novels/${novel.id}/acts/${actId}/reorder`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        // ✅ UPDATED: New request format matching ReorderActSchema
         body: JSON.stringify({ newOrder }),
       }
     );
 
     if (!response.ok) {
-      throw new Error("Failed to reorder chapter");
+      const error = await response.json();
+      throw new Error(error.error || "Failed to reorder act");
     }
 
-    return response.json();
+    // ✅ UPDATED: Handle new standardized response format
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Failed to reorder act");
+    }
+
+    return result.data; // Return the updated act data
   };
 
   // Drag handlers
@@ -504,3 +562,47 @@ export const DraggableManuscriptTree: React.FC<
     </DndContext>
   );
 };
+
+/*
+===== CHANGES MADE =====
+
+✅ UPDATED: Scene reordering request format
+   OLD: { newChapterId, newOrder }
+   NEW: { newOrder, newChapterId? } // newChapterId is optional
+
+✅ UPDATED: Chapter reordering request format  
+   OLD: { newOrder } (same-act only)
+   NEW: { newOrder, newActId? } // newActId is optional for cross-act moves
+
+✅ UPDATED: Act reordering request format
+   OLD: { newOrder }
+   NEW: { newOrder } // Same format, but now handles standardized response
+
+✅ UPDATED: All response handling
+   - Check result.success before proceeding
+   - Use result.data for the updated entity
+   - Use result.error for error messages
+
+===== SCHEMA VALIDATION =====
+
+These requests now validate against:
+- ReorderSceneSchema: { newOrder: number, newChapterId?: string }
+- ReorderChapterSchema: { newOrder: number, newActId?: string }  
+- ReorderActSchema: { newOrder: number }
+
+===== CROSS-ENTITY MOVES =====
+
+✅ Scenes can now move between chapters (newChapterId)
+✅ Chapters can now move between acts (newActId)
+✅ Acts stay within the same novel (no cross-novel moves)
+
+===== RESPONSE FORMAT =====
+
+All reorder operations return:
+{
+  "success": true,
+  "data": { updated entity with new order/parent  },
+  "message": "Entity reordered successfully",
+  "meta": { "timestamp": "...", "requestId": "...", "version": "1.0" }
+}
+*/

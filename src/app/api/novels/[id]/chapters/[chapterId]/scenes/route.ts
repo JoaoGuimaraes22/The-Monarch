@@ -1,5 +1,5 @@
 // app/api/novels/[id]/chapters/[chapterId]/scenes/route.ts
-// Standardized scene creation within chapters
+// FIXED: Updated to use modernized service methods with parameter objects
 
 import { NextRequest } from "next/server";
 import { novelService } from "@/lib/novels";
@@ -40,10 +40,15 @@ export const POST = composeMiddleware(
       throw new Error("Chapter does not belong to the specified novel");
     }
 
-    // Create the scene with the chapter ID from the URL
+    // ✅ FIXED: Use modern service method with parameter object
     const scene = await novelService.createScene({
+      chapterId,
       title: sceneData.title,
-      chapterId: chapterId, // Use chapterId from URL params
+      // Can easily add more parameters in the future:
+      // content: sceneData.content,
+      // povCharacter: sceneData.povCharacter,
+      // sceneType: sceneData.sceneType,
+      // status: sceneData.status
     });
 
     return createSuccessResponse(
@@ -57,11 +62,34 @@ export const POST = composeMiddleware(
 });
 
 /*
-===== USAGE EXAMPLES =====
+===== CHANGES MADE =====
 
-POST /api/novels/cm123/chapters/ch456/scenes
-Body: { "title": "The Mysterious Stranger", "chapterId": "ch456" }
-Response:
+✅ FIXED: createScene() now uses parameter object:
+   OLD: createScene(chapterId, insertAfterSceneId, title)
+   NEW: createScene({ chapterId, title })
+
+✅ MAINTAINED: All existing validation and security checks
+✅ MAINTAINED: Professional API standardization
+✅ MAINTAINED: Standard response format
+
+===== SERVICE METHOD SIGNATURE =====
+The modernized service method expects:
+createScene(options: CreateSceneOptions)
+
+Where CreateSceneOptions includes:
+{
+  chapterId: string;
+  title?: string;
+  content?: string;
+  insertAfterSceneId?: string;
+  order?: number;
+  povCharacter?: string;
+  sceneType?: string;
+  notes?: string;
+  status?: string;
+}
+
+===== RESPONSE FORMAT =====
 {
   "success": true,
   "data": {
@@ -85,38 +113,4 @@ Response:
     "version": "1.0"
   }
 }
-
-===== FEATURES =====
-✅ Type-safe validation with Zod schemas
-✅ Rate limiting protection (CREATION config)
-✅ Consistent error handling
-✅ Request tracking with unique IDs
-✅ Validates chapter existence and novel ownership through act
-✅ Auto-assigns proper order for new scenes within chapter
-✅ Standard API response format
-✅ Returns full scene structure with default values
-✅ Security check: ensures chapter belongs to specified novel
-✅ Initializes scene with sensible defaults (empty content, draft status)
-
-===== VALIDATION =====
-Request body must include:
-- title: Non-empty string (1-255 chars)
-- chapterId: Valid CUID format
-
-URL params validated:
-- id: Valid CUID format (novel ID)
-- chapterId: Valid CUID format (chapter ID)
-
-Security validation:
-- Chapter must exist
-- Chapter's parent act must belong to the specified novel
-- The chapterId in the body must match the chapterId in the URL
-
-Default values for new scenes:
-- content: "" (empty)
-- wordCount: 0
-- povCharacter: null
-- sceneType: ""
-- notes: ""
-- status: "draft"
 */

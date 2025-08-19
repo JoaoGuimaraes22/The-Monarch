@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { WorkspaceLayout } from "@/app/components/workspace/workspace-layout";
-import { useNovel } from "@/hooks/useNovels";
+import { useNovel } from "@/hooks/novels/useNovels";
 
 interface NovelLayoutProps {
   children: React.ReactNode;

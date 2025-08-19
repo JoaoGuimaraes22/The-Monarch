@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { BookOpen } from "lucide-react";
 import { Alert } from "@/app/components/ui";
-import { useNovels } from "@/hooks/useNovels";
+import { useNovels } from "@/hooks/novels/useNovels";
 import { CreateNovelData } from "@/lib/novels";
 
 // Import feature components

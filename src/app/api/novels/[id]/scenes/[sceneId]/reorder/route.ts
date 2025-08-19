@@ -1,119 +1,116 @@
-// src/app/api/novels/[id]/scenes/[sceneId]/reorder/route.ts
-// API endpoint for reordering scenes within chapters
+// app/api/novels/[id]/scenes/[sceneId]/reorder/route.ts
+// FIXED: Modernized to use standardized API system and parameter objects
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { novelService } from "@/lib/novels";
+import {
+  withValidation,
+  withRateLimit,
+  composeMiddleware,
+  createSuccessResponse,
+  handleServiceError,
+  ReorderSceneSchema,
+  ReorderSceneData,
+  SceneParamsSchema,
+  RATE_LIMIT_CONFIGS,
+} from "@/lib/api";
 
-// PUT /api/novels/[id]/scenes/[sceneId]/reorder
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; sceneId: string }> }
-) {
+// ===== PUT /api/novels/[id]/scenes/[sceneId]/reorder - Reorder a scene =====
+export const PUT = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
+  withValidation(ReorderSceneSchema, SceneParamsSchema)
+)(async function (req: NextRequest, context, validatedData) {
   try {
-    const { id: novelId, sceneId } = await params;
+    const params = await context.params;
+    const { id: novelId, sceneId } = params as { id: string; sceneId: string };
+    const reorderData = validatedData as ReorderSceneData;
 
-    console.log("🔄 Scene reorder request:", { novelId, sceneId });
-
-    // Get the reorder data from request body
-    const { newChapterId, newOrder } = await request.json();
-
-    if (!newOrder || typeof newOrder !== "number") {
-      return NextResponse.json(
-        { error: "New order position is required and must be a number" },
-        { status: 400 }
-      );
-    }
-
-    console.log("📊 Reorder details:", {
-      sceneId,
-      newChapterId: newChapterId || "same chapter",
-      newOrder,
-    });
-
-    // Get current novel structure
+    // Verify the novel exists and get structure
     const novel = await novelService.getNovelWithStructure(novelId);
     if (!novel) {
-      return NextResponse.json({ error: "Novel not found" }, { status: 404 });
+      throw new Error("Novel not found");
     }
 
-    // Find the scene to move
-    let sourceScene = null;
-    let sourceChapter = null;
-
+    // Find the scene to verify it exists
+    let foundScene = null;
     for (const act of novel.acts) {
       for (const chapter of act.chapters) {
         const scene = chapter.scenes.find((s) => s.id === sceneId);
         if (scene) {
-          sourceScene = scene;
-          sourceChapter = chapter;
+          foundScene = scene;
           break;
         }
       }
-      if (sourceScene) break;
+      if (foundScene) break;
     }
 
-    if (!sourceScene || !sourceChapter) {
-      return NextResponse.json({ error: "Scene not found" }, { status: 404 });
+    if (!foundScene) {
+      throw new Error("Scene not found");
     }
 
-    // Determine target chapter (same chapter if not specified)
-    const targetChapterId = newChapterId || sourceChapter.id;
-    let targetChapter = sourceChapter;
-
-    if (newChapterId && newChapterId !== sourceChapter.id) {
-      // Moving to different chapter
+    // If moving to a different chapter, verify the target chapter exists
+    if (reorderData.newChapterId) {
+      let targetChapterExists = false;
       for (const act of novel.acts) {
-        const chapter = act.chapters.find((c) => c.id === newChapterId);
-        if (chapter) {
-          targetChapter = chapter;
+        if (act.chapters.find((c) => c.id === reorderData.newChapterId)) {
+          targetChapterExists = true;
           break;
         }
       }
-
-      if (!targetChapter || targetChapter.id === sourceChapter.id) {
-        return NextResponse.json(
-          { error: "Target chapter not found" },
-          { status: 404 }
-        );
+      if (!targetChapterExists) {
+        throw new Error("Target chapter not found");
       }
     }
 
-    console.log("🎯 Moving scene:", {
-      from: `${sourceChapter.title} (order ${sourceScene.order})`,
-      to: `${targetChapter.title} (order ${newOrder})`,
-      crossChapter: newChapterId ? true : false,
-    });
-
-    // Perform the reordering using Prisma transactions
-    const result = await novelService.reorderScene(
+    // ✅ FIXED: Use modern service method with parameter object
+    const result = await novelService.reorderScene({
       sceneId,
-      targetChapterId,
-      newOrder
-    );
-
-    console.log("✅ Scene reordered successfully");
-
-    // Return the updated structure
-    return NextResponse.json({
-      success: true,
-      message: "Scene reordered successfully",
-      scene: {
-        id: result.id,
-        title: result.title,
-        order: result.order,
-        // Note: chapterId is not exposed in the Scene interface, so we don't return it
-      },
+      newOrder: reorderData.newOrder,
+      targetChapterId: reorderData.newChapterId, // Optional for cross-chapter moves
     });
-  } catch (error) {
-    console.error("❌ Scene reorder failed:", error);
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Failed to reorder scene",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+    return createSuccessResponse(
+      result,
+      reorderData.newChapterId
+        ? "Scene moved to new chapter successfully"
+        : "Scene reordered successfully",
+      context.requestId
     );
+  } catch (error) {
+    handleServiceError(error);
   }
+});
+
+/*
+===== CHANGES MADE =====
+
+✅ MODERNIZED: Full API standardization with middleware composition
+✅ FIXED: reorderScene() now uses parameter object:
+   OLD: reorderScene(sceneId, targetChapterId, newOrder)
+   NEW: reorderScene({ sceneId, newOrder, targetChapterId })
+
+✅ ADDED: Proper Zod validation with ReorderSceneSchema
+✅ ADDED: Rate limiting protection
+✅ ADDED: Request tracking with unique IDs
+✅ ADDED: Consistent error handling with handleServiceError
+✅ ADDED: Standard API response format
+
+===== API SCHEMA =====
+ReorderSceneSchema validates:
+{
+  "newOrder": number (required, >= 1),
+  "newChapterId": string (optional, for cross-chapter moves)
 }
+
+// ===== RESPONSE FORMAT =====
+// {
+//   "success": true,
+//   "data": /* updated scene data */
+//   "message": "Scene reordered successfully",
+//   "meta": {
+//     "timestamp": "2025-08-19T...",
+//     "requestId": "req_1692...",
+//     "version": "1.0"
+//   }
+// }
+// */
