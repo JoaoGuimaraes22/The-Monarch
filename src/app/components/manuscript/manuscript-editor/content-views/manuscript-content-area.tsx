@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/manuscript-content-area.tsx
-// ✅ UPDATED: Pass new props to SceneGrid for enhanced grid view functionality
+// ✅ FINAL: Complete with breadcrumbs, focus buttons ONLY in act view, and Add Scene button
 
 import React from "react";
 import { FileText, Plus } from "lucide-react";
@@ -75,48 +75,185 @@ const SceneEditor: React.FC<{
                 value={scene.title || `Scene ${scene.order}`}
                 onSave={(newTitle) => onSceneRename(scene.id, newTitle)}
                 placeholder="Scene title"
-                className="text-sm font-medium text-white"
-                maxLength={100}
+                className="text-base font-medium text-white"
+                maxLength={200}
               />
             ) : (
-              <span className="text-sm font-medium text-white">
+              <h3 className="text-base font-medium text-white">
                 {scene.title || `Scene ${scene.order}`}
-              </span>
+              </h3>
             )}
           </div>
-          <div className="text-xs text-gray-400 mt-1">
-            {scene.wordCount} words
-          </div>
+          {showChapterContext && chapterInfo && (
+            <p className="text-xs text-gray-500 mt-0.5">
+              {chapterInfo.title} • {scene.wordCount} words • {scene.status}
+            </p>
+          )}
         </div>
 
-        {/* Add Scene Button - Compact */}
-        {showAddButton && onAddScene && chapterInfo && (
-          <button
-            onClick={() => onAddScene(chapterInfo.id, scene.id)}
-            className="px-2 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded flex items-center space-x-1 transition-colors"
-            title="Add scene after this one"
-          >
-            <Plus className="w-3 h-3" />
-            <span>Scene</span>
-          </button>
-        )}
+        <button
+          onClick={() => onSceneClick(scene.id, scene)}
+          className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+        >
+          Focus
+        </button>
       </div>
 
-      {/* Scene Content Editor */}
-      <div className="bg-gray-800 rounded-lg p-4 min-h-[300px]">
+      {/* Scene Content */}
+      <div className="bg-gray-800 rounded-lg p-3">
         <SceneTextEditor
-          key={`scene-editor-${scene.id}`}
           content={scene.content}
           onContentChange={handleContentChange}
+          placeholder="Start writing your scene..."
+          readOnly={false}
         />
+      </div>
+
+      {/* Add Scene Button - Compact */}
+      {showAddButton && onAddScene && chapterInfo && (
+        <div className="flex justify-center py-2">
+          <button
+            onClick={() => onAddScene(chapterInfo.id, scene.id)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 border border-dashed border-blue-600 rounded bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200 text-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="font-medium">Add Scene</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ✅ Chapter Header with conditional Focus button (only in act view)
+const ChapterHeader: React.FC<{
+  chapter: Chapter;
+  onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
+  onChapterClick?: (chapter: Chapter) => void;
+  showWordCount?: boolean;
+}> = ({ chapter, onChapterRename, onChapterClick, showWordCount = true }) => {
+  const totalWords = chapter.scenes.reduce(
+    (sum, scene) => sum + scene.wordCount,
+    0
+  );
+
+  return (
+    <div className="my-4 p-3 border border-yellow-600/40 rounded bg-gray-800/30">
+      <div className="flex items-center space-x-3">
+        {/* Compact chapter order number */}
+        <span className="text-sm font-medium text-gray-400 flex-shrink-0">
+          CH{chapter.order}
+        </span>
+
+        <div className="flex-1">
+          {onChapterRename ? (
+            <EditableText
+              value={chapter.title}
+              onSave={(newTitle) => onChapterRename(chapter.id, newTitle)}
+              placeholder="Chapter title"
+              className="text-lg font-bold text-gray-200"
+              maxLength={200}
+            />
+          ) : (
+            <h2 className="text-lg font-bold text-gray-200">{chapter.title}</h2>
+          )}
+
+          {showWordCount && (
+            <p className="text-gray-400 mt-1 text-sm">
+              {chapter.scenes.length} scene
+              {chapter.scenes.length !== 1 ? "s" : ""} •{" "}
+              {totalWords.toLocaleString()} words
+            </p>
+          )}
+        </div>
+
+        {/* ✅ CRITICAL: Focus button only shows when onChapterClick is provided */}
+        {onChapterClick && (
+          <button
+            onClick={() => onChapterClick(chapter)}
+            className="px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+          >
+            Focus
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-// Helper function to find chapter from scene
+// Add Chapter Button with golden theme
+const AddChapterButton: React.FC<{
+  actId: string;
+  afterChapterId?: string;
+  onAddChapter: (actId: string, afterChapterId?: string) => void;
+}> = ({ actId, afterChapterId, onAddChapter }) => {
+  return (
+    <div className="flex justify-center my-3">
+      <button
+        onClick={() => onAddChapter(actId, afterChapterId)}
+        className="flex items-center space-x-1.5 px-4 py-2 border border-dashed border-yellow-600 rounded bg-yellow-900/20 text-yellow-300 hover:border-yellow-400 hover:text-yellow-200 hover:bg-yellow-900/30 transition-all duration-200 text-sm"
+      >
+        <Plus className="w-4 h-4" />
+        <span className="font-medium">Add Chapter</span>
+      </button>
+    </div>
+  );
+};
+
+// Act Document View Header
+const ActDocumentViewHeader: React.FC<{
+  act: Act;
+  onActRename?: (actId: string, newTitle: string) => Promise<void>;
+}> = ({ act, onActRename }) => {
+  const totalChapters = act.chapters.length;
+  const totalScenes = act.chapters.reduce(
+    (sum, chapter) => sum + chapter.scenes.length,
+    0
+  );
+  const totalWords = act.chapters.reduce(
+    (sum, chapter) =>
+      sum +
+      chapter.scenes.reduce(
+        (chapterSum, scene) => chapterSum + scene.wordCount,
+        0
+      ),
+    0
+  );
+
+  return (
+    <div className="mb-4 p-4 border-b border-red-700/40 bg-gray-800/50">
+      <div className="flex items-center space-x-3">
+        <span className="text-sm font-medium text-gray-400 flex-shrink-0">
+          ACT{act.order}
+        </span>
+
+        <div className="flex-1">
+          {onActRename ? (
+            <EditableText
+              value={act.title}
+              onSave={(newTitle) => onActRename(act.id, newTitle)}
+              placeholder="Act title"
+              className="text-xl font-bold text-white"
+              maxLength={200}
+            />
+          ) : (
+            <h1 className="text-xl font-bold text-white">{act.title}</h1>
+          )}
+
+          <p className="text-gray-400 mt-1 text-sm">
+            Act view • {totalChapters} chapter{totalChapters !== 1 ? "s" : ""} •{" "}
+            {totalScenes} scene{totalScenes !== 1 ? "s" : ""} •{" "}
+            {totalWords.toLocaleString()} words
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper functions to find chapter/act info
 const findChapterFromSection = (
-  novel: NovelWithStructure | null | undefined,
+  novel: NovelWithStructure | undefined,
   section: ContentSection
 ): Chapter | null => {
   if (!novel?.acts) return null;
@@ -124,10 +261,8 @@ const findChapterFromSection = (
   for (const act of novel.acts) {
     for (const chapter of act.chapters) {
       if (
-        section.scenes.some((sectionScene: Scene) =>
-          chapter.scenes.some(
-            (chapterScene) => chapterScene.id === sectionScene.id
-          )
+        section.scenes.some((s: Scene) =>
+          chapter.scenes.some((cs: Scene) => cs.id === s.id)
         )
       ) {
         return chapter;
@@ -137,16 +272,35 @@ const findChapterFromSection = (
   return null;
 };
 
-// Helper function to find act from chapter ID
-const findActFromChapterId = (
-  novel: NovelWithStructure | null | undefined,
-  chapterId: string
+const findActFromSection = (
+  novel: NovelWithStructure | undefined,
+  section: ContentSection
 ): Act | null => {
   if (!novel?.acts) return null;
 
   for (const act of novel.acts) {
+    for (const chapter of act.chapters) {
+      if (
+        section.scenes.some((s: Scene) =>
+          chapter.scenes.some((cs: Scene) => cs.id === s.id)
+        )
+      ) {
+        return act;
+      }
+    }
+  }
+  return null;
+};
+
+const findActIdForChapter = (
+  novel: NovelWithStructure | undefined,
+  chapterId: string
+): string | null => {
+  if (!novel?.acts) return null;
+
+  for (const act of novel.acts) {
     if (act.chapters.some((chapter) => chapter.id === chapterId)) {
-      return act;
+      return act.id;
     }
   }
   return null;
@@ -195,7 +349,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ UPDATED: Grid view with all new props passed to SceneGrid
+  // Grid view
   if (
     (viewMode === "chapter" || viewMode === "act") &&
     contentDisplayMode === "grid"
@@ -211,8 +365,6 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           onSceneClick={onSceneClick}
           onSceneRename={onSceneRename}
           onChapterRename={onChapterRename}
-          onChapterClick={onChapterClick} // ✅ NEW: Pass chapter focus handler
-          onActRename={onActRename} // ✅ NEW: Pass act rename handler
           novel={novel}
         />
       </div>
@@ -226,8 +378,57 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
 
     // Find chapter and act info for breadcrumbs
     const chapterInfo = findChapterFromSection(novel, section);
-    const actInfo = chapterInfo
-      ? findActFromChapterId(novel, chapterInfo.id)
+    const actInfo = chapterInfo ? findActFromSection(novel, section) : null;
+
+    return (
+      <div
+        className="flex-1 transition-all duration-300"
+        style={{ marginLeft, marginRight }}
+      >
+        <div className="p-6 h-full flex flex-col">
+          {/* ✅ Breadcrumb navigation */}
+          {actInfo && chapterInfo && (
+            <div className="text-xs text-gray-500 mb-3 border-b border-gray-700 pb-2">
+              ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order} -{" "}
+              {chapterInfo.title}
+            </div>
+          )}
+
+          {/* Scene Content */}
+          <div className="flex-1">
+            <SceneTextEditor
+              content={section.content}
+              onContentChange={onContentChange}
+              placeholder="Start writing your scene..."
+              readOnly={false}
+            />
+          </div>
+
+          {/* Add Scene Button at bottom */}
+          {onAddScene && chapterInfo && (
+            <div className="flex justify-center py-3 border-t border-gray-700 mt-4">
+              <button
+                onClick={() => onAddScene(chapterInfo.id, scene.id)}
+                className="flex items-center space-x-2 px-4 py-2 border border-dashed border-blue-600 rounded bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="font-medium">Add Scene</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Chapter view with breadcrumbs - NO focus button
+  if (viewMode === "chapter") {
+    const section = aggregatedContent.sections[0];
+    const scenes = section.scenes;
+    const chapterInfo = findChapterFromSection(novel, section);
+    const actInfo = chapterInfo ? findActFromSection(novel, section) : null;
+    const actId = chapterInfo
+      ? findActIdForChapter(novel, chapterInfo.id)
       : null;
 
     return (
@@ -235,144 +436,141 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
-        <div className="p-6">
-          {/* ✅ Breadcrumb Navigation */}
-          <div className="mb-4 text-sm text-gray-400">
-            {actInfo && chapterInfo && (
-              <span>
-                ACT{actInfo.order} - {actInfo.title} / CH{chapterInfo.order} -{" "}
-                {chapterInfo.title}
-              </span>
-            )}
-          </div>
+        <div className="p-4 space-y-4">
+          {/* ✅ Breadcrumb navigation for chapter view */}
+          {actInfo && (
+            <div className="text-xs text-gray-500 mb-3 border-b border-gray-700 pb-2">
+              ACT{actInfo.order} - {actInfo.title}
+            </div>
+          )}
 
-          {/* ✅ Scene Editor */}
-          <SceneEditor
-            scene={scene}
-            onSceneClick={onSceneClick}
-            onContentChange={handleIndividualSceneChange || (() => {})}
-            onAddScene={onAddScene}
-            onSceneRename={onSceneRename}
-            chapterInfo={chapterInfo}
-            showChapterContext={false}
-            showAddButton={true}
-          />
+          {chapterInfo && (
+            <ChapterHeader
+              chapter={chapterInfo}
+              onChapterRename={onChapterRename}
+              // ✅ CRITICAL: NO focus button in chapter view - we're already there!
+              onChapterClick={undefined}
+            />
+          )}
+
+          {scenes.map((scene, index) => (
+            <SceneEditor
+              key={scene.id}
+              scene={scene}
+              onSceneClick={onSceneClick}
+              onContentChange={handleIndividualSceneChange}
+              onAddScene={onAddScene}
+              onSceneRename={onSceneRename}
+              chapterInfo={chapterInfo}
+              showChapterContext={false}
+              isLastInChapter={index === scenes.length - 1}
+            />
+          ))}
+
+          {onAddChapter && chapterInfo && actId && (
+            <AddChapterButton
+              actId={actId}
+              afterChapterId={chapterInfo.id}
+              onAddChapter={onAddChapter}
+            />
+          )}
         </div>
       </div>
     );
   }
 
-  // ✅ Document views for chapter and act
-  if (contentDisplayMode === "document") {
+  // ✅ Act view with focus buttons on chapters
+  if (viewMode === "act") {
+    const firstSection = aggregatedContent.sections[0];
+    const actInfo = findActFromSection(novel, firstSection);
+
+    if (!actInfo) {
+      return (
+        <div
+          className="flex-1 p-6 transition-all duration-300"
+          style={{ marginLeft, marginRight }}
+        >
+          <div className="text-center text-gray-400">
+            <p>Could not find act information</p>
+          </div>
+        </div>
+      );
+    }
+
+    const sortedChapters = [...actInfo.chapters].sort(
+      (a, b) => a.order - b.order
+    );
+
     return (
       <div
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
-        <div className="p-6">
-          {/* ✅ Document Header */}
-          <div className="mb-6">
-            {viewMode === "act" && aggregatedContent.sections.length > 0 && (
-              <div>
-                <h1 className="text-2xl text-white font-medium mb-2">
-                  {aggregatedContent.sections[0]?.title?.split(":")[0] || "Act"}
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  {aggregatedContent.sections.length} chapter
-                  {aggregatedContent.sections.length !== 1 ? "s" : ""} •{" "}
-                  {aggregatedContent.totalWordCount.toLocaleString()} words
-                </p>
-              </div>
-            )}
+        <div className="p-4 space-y-4">
+          <ActDocumentViewHeader act={actInfo} onActRename={onActRename} />
 
-            {viewMode === "chapter" &&
-              aggregatedContent.sections.length > 0 && (
-                <div>
-                  <h2 className="text-xl text-white font-medium mb-2">
-                    {aggregatedContent.sections[0]?.title || "Chapter"}
-                  </h2>
-                  <p className="text-gray-400 text-sm">
-                    {aggregatedContent.sections[0]?.scenes.length} scene
-                    {aggregatedContent.sections[0]?.scenes.length !== 1
-                      ? "s"
-                      : ""}{" "}
-                    • {aggregatedContent.totalWordCount.toLocaleString()} words
-                  </p>
-                </div>
-              )}
-          </div>
+          {sortedChapters.map((chapter, chapterIndex) => {
+            const sortedScenes = [...chapter.scenes].sort(
+              (a, b) => a.order - b.order
+            );
 
-          {/* ✅ Document Content */}
-          <div className="space-y-8">
-            {aggregatedContent.sections.map((section) => (
-              <div key={section.id} className="space-y-6">
-                {/* Chapter Header for Act view */}
-                {viewMode === "act" && (
-                  <div className="border-b border-gray-700 pb-3">
-                    <h3 className="text-lg text-white font-medium">
-                      {section.title?.split(":").pop()?.trim() || "Chapter"}
-                    </h3>
-                    <p className="text-gray-400 text-sm">
-                      {section.scenes.length} scene
-                      {section.scenes.length !== 1 ? "s" : ""} •{" "}
-                      {section.wordCount.toLocaleString()} words
-                    </p>
-                  </div>
-                )}
+            return (
+              <React.Fragment key={chapter.id}>
+                <ChapterHeader
+                  chapter={chapter}
+                  onChapterRename={onChapterRename}
+                  // ✅ CRITICAL: Focus button ONLY in act view
+                  onChapterClick={onChapterClick}
+                  showWordCount={true}
+                />
 
-                {/* Scenes */}
-                <div className="space-y-6">
-                  {section.scenes.map((scene, sceneIndex) => {
-                    const chapterInfo = findChapterFromSection(novel, section);
-                    return (
-                      <SceneEditor
-                        key={scene.id}
-                        scene={scene}
-                        onSceneClick={onSceneClick}
-                        onContentChange={
-                          handleIndividualSceneChange || (() => {})
-                        }
-                        onAddScene={onAddScene}
-                        onSceneRename={onSceneRename}
-                        chapterInfo={chapterInfo}
-                        showChapterContext={viewMode === "act"}
-                        showAddButton={sceneIndex === section.scenes.length - 1}
-                      />
-                    );
-                  })}
+                <div className="space-y-3 ml-3">
+                  {sortedScenes.map((scene) => (
+                    <SceneEditor
+                      key={scene.id}
+                      scene={scene}
+                      onSceneClick={onSceneClick}
+                      onContentChange={handleIndividualSceneChange}
+                      onAddScene={onAddScene}
+                      onSceneRename={onSceneRename}
+                      chapterInfo={chapter}
+                      showChapterContext={false}
+                    />
+                  ))}
                 </div>
 
-                {/* Add Chapter button for Act view */}
-                {viewMode === "act" && onAddChapter && (
-                  <div className="pt-4 border-t border-gray-700">
-                    <button
-                      onClick={() => {
-                        const chapterInfo = findChapterFromSection(
-                          novel,
-                          section
-                        );
-                        const actInfo = chapterInfo
-                          ? findActFromChapterId(novel, chapterInfo.id)
-                          : null;
-                        if (actInfo) {
-                          onAddChapter(actInfo.id, chapterInfo?.id);
-                        }
-                      }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors flex items-center space-x-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Add Chapter</span>
-                    </button>
-                  </div>
+                {onAddChapter && chapterIndex < sortedChapters.length - 1 && (
+                  <AddChapterButton
+                    actId={actInfo.id}
+                    afterChapterId={chapter.id}
+                    onAddChapter={onAddChapter}
+                  />
                 )}
-              </div>
-            ))}
-          </div>
+              </React.Fragment>
+            );
+          })}
+
+          {onAddChapter && sortedChapters.length > 0 && (
+            <AddChapterButton
+              actId={actInfo.id}
+              afterChapterId={sortedChapters[sortedChapters.length - 1].id}
+              onAddChapter={onAddChapter}
+            />
+          )}
         </div>
       </div>
     );
   }
 
   // Fallback
-  return null;
+  return (
+    <div
+      className="flex-1 p-6 transition-all duration-300"
+      style={{ marginLeft, marginRight }}
+    >
+      <div className="text-center text-gray-400">
+        <p>Unsupported view mode: {viewMode}</p>
+      </div>
+    </div>
+  );
 };
