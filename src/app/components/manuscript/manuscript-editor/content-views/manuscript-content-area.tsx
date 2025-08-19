@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/manuscript-content-area.tsx
-// ✨ FINAL: Act Document View with proper chapter boundaries and complete TypeScript compliance
+// ✨ UPDATED: Tightened styling with smaller titles, compact boxes, and reduced spacing
 
 import React from "react";
 import { FileText, Plus } from "lucide-react";
@@ -27,13 +27,12 @@ interface ManuscriptContentAreaProps {
   onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
   onActRename?: (actId: string, newTitle: string) => Promise<void>;
   novel?: NovelWithStructure;
-  // ✨ NEW: Separate handler for individual scene changes in document views
   onIndividualSceneChange?: (sceneId: string, content: string) => void;
   marginLeft?: string;
   marginRight?: string;
 }
 
-// ✨ Scene Editor Component for Document Views
+// ✨ UPDATED: Compact Scene Editor with tighter spacing
 const SceneEditor: React.FC<{
   scene: Scene;
   onSceneClick: (sceneId: string, scene: Scene) => void;
@@ -62,12 +61,12 @@ const SceneEditor: React.FC<{
   );
 
   return (
-    <div className="space-y-4">
-      {/* Scene Header */}
-      <div className="flex items-center justify-between border-b border-gray-600 pb-2">
+    <div className="space-y-3">
+      {/* Scene Header - Tighter */}
+      <div className="flex items-center justify-between border-b border-gray-600 pb-1.5">
         <div className="flex-1">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-gray-400">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-medium text-gray-400">
               Scene {scene.order}
             </span>
             {onSceneRename ? (
@@ -75,17 +74,17 @@ const SceneEditor: React.FC<{
                 value={scene.title || `Scene ${scene.order}`}
                 onSave={(newTitle) => onSceneRename(scene.id, newTitle)}
                 placeholder="Scene title"
-                className="text-lg font-medium text-white"
+                className="text-base font-medium text-white"
                 maxLength={200}
               />
             ) : (
-              <h3 className="text-lg font-medium text-white">
+              <h3 className="text-base font-medium text-white">
                 {scene.title || `Scene ${scene.order}`}
               </h3>
             )}
           </div>
           {showChapterContext && chapterInfo && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-0.5">
               {chapterInfo.title} • {scene.wordCount} words • {scene.status}
             </p>
           )}
@@ -93,14 +92,14 @@ const SceneEditor: React.FC<{
 
         <button
           onClick={() => onSceneClick(scene.id, scene)}
-          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+          className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
         >
           Focus
         </button>
       </div>
 
       {/* Scene Content */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="bg-gray-800 rounded-lg p-3">
         <SceneTextEditor
           content={scene.content}
           onContentChange={handleContentChange}
@@ -109,14 +108,14 @@ const SceneEditor: React.FC<{
         />
       </div>
 
-      {/* Add Scene Button */}
+      {/* Add Scene Button - Compact */}
       {showAddButton && onAddScene && chapterInfo && (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-2">
           <button
             onClick={() => onAddScene(chapterInfo.id, scene.id)}
-            className="flex items-center space-x-2 px-6 py-3 border-2 border-dashed border-blue-600 rounded-lg bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200"
+            className="flex items-center space-x-1.5 px-3 py-1.5 border border-dashed border-blue-600 rounded bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200 text-sm"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-3.5 h-3.5" />
             <span className="font-medium">Add Scene</span>
           </button>
         </div>
@@ -125,7 +124,7 @@ const SceneEditor: React.FC<{
   );
 };
 
-// ✨ Chapter Header Component for Act Document View
+// ✅ ENHANCED: Chapter Header with order number and grey styling
 const ChapterHeader: React.FC<{
   chapter: Chapter;
   onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
@@ -137,52 +136,59 @@ const ChapterHeader: React.FC<{
   );
 
   return (
-    <div className="my-8 p-6 border border-red-700 rounded-lg bg-red-900/10">
-      <div className="text-center">
-        {onChapterRename ? (
-          <EditableText
-            value={chapter.title}
-            onSave={(newTitle) => onChapterRename(chapter.id, newTitle)}
-            placeholder="Chapter title"
-            className="text-2xl font-bold text-red-400"
-            maxLength={200}
-          />
-        ) : (
-          <h2 className="text-2xl font-bold text-red-400">{chapter.title}</h2>
-        )}
+    <div className="my-4 p-3 border border-yellow-600/40 rounded bg-gray-800/30">
+      <div className="flex items-center space-x-3">
+        {/* ✅ NEW: Compact chapter order number */}
+        <span className="text-sm font-medium text-gray-400 flex-shrink-0">
+          CH{chapter.order}
+        </span>
 
-        {showWordCount && (
-          <p className="text-gray-400 mt-2">
-            {chapter.scenes.length} scene
-            {chapter.scenes.length !== 1 ? "s" : ""} •{" "}
-            {totalWords.toLocaleString()} words
-          </p>
-        )}
+        <div className="flex-1">
+          {onChapterRename ? (
+            <EditableText
+              value={chapter.title}
+              onSave={(newTitle) => onChapterRename(chapter.id, newTitle)}
+              placeholder="Chapter title"
+              className="text-lg font-bold text-gray-200"
+              maxLength={200}
+            />
+          ) : (
+            <h2 className="text-lg font-bold text-gray-200">{chapter.title}</h2>
+          )}
+
+          {showWordCount && (
+            <p className="text-gray-400 mt-1 text-sm">
+              {chapter.scenes.length} scene
+              {chapter.scenes.length !== 1 ? "s" : ""} •{" "}
+              {totalWords.toLocaleString()} words
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-// ✨ Add Chapter Button Component
+// ✨ UPDATED: Compact Add Chapter Button with golden theme
 const AddChapterButton: React.FC<{
   actId: string;
   afterChapterId?: string;
   onAddChapter: (actId: string, afterChapterId?: string) => void;
 }> = ({ actId, afterChapterId, onAddChapter }) => {
   return (
-    <div className="flex justify-center my-8">
+    <div className="flex justify-center my-3">
       <button
         onClick={() => onAddChapter(actId, afterChapterId)}
-        className="flex items-center space-x-2 px-8 py-4 border-2 border-dashed border-red-600 rounded-lg bg-red-900/20 text-red-300 hover:border-red-400 hover:text-red-200 hover:bg-red-900/30 transition-all duration-200 group"
+        className="flex items-center space-x-1.5 px-4 py-2 border border-dashed border-yellow-600 rounded bg-yellow-900/20 text-yellow-300 hover:border-yellow-400 hover:text-yellow-200 hover:bg-yellow-900/30 transition-all duration-200 text-sm"
       >
-        <Plus className="w-6 h-6" />
-        <span className="font-medium text-lg">Add Chapter</span>
+        <Plus className="w-4 h-4" />
+        <span className="font-medium">Add Chapter</span>
       </button>
     </div>
   );
 };
 
-// ✨ Act Document View Title Header
+// ✅ ENHANCED: Act Document View Header with order number and left-aligned stats
 const ActDocumentViewHeader: React.FC<{
   act: Act;
   onActRename?: (actId: string, newTitle: string) => Promise<void>;
@@ -203,25 +209,33 @@ const ActDocumentViewHeader: React.FC<{
   );
 
   return (
-    <div className="mb-8 p-6 border-b border-gray-700 bg-gray-800/50">
-      <div className="text-center">
-        {onActRename ? (
-          <EditableText
-            value={act.title}
-            onSave={(newTitle) => onActRename(act.id, newTitle)}
-            placeholder="Act title"
-            className="text-3xl font-bold text-white"
-            maxLength={200}
-          />
-        ) : (
-          <h1 className="text-3xl font-bold text-white">{act.title}</h1>
-        )}
+    <div className="mb-4 p-4 border-b border-red-700/40 bg-gray-800/50">
+      <div className="flex items-center space-x-3">
+        {/* ✅ NEW: Compact act order number */}
+        <span className="text-sm font-medium text-gray-400 flex-shrink-0">
+          ACT{act.order}
+        </span>
 
-        <p className="text-gray-400 mt-2">
-          Act view • {totalChapters} chapter{totalChapters !== 1 ? "s" : ""} •{" "}
-          {totalScenes} scene{totalScenes !== 1 ? "s" : ""} •{" "}
-          {totalWords.toLocaleString()} words
-        </p>
+        <div className="flex-1">
+          {onActRename ? (
+            <EditableText
+              value={act.title}
+              onSave={(newTitle) => onActRename(act.id, newTitle)}
+              placeholder="Act title"
+              className="text-xl font-bold text-white"
+              maxLength={200}
+            />
+          ) : (
+            <h1 className="text-xl font-bold text-white">{act.title}</h1>
+          )}
+
+          {/* ✅ UPDATED: Left-aligned stats instead of centered */}
+          <p className="text-gray-400 mt-1 text-sm">
+            Act view • {totalChapters} chapter{totalChapters !== 1 ? "s" : ""} •{" "}
+            {totalScenes} scene{totalScenes !== 1 ? "s" : ""} •{" "}
+            {totalWords.toLocaleString()} words
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -294,11 +308,10 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
   onChapterRename,
   onActRename,
   novel,
-  onIndividualSceneChange, // ✨ NEW: Proper content saving handler
+  onIndividualSceneChange,
   marginLeft = "0",
   marginRight = "0",
 }) => {
-  // ✨ UPDATED: Simplified handler that uses the prop
   const handleIndividualSceneChange = React.useCallback(
     (sceneId: string, content: string) => {
       if (onIndividualSceneChange) {
@@ -346,6 +359,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
       </div>
     );
   }
+
   // ✅ Single scene view - uses main onContentChange
   if (viewMode === "scene") {
     const section = aggregatedContent.sections[0];
@@ -356,7 +370,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
       >
         <SceneTextEditor
           content={section.content}
-          onContentChange={onContentChange} // ✅ Uses main handler for single scene
+          onContentChange={onContentChange}
           placeholder="Start writing your scene..."
           readOnly={false}
         />
@@ -364,7 +378,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ Chapter Document View - uses individual scene handler
+  // ✅ UPDATED: Chapter Document View with tighter spacing
   if (viewMode === "chapter") {
     const section = aggregatedContent.sections[0];
     const scenes = section.scenes;
@@ -378,7 +392,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
-        <div className="p-6 space-y-8">
+        <div className="p-4 space-y-4">
           {chapterInfo && (
             <ChapterHeader
               chapter={chapterInfo}
@@ -391,7 +405,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
               key={scene.id}
               scene={scene}
               onSceneClick={onSceneClick}
-              onContentChange={handleIndividualSceneChange} // ✅ Uses individual handler
+              onContentChange={handleIndividualSceneChange}
               onAddScene={onAddScene}
               onSceneRename={onSceneRename}
               chapterInfo={chapterInfo}
@@ -412,7 +426,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ Act Document View - uses individual scene handler
+  // ✅ UPDATED: Act Document View with much tighter spacing
   if (viewMode === "act") {
     const firstSection = aggregatedContent.sections[0];
     const actInfo = findActFromSection(novel, firstSection);
@@ -433,12 +447,13 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     const sortedChapters = [...actInfo.chapters].sort(
       (a, b) => a.order - b.order
     );
+
     return (
       <div
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
-        <div className="p-6 space-y-8">
+        <div className="p-4 space-y-4">
           <ActDocumentViewHeader act={actInfo} onActRename={onActRename} />
 
           {sortedChapters.map((chapter, chapterIndex) => {
@@ -454,13 +469,13 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                   showWordCount={true}
                 />
 
-                <div className="space-y-6 ml-4">
+                <div className="space-y-3 ml-3">
                   {sortedScenes.map((scene) => (
                     <SceneEditor
                       key={scene.id}
                       scene={scene}
                       onSceneClick={onSceneClick}
-                      onContentChange={handleIndividualSceneChange} // ✅ Uses individual handler
+                      onContentChange={handleIndividualSceneChange}
                       onAddScene={onAddScene}
                       onSceneRename={onSceneRename}
                       chapterInfo={chapter}
