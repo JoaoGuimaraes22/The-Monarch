@@ -58,20 +58,25 @@
 │   │   │       │   │       │   └── ⚛️  route.tsx
 │   │   │       │   │       ├── ⚛️  route.ts
 │   │   │       │   │       └── 📁 scenes/
-│   │   │       │   │           └── ⚛️  route.ts
+│   │   │       │   │           ├── ⚛️  route.ts
+│   │   │       │   │           └── 📄 route.ts.backup
 │   │   │       │   ├── 📁 import/
 │   │   │       │   │   └── ⚛️  route.ts
 │   │   │       │   ├── 📁 import-fixed/
 │   │   │       │   │   └── ⚛️  route.ts
 │   │   │       │   ├── ⚛️  route.ts
+│   │   │       │   ├── 📄 route.ts.backup
 │   │   │       │   ├── 📁 scenes/
 │   │   │       │   │   └── 📁 [sceneId]/
 │   │   │       │   │       ├── 📁 reorder/
 │   │   │       │   │       │   └── ⚛️  route.ts
-│   │   │       │   │       └── ⚛️  route.ts
+│   │   │       │   │       ├── ⚛️  route.ts
+│   │   │       │   │       └── 📄 route.ts.backup
 │   │   │       │   └── 📁 structure/
-│   │   │       │       └── ⚛️  route.ts
-│   │   │       └── ⚛️  route.ts
+│   │   │       │       ├── ⚛️  route.ts
+│   │   │       │       └── 📄 route.ts.backup
+│   │   │       ├── ⚛️  route.ts
+│   │   │       └── 📄 route.ts.backup
 │   │   ├── 📁 components/
 │   │   │   ├── 📁 manuscript/
 │   │   │   │   ├── 📁 chapter-tree/
@@ -149,11 +154,18 @@
 │   ├── 📁 hooks/
 │   │   ├── 📁 manuscript/
 │   │   │   ├── ⚛️  useAutoSave.ts
+│   │   │   ├── ⚛️  useManuscriptCRUD.ts
 │   │   │   ├── ⚛️  useManuscriptLogic.ts
 │   │   │   └── ⚛️  useManuscriptState.ts
 │   │   ├── 📁 novels/
 │   │   └── ⚛️  useNovels.ts
 │   └── 📁 lib/
+│       ├── 📁 api/
+│       │   ├── ⚛️  index.ts
+│       │   ├── ⚛️  logger.ts
+│       │   ├── ⚛️  middleware.ts
+│       │   ├── ⚛️  rate-limit.ts
+│       │   └── ⚛️  types.ts
 │       ├── 📁 doc-parse/
 │       │   ├── ⚛️  auto-fix-service.ts
 │       │   ├── 📁 detectors/
@@ -181,7 +193,7 @@
 │       └── ⚛️  prisma.ts
 └── 📋 tsconfig.json
 
-Generated on: Tue, Aug 19, 2025  1:28:56 AM
+Generated on: Tue, Aug 19, 2025 12:25:41 PM
 Directory: /c/Users/jssgm/Dev/Projects/ProdMonarch/themonarch
 Max depth: 14
 Include hidden: false

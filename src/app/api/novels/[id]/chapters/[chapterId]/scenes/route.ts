@@ -15,13 +15,13 @@ import {
 
 // ===== SCHEMAS =====
 const CreateSceneParamsSchema = z.object({
-  id: z.string().cuid("Invalid novel ID format"),
-  chapterId: z.string().cuid("Invalid chapter ID format"),
+  id: z.string().cuid2("Invalid novel ID format"),
+  chapterId: z.string().cuid2("Invalid chapter ID format"),
 });
 
 const CreateSceneBodySchema = z
   .object({
-    insertAfterSceneId: z.string().cuid().optional(),
+    insertAfterSceneId: z.string().cuid2().optional(),
     title: z.string().max(255).optional(),
   })
   .optional()
