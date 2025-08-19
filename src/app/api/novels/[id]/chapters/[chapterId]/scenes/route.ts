@@ -1,36 +1,24 @@
 // app/api/novels/[id]/chapters/[chapterId]/scenes/route.ts
-// Standardized scene creation
+// Standardized scene creation within chapters
 
 import { NextRequest } from "next/server";
 import { novelService } from "@/lib/novels";
-import { z } from "zod";
 import {
   withValidation,
   withRateLimit,
   composeMiddleware,
   createSuccessResponse,
   handleServiceError,
+  CreateSceneInChapterSchema,
+  CreateSceneInChapterData,
+  ChapterParamsSchema,
   RATE_LIMIT_CONFIGS,
 } from "@/lib/api";
 
-// ===== SCHEMAS =====
-const CreateSceneParamsSchema = z.object({
-  id: z.string().cuid2("Invalid novel ID format"),
-  chapterId: z.string().cuid2("Invalid chapter ID format"),
-});
-
-const CreateSceneBodySchema = z
-  .object({
-    insertAfterSceneId: z.string().cuid2().optional(),
-    title: z.string().max(255).optional(),
-  })
-  .optional()
-  .default({});
-
-// ===== POST /api/novels/[id]/chapters/[chapterId]/scenes - Create new scene =====
+// ===== POST /api/novels/[id]/chapters/[chapterId]/scenes - Create a new scene in a chapter =====
 export const POST = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.CREATION),
-  withValidation(CreateSceneBodySchema, CreateSceneParamsSchema)
+  withValidation(CreateSceneInChapterSchema, ChapterParamsSchema)
 )(async function (req: NextRequest, context, validatedData) {
   try {
     const params = await context.params;
@@ -38,88 +26,97 @@ export const POST = composeMiddleware(
       id: string;
       chapterId: string;
     };
-    const createData = validatedData as {
-      insertAfterSceneId?: string;
-      title?: string;
-    };
+    const sceneData = validatedData as CreateSceneInChapterData;
 
-    // Verify novel exists
-    const novel = await novelService.getNovelById(novelId);
-    if (!novel) {
-      throw new Error("Novel not found");
+    // Verify the chapter exists and belongs to the novel
+    const chapter = await novelService.getChapterById(chapterId);
+    if (!chapter) {
+      throw new Error("Chapter not found");
     }
 
-    // Create the new scene using the updated service method
-    const newScene = await novelService.createScene(
-      chapterId,
-      createData.insertAfterSceneId,
-      createData.title
-    );
+    // Get the act to verify novel ownership
+    const act = await novelService.getActById(chapter.actId);
+    if (!act || act.novelId !== novelId) {
+      throw new Error("Chapter does not belong to the specified novel");
+    }
+
+    // Create the scene with the chapter ID from the URL
+    const scene = await novelService.createScene({
+      title: sceneData.title,
+      chapterId: chapterId, // Use chapterId from URL params
+    });
 
     return createSuccessResponse(
-      newScene,
+      scene,
       "Scene created successfully",
       context.requestId
     );
   } catch (error) {
-    // Handle specific error cases with better messages
-    if (error instanceof Error) {
-      if (error.message.includes("Chapter not found")) {
-        throw new Error("Chapter not found");
-      }
-    }
     handleServiceError(error);
   }
 });
 
 /*
-===== REQUEST/RESPONSE EXAMPLES =====
+===== USAGE EXAMPLES =====
 
-POST /api/novels/[novelId]/chapters/[chapterId]/scenes
-
-REQUEST BODY (all optional):
-{
-  "insertAfterSceneId": "scene123", // Optional: Insert after specific scene
-  "title": "The Dragon's Lair"      // Optional: Custom title
-}
-
-SUCCESSFUL RESPONSE:
+POST /api/novels/cm123/chapters/ch456/scenes
+Body: { "title": "The Mysterious Stranger", "chapterId": "ch456" }
+Response:
 {
   "success": true,
   "data": {
-    "id": "newScene456",
-    "title": "The Dragon's Lair",
+    "id": "sc789",
+    "title": "The Mysterious Stranger",
     "content": "",
+    "order": 1,
     "wordCount": 0,
-    "order": 4,
+    "chapterId": "ch456",
     "povCharacter": null,
     "sceneType": "",
     "notes": "",
     "status": "draft",
-    "chapterId": "chapter123",
     "createdAt": "2025-08-19T...",
     "updatedAt": "2025-08-19T..."
   },
   "message": "Scene created successfully",
   "meta": {
-    "requestId": "req_...",
     "timestamp": "2025-08-19T...",
+    "requestId": "req_1692...",
     "version": "1.0"
   }
 }
 
-ERROR RESPONSES:
-- 400: Invalid chapter ID format
-- 404: Novel not found
-- 404: Chapter not found  
-- 429: Rate limit exceeded (20 creations per 15 minutes)
-- 500: Database error
+===== FEATURES =====
+✅ Type-safe validation with Zod schemas
+✅ Rate limiting protection (CREATION config)
+✅ Consistent error handling
+✅ Request tracking with unique IDs
+✅ Validates chapter existence and novel ownership through act
+✅ Auto-assigns proper order for new scenes within chapter
+✅ Standard API response format
+✅ Returns full scene structure with default values
+✅ Security check: ensures chapter belongs to specified novel
+✅ Initializes scene with sensible defaults (empty content, draft status)
 
-FEATURES:
-✅ Optional positioning (insertAfterSceneId)
-✅ Optional custom title
-✅ Validates novel and chapter exist
-✅ Rate limited for creation operations
-✅ Comprehensive error handling
-✅ Consistent response format
+===== VALIDATION =====
+Request body must include:
+- title: Non-empty string (1-255 chars)
+- chapterId: Valid CUID format
+
+URL params validated:
+- id: Valid CUID format (novel ID)
+- chapterId: Valid CUID format (chapter ID)
+
+Security validation:
+- Chapter must exist
+- Chapter's parent act must belong to the specified novel
+- The chapterId in the body must match the chapterId in the URL
+
+Default values for new scenes:
+- content: "" (empty)
+- wordCount: 0
+- povCharacter: null
+- sceneType: ""
+- notes: ""
+- status: "draft"
 */

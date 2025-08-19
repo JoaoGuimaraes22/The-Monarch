@@ -88,6 +88,11 @@ export const SceneParamsSchema = z.object({
   sceneId: cuidParam("scene ID"),
 });
 
+export const CreateSceneSchema = z.object({
+  title: trimmedString(1, 255),
+  chapterId: cuidParam("chapter ID"),
+});
+
 // ===== CHAPTER SCHEMAS =====
 export const CreateChapterSchema = z.object({
   title: trimmedString(1, 255),
@@ -113,9 +118,45 @@ export const ActParamsSchema = z.object({
 });
 
 // ===== REORDER SCHEMAS =====
+// Generic reorder schema for simple reordering within same parent
 export const ReorderSchema = z.object({
   newOrder: z.number().int().min(1, "Order must be at least 1"),
-  targetChapterId: cuidParam("target chapter ID").optional(), // For scene reordering
+});
+
+// Chapter reordering (can move between acts)
+export const ReorderChapterSchema = z.object({
+  newOrder: z.number().int().min(1, "Order must be at least 1"),
+  newActId: cuidParam("target act ID").optional(), // Optional - for moving between acts
+});
+
+// Scene reordering (can move between chapters)
+export const ReorderSceneSchema = z.object({
+  newOrder: z.number().int().min(1, "Order must be at least 1"),
+  newChapterId: cuidParam("target chapter ID").optional(), // Optional - for moving between chapters
+});
+
+// Act reordering (simple - stays within same novel)
+export const ReorderActSchema = z.object({
+  newOrder: z.number().int().min(1, "Order must be at least 1"),
+});
+
+// ===== CREATION WITH PARENT SCHEMAS =====
+// For creating chapters within acts
+export const CreateChapterInActSchema = z.object({
+  title: trimmedString(1, 255),
+  actId: cuidParam("act ID"),
+});
+
+// For creating scenes within chapters
+export const CreateSceneInChapterSchema = z.object({
+  title: trimmedString(1, 255),
+  chapterId: cuidParam("chapter ID"),
+});
+
+// For creating acts within novels
+export const CreateActInNovelSchema = z.object({
+  title: trimmedString(1, 255),
+  novelId: cuidParam("novel ID"),
 });
 
 // ===== FILE UPLOAD SCHEMAS =====
@@ -157,10 +198,79 @@ export const SortSchema = z.object({
 export type CreateNovelData = z.infer<typeof CreateNovelSchema>;
 export type UpdateNovelData = z.infer<typeof UpdateNovelSchema>;
 export type UpdateSceneData = z.infer<typeof UpdateSceneSchema>;
+export type CreateSceneData = z.infer<typeof CreateSceneSchema>;
 export type CreateChapterData = z.infer<typeof CreateChapterSchema>;
 export type UpdateChapterData = z.infer<typeof UpdateChapterSchema>;
 export type CreateActData = z.infer<typeof CreateActSchema>;
 export type UpdateActData = z.infer<typeof UpdateActSchema>;
 export type ReorderData = z.infer<typeof ReorderSchema>;
+export type ReorderChapterData = z.infer<typeof ReorderChapterSchema>;
+export type ReorderSceneData = z.infer<typeof ReorderSceneSchema>;
+export type ReorderActData = z.infer<typeof ReorderActSchema>;
+export type CreateChapterInActData = z.infer<typeof CreateChapterInActSchema>;
+export type CreateSceneInChapterData = z.infer<
+  typeof CreateSceneInChapterSchema
+>;
+export type CreateActInNovelData = z.infer<typeof CreateActInNovelSchema>;
 export type PaginationData = z.infer<typeof PaginationSchema>;
 export type SortData = z.infer<typeof SortSchema>;
+
+/*
+===== SCHEMA USAGE SUMMARY =====
+
+NOVEL:
+- CreateNovelSchema: { title, description, coverImage? }
+- UpdateNovelSchema: Partial of CreateNovel
+- NovelParamsSchema: { id }
+
+SCENE: 
+- CreateSceneSchema: { title, chapterId }
+- UpdateSceneSchema: { title?, content?, povCharacter?, sceneType?, notes?, status? }
+- SceneParamsSchema: { id, sceneId }
+- ReorderSceneSchema: { newOrder, newChapterId? }
+- CreateSceneInChapterSchema: { title, chapterId }
+
+CHAPTER:
+- CreateChapterSchema: { title }
+- UpdateChapterSchema: { title? }
+- ChapterParamsSchema: { id, chapterId }
+- ReorderChapterSchema: { newOrder, newActId? }
+- CreateChapterInActSchema: { title, actId }
+
+ACT:
+- CreateActSchema: { title }
+- UpdateActSchema: { title? }
+- ActParamsSchema: { id, actId }
+- ReorderActSchema: { newOrder }
+- CreateActInNovelSchema: { title, novelId }
+
+REORDERING:
+- ReorderSchema: Generic { newOrder }
+- ReorderChapterSchema: { newOrder, newActId? }
+- ReorderSceneSchema: { newOrder, newChapterId? }
+- ReorderActSchema: { newOrder }
+
+UTILITIES:
+- PaginationSchema: { page?, limit? }
+- SortSchema: { sortBy?, sortOrder? }
+- FileUploadConfigSchema: { maxSizeBytes?, allowedTypes? }
+
+===== VALIDATION EXAMPLES =====
+
+✅ Valid CreateChapterSchema:
+{ "title": "Chapter One: The Beginning" }
+
+✅ Valid ReorderSceneSchema:
+{ "newOrder": 3 }  // Same chapter
+{ "newOrder": 1, "newChapterId": "ch456" }  // Cross-chapter
+
+✅ Valid UpdateSceneSchema:
+{ "title": "New Scene Title", "status": "complete" }
+{ "content": "Updated scene content..." }
+{}  // Empty updates allowed
+
+❌ Invalid examples:
+{ "title": "" }  // Empty title
+{ "newOrder": 0 }  // Order must be >= 1
+{ "invalidField": "value" }  // Unknown fields rejected
+*/
