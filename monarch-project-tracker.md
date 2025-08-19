@@ -1,5 +1,9 @@
 # The Monarch Story Platform - Project Handoff Document
 
+## 🎯 Added important instructions
+
+**any types** do not use "any" ever, unless really, really, needed, it leads to -> Unexpected any. Specify a different type.
+
 ## 🎯 Project Overview
 
 **Goal**: Build a story development platform tailored for _The Monarch_ epic fantasy series, focusing on practical utility over marketing fluff.
