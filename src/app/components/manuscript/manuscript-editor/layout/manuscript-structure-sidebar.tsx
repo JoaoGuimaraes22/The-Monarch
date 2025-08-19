@@ -1,9 +1,9 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// ✨ UPDATED: Compact auto-save design with hide/show details functionality
+// ✨ ENHANCED: Complete scrollable design with proper fixed/scrollable areas
 
 import React, { useState, useEffect } from "react";
 import { BookOpen } from "lucide-react";
-import { CollapsibleSidebar } from "@/app/components/ui";
+import { CollapsibleSidebar, WordCountDisplay } from "@/app/components/ui";
 import { CompactAutoSaveTools } from "./compact-auto-save-tools";
 import { DraggableManuscriptTree } from "../../chapter-tree/draggable-manuscript-tree";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -116,33 +116,32 @@ export const ManuscriptStructureSidebar: React.FC<
     }
   }, [novel.acts, selectedScene, isFirstLoad]);
 
-  // Collapsed content
+  // Collapsed content for sidebar
   const collapsedContent = (
-    <button
-      onClick={onToggleCollapse}
-      className="p-2 text-gray-400 hover:text-white transition-colors"
-      title="Expand Structure"
-    >
-      <BookOpen className="w-5 h-5" />
-    </button>
+    <div className="flex flex-col items-center space-y-3">
+      <BookOpen className="w-6 h-6 text-gray-400" />
+      <WordCountDisplay
+        count={novel.wordCount || 0}
+        variant="compact"
+        className="text-xs"
+      />
+    </div>
   );
 
   return (
     <CollapsibleSidebar
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
-      title="Structure"
-      subtitle="Acts, chapters & scenes"
-      icon={BookOpen}
-      position="left"
-      width={width}
       left={left}
+      width={width}
+      title="Structure"
       collapsedContent={collapsedContent}
-      className="z-30"
+      position="left"
     >
-      <div className="flex flex-col h-full">
-        {/* ✨ COMPACT: Tools Section with 2-line design */}
-        <div className="border-b border-gray-700 bg-gray-800">
+      {/* ✅ ENHANCED: Better container structure for scrolling */}
+      <div className="h-full flex flex-col">
+        {/* ✅ FIXED HEADER: This stays at the top, doesn't scroll */}
+        <div className="flex-shrink-0 border-b border-gray-700 bg-gray-800">
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-white">TOOLS</h3>
@@ -163,7 +162,7 @@ export const ManuscriptStructureSidebar: React.FC<
               </div>
             </div>
 
-            {/* ✨ NEW: Compact Auto-Save Tools */}
+            {/* ✅ Auto-Save Tools - Fixed at top */}
             <CompactAutoSaveTools
               autoSaveEnabled={autoSaveEnabled}
               setAutoSaveEnabled={setAutoSaveEnabled}
@@ -177,10 +176,11 @@ export const ManuscriptStructureSidebar: React.FC<
           </div>
         </div>
 
-        {/* Chapter Tree */}
-        <div className="flex-1 overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
+        {/* ✅ SCROLLABLE CONTENT AREA: This is the main scrolling container */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* ✅ CHAPTER STATS: Fixed below header */}
+          <div className="flex-shrink-0 p-4 bg-gray-800 border-b border-gray-700">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-gray-400">
                 {expandedChapters.size} of{" "}
                 {novel.acts?.flatMap((act) => act.chapters).length || 0}{" "}
@@ -195,57 +195,79 @@ export const ManuscriptStructureSidebar: React.FC<
                       ) || [];
                     setExpandedChapters(new Set(allChapterIds));
                   }}
-                  className="text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                 >
                   Expand All
                 </button>
                 <span className="text-xs text-gray-600">•</span>
                 <button
                   onClick={() => setExpandedChapters(new Set())}
-                  className="text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                 >
                   Collapse All
                 </button>
               </div>
             </div>
+
+            {/* ✅ NOVEL STATS: Quick overview */}
+            <div className="flex items-center space-x-4 text-xs text-gray-400">
+              <span>{novel.acts?.length || 0} acts</span>
+              <span className="text-gray-600">•</span>
+              <span>
+                {novel.acts?.flatMap((act) => act.chapters).length || 0}{" "}
+                chapters
+              </span>
+              <span className="text-gray-600">•</span>
+              <span>
+                {novel.acts
+                  ?.flatMap((act) => act.chapters)
+                  .flatMap((ch) => ch.scenes).length || 0}{" "}
+                scenes
+              </span>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <DraggableManuscriptTree
-              novel={novel}
-              selectedSceneId={selectedScene?.id}
-              selectedChapterId={selectedChapterId}
-              selectedActId={selectedActId}
-              expandedChapters={expandedChapters}
-              onChapterToggle={(chapterId) => {
-                const newExpanded = new Set(expandedChapters);
-                if (newExpanded.has(chapterId)) {
-                  newExpanded.delete(chapterId);
-                } else {
-                  newExpanded.add(chapterId);
+          {/* ✅ MAIN SCROLLABLE TREE AREA */}
+          <div className="flex-1 overflow-y-auto manuscript-sidebar-scroll smooth-scroll scroll-pt-safe">
+            <div className="p-2">
+              <DraggableManuscriptTree
+                novel={novel}
+                selectedSceneId={selectedScene?.id}
+                selectedChapterId={selectedChapterId}
+                selectedActId={selectedActId}
+                expandedChapters={expandedChapters}
+                onChapterToggle={(chapterId) => {
+                  const newExpanded = new Set(expandedChapters);
+                  if (newExpanded.has(chapterId)) {
+                    newExpanded.delete(chapterId);
+                  } else {
+                    newExpanded.add(chapterId);
+                  }
+                  setExpandedChapters(newExpanded);
+                }}
+                onSceneSelect={onSceneSelect}
+                onChapterSelect={onChapterSelect || (() => {})}
+                onActSelect={onActSelect || (() => {})}
+                onSceneDelete={(sceneId: string, title: string) => {
+                  if (window.confirm(`Delete "${title}"?`)) {
+                    onDeleteScene(sceneId);
+                  }
+                }}
+                onChapterDelete={onDeleteChapter}
+                onActDelete={onDeleteAct}
+                onAddScene={onAddScene}
+                onAddChapter={onAddChapter}
+                onUpdateActName={onUpdateActName || (() => Promise.resolve())}
+                onUpdateChapterName={
+                  onUpdateChapterName || (() => Promise.resolve())
                 }
-                setExpandedChapters(newExpanded);
-              }}
-              onSceneSelect={onSceneSelect}
-              onChapterSelect={onChapterSelect || (() => {})}
-              onActSelect={onActSelect || (() => {})}
-              onSceneDelete={(sceneId: string, title: string) => {
-                if (window.confirm(`Delete "${title}"?`)) {
-                  onDeleteScene(sceneId);
+                onUpdateSceneName={
+                  onUpdateSceneName || (() => Promise.resolve())
                 }
-              }}
-              onChapterDelete={onDeleteChapter}
-              onActDelete={onDeleteAct}
-              onAddScene={onAddScene}
-              onAddChapter={onAddChapter}
-              onUpdateActName={onUpdateActName || (() => Promise.resolve())}
-              onUpdateChapterName={
-                onUpdateChapterName || (() => Promise.resolve())
-              }
-              onUpdateSceneName={onUpdateSceneName || (() => Promise.resolve())}
-              onRefresh={onRefresh}
-              viewDensity={viewDensity}
-            />
+                onRefresh={onRefresh}
+                viewDensity={viewDensity}
+              />
+            </div>
           </div>
         </div>
       </div>
