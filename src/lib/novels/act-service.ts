@@ -356,7 +356,7 @@ export class ActService {
   }
 
   /**
-   * Get act by ID
+   * Get act by ID with full structure
    */
   async getActById(actId: string): Promise<Act | null> {
     try {

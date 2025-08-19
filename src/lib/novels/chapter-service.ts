@@ -315,8 +315,10 @@ export class ChapterService {
     }
   }
 
+  // Add this method to lib/novels/chapter-service.ts
+
   /**
-   * Get chapter by ID
+   * Get chapter by ID with scenes
    */
   async getChapterById(chapterId: string): Promise<Chapter | null> {
     try {

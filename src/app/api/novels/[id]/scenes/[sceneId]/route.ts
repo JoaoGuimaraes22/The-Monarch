@@ -1,128 +1,166 @@
-// ==========================================
-// FILE: src/app/api/novels/[id]/scenes/[sceneId]/route.ts (ENHANCED)
-// ==========================================
+// app/api/novels/[id]/scenes/[sceneId]/route.ts
+// Standardized scene CRUD operations
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { novelService } from "@/lib/novels";
+import {
+  withValidation,
+  withRateLimit,
+  composeMiddleware,
+  createSuccessResponse,
+  handleServiceError,
+  UpdateSceneSchema,
+  UpdateSceneData,
+  SceneParamsSchema,
+  RATE_LIMIT_CONFIGS,
+} from "@/lib/api";
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-    sceneId: string;
-  }>;
-}
-
-// PUT /api/novels/[id]/scenes/[sceneId] - Update scene (ENHANCED)
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+// ===== GET /api/novels/[id]/scenes/[sceneId] - Get a specific scene =====
+export const GET = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
+  withValidation(undefined, SceneParamsSchema)
+)(async function (req: NextRequest, context) {
   try {
-    const { id: novelId, sceneId } = await params;
-    const body = await request.json();
+    const params = await context.params;
+    const { id: novelId, sceneId } = params as { id: string; sceneId: string };
 
-    // ✨ ENHANCED: Support updating scene metadata in addition to content
-    const {
-      content,
-      title, // NEW: Scene title/name
-      povCharacter, // POV character
-      sceneType, // Scene type
-      notes, // Scene notes
-      status, // Scene status
-    } = body;
+    // Get the scene (this will need to be implemented in your service)
+    const scene = await novelService.getSceneById(sceneId);
 
-    // Build update object with only provided fields
-    const updates: {
-      title?: string;
-      povCharacter?: string | null;
-      sceneType?: string;
-      notes?: string;
-      status?: string;
-    } = {};
-
-    if (title !== undefined) {
-      if (typeof title !== "string") {
-        return NextResponse.json(
-          { error: "Title must be a string" },
-          { status: 400 }
-        );
-      }
-      if (title.length > 100) {
-        return NextResponse.json(
-          { error: "Title must be 100 characters or less" },
-          { status: 400 }
-        );
-      }
-      updates.title = title.trim();
+    if (!scene) {
+      throw new Error("Scene not found");
     }
 
-    if (povCharacter !== undefined) {
-      updates.povCharacter = povCharacter?.trim() || null;
-    }
-
-    if (sceneType !== undefined) {
-      updates.sceneType = sceneType?.trim() || "";
-    }
-
-    if (notes !== undefined) {
-      updates.notes = notes?.trim() || "";
-    }
-
-    if (status !== undefined) {
-      const validStatuses = ["draft", "review", "complete"];
-      if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          { error: "Status must be one of: draft, review, complete" },
-          { status: 400 }
-        );
-      }
-      updates.status = status;
-    }
-
-    let updatedScene;
-
-    if (content !== undefined) {
-      // Update content (and optionally metadata)
-      updatedScene = await novelService.updateScene(
-        sceneId,
-        content,
-        Object.keys(updates).length > 0 ? updates : undefined
-      );
-    } else if (Object.keys(updates).length > 0) {
-      // Just updating metadata
-      updatedScene = await novelService.updateSceneMetadata(sceneId, updates);
-    } else {
-      return NextResponse.json(
-        { error: "No valid fields provided for update" },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      scene: updatedScene,
-    });
-  } catch (error) {
-    console.error("Error updating scene:", error);
-    return NextResponse.json(
-      { error: "Failed to update scene" },
-      { status: 500 }
+    return createSuccessResponse(
+      scene,
+      "Scene retrieved successfully",
+      context.requestId
     );
+  } catch (error) {
+    handleServiceError(error);
   }
-}
+});
 
-// DELETE /api/novels/[id]/scenes/[sceneId] - Delete scene (existing)
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+// ===== PUT /api/novels/[id]/scenes/[sceneId] - Update a scene =====
+export const PUT = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
+  withValidation(UpdateSceneSchema, SceneParamsSchema)
+)(async function (req: NextRequest, context, validatedData) {
   try {
-    const { sceneId } = await params;
+    const params = await context.params;
+    const { id: novelId, sceneId } = params as { id: string; sceneId: string };
+    const updateData = validatedData as UpdateSceneData;
+
+    // Handle content vs metadata updates differently
+    if ("content" in updateData && updateData.content !== undefined) {
+      // Content update (triggers word count recalculation)
+      const scene = await novelService.updateSceneContent(
+        sceneId,
+        updateData.content,
+        {
+          title: updateData.title,
+          povCharacter: updateData.povCharacter,
+          sceneType: updateData.sceneType,
+          notes: updateData.notes,
+          status: updateData.status,
+        }
+      );
+
+      return createSuccessResponse(
+        scene,
+        "Scene content updated successfully",
+        context.requestId
+      );
+    } else {
+      // Metadata-only update
+      const scene = await novelService.updateSceneMetadata(sceneId, updateData);
+
+      return createSuccessResponse(
+        scene,
+        "Scene metadata updated successfully",
+        context.requestId
+      );
+    }
+  } catch (error) {
+    handleServiceError(error);
+  }
+});
+
+// ===== DELETE /api/novels/[id]/scenes/[sceneId] - Delete a scene =====
+export const DELETE = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
+  withValidation(undefined, SceneParamsSchema)
+)(async function (req: NextRequest, context) {
+  try {
+    const params = await context.params;
+    const { id: novelId, sceneId } = params as { id: string; sceneId: string };
+
     await novelService.deleteScene(sceneId);
 
-    return NextResponse.json({
-      success: true,
-      message: "Scene deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error deleting scene:", error);
-    return NextResponse.json(
-      { error: "Failed to delete scene" },
-      { status: 500 }
+    return createSuccessResponse(
+      {
+        sceneId,
+        deleted: true,
+      },
+      "Scene deleted successfully",
+      context.requestId
     );
+  } catch (error) {
+    handleServiceError(error);
   }
-}
+});
+
+// /*
+// ===== ENHANCED FEATURES =====
+
+// 1. INTELLIGENT UPDATE HANDLING
+//    - Separates content updates (expensive) from metadata updates (cheap)
+//    - Content updates trigger word count recalculation
+//    - Metadata updates are fast and lightweight
+
+// 2. COMPREHENSIVE VALIDATION
+//    - Scene ID format validation (CUID)
+//    - Novel ID format validation
+//    - Update data validation with Zod schemas
+
+// 3. CONSISTENT RESPONSES
+//    - All operations return standardized format
+//    - Clear success/error messages
+//    - Request tracking for debugging
+
+// 4. RATE LIMITING
+//    - Standard limits for most operations
+//    - Could be customized per operation type if needed
+
+// EXAMPLE RESPONSES:
+
+// GET /api/novels/[id]/scenes/[sceneId]:
+// {
+//   "success": true,
+//   "data": {
+//     "id": "scene123",
+//     "title": "The Dragon Awakens",
+//     "content": "The mighty dragon...",
+//     "wordCount": 1250,
+//     "order": 3,
+//     "povCharacter": "Aria",
+//     "sceneType": "action",
+//     "status": "draft",
+//     ...
+//   },
+//   "message": "Scene retrieved successfully"
+// }
+
+// PUT /api/novels/[id]/scenes/[sceneId] (content update):
+// {
+//   "success": true,
+//   "data": { /* updated scene with new word count */ },
+//   "message": "Scene content updated successfully"
+// }
+
+// DELETE /api/novels/[id]/scenes/[sceneId]:
+// {
+//   "success": true,
+//   "data": { "sceneId": "scene123", "deleted": true },
+//   "message": "Scene deleted successfully"
+// }

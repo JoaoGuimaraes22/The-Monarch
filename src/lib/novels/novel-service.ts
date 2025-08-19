@@ -242,6 +242,81 @@ export class NovelService {
   }
 
   /**
+   * Clear all structure (acts, chapters, scenes) from a novel
+   * This is a destructive operation that removes all content while keeping the novel itself
+   */
+  async clearNovelStructure(novelId: string): Promise<void> {
+    try {
+      console.log(`🗑️ Clearing structure for novel: ${novelId}`);
+
+      // Verify novel exists first
+      const novel = await prisma.novel.findUnique({
+        where: { id: novelId },
+      });
+
+      if (!novel) {
+        throw new Error("Novel not found");
+      }
+
+      // Use transaction to ensure atomicity
+      await prisma.$transaction(async (tx) => {
+        console.log("🔄 Starting structure clearing transaction...");
+
+        // Delete all scenes first (due to foreign key constraints)
+        const deletedScenes = await tx.scene.deleteMany({
+          where: {
+            chapter: {
+              act: {
+                novelId: novelId,
+              },
+            },
+          },
+        });
+        console.log(`📝 Deleted ${deletedScenes.count} scenes`);
+
+        // Delete all chapters
+        const deletedChapters = await tx.chapter.deleteMany({
+          where: {
+            act: {
+              novelId: novelId,
+            },
+          },
+        });
+        console.log(`📚 Deleted ${deletedChapters.count} chapters`);
+
+        // Delete all acts
+        const deletedActs = await tx.act.deleteMany({
+          where: { novelId: novelId },
+        });
+        console.log(`🎭 Deleted ${deletedActs.count} acts`);
+
+        // Reset novel word count to 0
+        await tx.novel.update({
+          where: { id: novelId },
+          data: {
+            wordCount: 0,
+            updatedAt: new Date(),
+          },
+        });
+        console.log("📊 Reset novel word count to 0");
+
+        console.log("✅ Structure clearing transaction completed successfully");
+      });
+
+      console.log(
+        `🎉 Novel structure cleared successfully for: ${novel.title}`
+      );
+    } catch (error) {
+      console.error("❌ Failed to clear novel structure:", error);
+      throw new Error(
+        `Failed to clear novel structure: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    }
+  }
+
+  /**
    * Delete entire manuscript structure (all acts, chapters, scenes)
    */
   async deleteManuscriptStructure(novelId: string): Promise<void> {

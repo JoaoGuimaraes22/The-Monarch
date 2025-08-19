@@ -68,18 +68,19 @@ export const DELETE = composeMiddleware(
     const params = await context.params;
     const { id } = params as { id: string }; // Type assertion after validation
 
-    // Verify novel exists before clearing structure
-    const novel = await novelService.getNovelById(id);
-    if (!novel) {
-      throw new Error("Novel not found");
-    }
-
-    // Clear the structure (this should be implemented in your novel service)
-    // For now, assuming there's a method for this
+    // Clear the novel structure using dedicated method
     await novelService.clearNovelStructure(id);
 
     return createSuccessResponse(
-      { novelId: id },
+      {
+        novelId: id,
+        cleared: {
+          acts: true,
+          chapters: true,
+          scenes: true,
+          wordCount: true,
+        },
+      },
       "Novel structure cleared successfully",
       context.requestId
     );

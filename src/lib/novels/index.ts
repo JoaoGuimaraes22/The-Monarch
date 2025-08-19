@@ -32,48 +32,111 @@ export class NovelServiceAggregator {
   public acts = new ActService();
 
   // ==========================================
-  // BACKWARD COMPATIBILITY METHODS
-  // These delegate to the appropriate services
+  // INDIVIDUAL ENTITY GETTERS
   // ==========================================
 
-  // Novel operations (delegate to NovelService)
-  async getAllNovels() {
-    return this.novels.getAllNovels();
-  }
-
+  /**
+   * Get novel by ID (basic info only)
+   */
   async getNovelById(id: string) {
     return this.novels.getNovelById(id);
   }
 
+  /**
+   * Get novel with full structure (acts, chapters, scenes)
+   */
   async getNovelWithStructure(id: string) {
     return this.novels.getNovelWithStructure(id);
   }
 
+  /**
+   * Get scene by ID
+   */
+  async getSceneById(sceneId: string) {
+    return this.scenes.getSceneById(sceneId);
+  }
+
+  /**
+   * Get chapter by ID with scenes
+   */
+  async getChapterById(chapterId: string) {
+    return this.chapters.getChapterById(chapterId);
+  }
+
+  /**
+   * Get act by ID with full structure
+   */
+  async getActById(actId: string) {
+    return this.acts.getActById(actId);
+  }
+
+  // ==========================================
+  // NOVEL OPERATIONS
+  // ==========================================
+
+  /**
+   * Get all novels (basic info only)
+   */
+  async getAllNovels() {
+    return this.novels.getAllNovels();
+  }
+
+  /**
+   * Create a new novel
+   */
   async createNovel(data: CreateNovelData) {
     return this.novels.createNovel(data);
   }
 
+  /**
+   * Update a novel
+   */
   async updateNovel(id: string, data: Partial<CreateNovelData>) {
     return this.novels.updateNovel(id, data);
   }
 
+  /**
+   * Delete a novel (cascades to all content)
+   */
   async deleteNovel(id: string) {
     return this.novels.deleteNovel(id);
   }
 
+  /**
+   * Import structure into existing novel
+   */
   async importStructure(novelId: string, structure: ImportStructureData) {
     return this.novels.importStructure(novelId, structure);
   }
 
+  /**
+   * Clear all structure from a novel (acts, chapters, scenes)
+   */
+  async clearNovelStructure(novelId: string): Promise<void> {
+    return this.novels.clearNovelStructure(novelId);
+  }
+
+  /**
+   * @deprecated Use clearNovelStructure instead
+   */
   async deleteManuscriptStructure(novelId: string) {
     return this.novels.deleteManuscriptStructure(novelId);
   }
 
+  /**
+   * Recalculate novel word count from a scene change
+   */
   async recalculateNovelWordCount(sceneId: string) {
     return this.novels.recalculateNovelWordCountFromScene(sceneId);
   }
 
-  // Scene operations (delegate to SceneService)
+  // ==========================================
+  // SCENE OPERATIONS
+  // ==========================================
+
+  /**
+   * Update scene content and metadata (triggers word count recalculation)
+   */
   async updateScene(
     sceneId: string,
     content: string,
@@ -82,23 +145,48 @@ export class NovelServiceAggregator {
     return this.scenes.updateScene(sceneId, content, metadata);
   }
 
+  /**
+   * Update scene content and metadata (alias for clarity)
+   */
+  async updateSceneContent(
+    sceneId: string,
+    content: string,
+    metadata?: UpdateSceneMetadata
+  ) {
+    return this.scenes.updateScene(sceneId, content, metadata);
+  }
+
+  /**
+   * Update scene metadata only (no content/word count changes)
+   */
   async updateSceneMetadata(sceneId: string, data: UpdateSceneMetadata) {
     return this.scenes.updateSceneMetadata(sceneId, data);
   }
 
-  async createScene(chapterId: string, insertAfterSceneId?: string) {
+  /**
+   * Create a new scene in a chapter
+   */
+  async createScene(
+    chapterId: string,
+    insertAfterSceneId?: string,
+    title?: string
+  ) {
     return this.scenes.createScene({
       chapterId,
       insertAfterSceneId,
+      title,
     });
   }
 
+  /**
+   * Delete a scene
+   */
   async deleteScene(sceneId: string) {
     return this.scenes.deleteScene(sceneId);
   }
 
   /**
-   * KEY METHOD: Reorder scene for drag-and-drop
+   * Reorder scene for drag-and-drop
    */
   async reorderScene(
     sceneId: string,
@@ -108,11 +196,20 @@ export class NovelServiceAggregator {
     return this.scenes.reorderScene(sceneId, targetChapterId, newOrder);
   }
 
-  // Chapter operations (delegate to ChapterService)
+  // ==========================================
+  // CHAPTER OPERATIONS
+  // ==========================================
+
+  /**
+   * Update chapter metadata
+   */
   async updateChapter(chapterId: string, data: UpdateChapterData) {
     return this.chapters.updateChapter(chapterId, data);
   }
 
+  /**
+   * Create a new chapter in an act
+   */
   async createChapter(
     actId: string,
     insertAfterChapterId?: string,
@@ -125,22 +222,34 @@ export class NovelServiceAggregator {
     });
   }
 
+  /**
+   * Delete a chapter (cascades to scenes)
+   */
   async deleteChapter(chapterId: string) {
     return this.chapters.deleteChapter(chapterId);
   }
 
   /**
-   * KEY METHOD: Reorder chapter for drag-and-drop
+   * Reorder chapter for drag-and-drop
    */
   async reorderChapter(chapterId: string, newOrder: number) {
     return this.chapters.reorderChapter(chapterId, newOrder);
   }
 
-  // Act operations (delegate to ActService)
+  // ==========================================
+  // ACT OPERATIONS
+  // ==========================================
+
+  /**
+   * Update act metadata
+   */
   async updateAct(actId: string, data: UpdateActData) {
     return this.acts.updateAct(actId, data);
   }
 
+  /**
+   * Create a new act in a novel
+   */
   async createAct(novelId: string, insertAfterActId?: string, title?: string) {
     return this.acts.createAct({
       novelId,
@@ -149,20 +258,47 @@ export class NovelServiceAggregator {
     });
   }
 
+  /**
+   * Delete an act (cascades to chapters and scenes)
+   */
   async deleteAct(actId: string) {
     return this.acts.deleteAct(actId);
   }
 
   /**
-   * KEY METHOD: Reorder act for drag-and-drop
+   * Reorder act for drag-and-drop
    */
   async reorderAct(actId: string, newOrder: number) {
     return this.acts.reorderAct(actId, newOrder);
   }
 
   // ==========================================
-  // NEW ENHANCED METHODS
-  // These provide additional functionality
+  // COLLECTION GETTERS (Utility Methods)
+  // ==========================================
+
+  /**
+   * Get all scenes in a chapter
+   */
+  async getScenesByChapter(chapterId: string) {
+    return this.scenes.getScenesByChapter(chapterId);
+  }
+
+  /**
+   * Get all chapters in an act
+   */
+  async getChaptersByAct(actId: string) {
+    return this.chapters.getChaptersByAct(actId);
+  }
+
+  /**
+   * Get all acts in a novel
+   */
+  async getActsByNovel(novelId: string) {
+    return this.acts.getActsByNovel(novelId);
+  }
+
+  // ==========================================
+  // ENHANCED METHODS & UTILITIES
   // ==========================================
 
   /**
@@ -227,7 +363,7 @@ export class NovelServiceAggregator {
   }
 
   /**
-   * Batch operations for efficiency
+   * Batch update multiple scenes efficiently
    */
   async batchUpdateScenes(
     updates: Array<{
@@ -416,8 +552,8 @@ export class NovelServiceAggregator {
           await this.deleteScene(autoScene.id);
         }
 
-        for (const chapter of act.chapters) {
-          await this.createScene(newChapter.id, undefined);
+        for (const scene of chapter.scenes) {
+          await this.createScene(newChapter.id, undefined, scene.title);
         }
       }
     }
