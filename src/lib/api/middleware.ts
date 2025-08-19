@@ -2,7 +2,7 @@
 // Middleware system for API route standardization
 
 import { NextRequest, NextResponse } from "next/server";
-import { ZodSchema } from "zod";
+import { z } from "zod";
 import { APIError, APIResponse } from "./types";
 import {
   rateLimit,
@@ -108,9 +108,9 @@ export function createErrorResponse(
 
 // ===== VALIDATION MIDDLEWARE =====
 export function withValidation<T>(
-  bodySchema?: ZodSchema<T>,
-  paramsSchema?: ZodSchema,
-  querySchema?: ZodSchema
+  bodySchema?: z.ZodType<T>,
+  paramsSchema?: z.ZodType,
+  querySchema?: z.ZodType
 ) {
   return function middleware(handler: RouteHandler<T>) {
     return async function (
@@ -198,10 +198,10 @@ export function withValidation<T>(
         // Create enriched context
         const enrichedContext: RouteContext = {
           params: validatedParams
-            ? Promise.resolve(validatedParams)
+            ? Promise.resolve(validatedParams as Record<string, unknown>)
             : context.params,
           requestId,
-          query: validatedQuery,
+          query: validatedQuery as Record<string, unknown> | undefined,
         };
 
         // Call the actual handler

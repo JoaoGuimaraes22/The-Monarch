@@ -1,21 +1,59 @@
-import { NextRequest, NextResponse } from "next/server";
-import { novelService } from "@/lib/novels";
+// app/api/novels/route.ts
+// Refactored with API standardization system
 
-// GET /api/novels - Get all novels
-export async function GET() {
+import { NextRequest } from "next/server";
+import { novelService } from "@/lib/novels";
+import {
+  withValidation,
+  withRateLimit,
+  composeMiddleware,
+  createSuccessResponse,
+  handleServiceError,
+  CreateNovelSchema,
+  CreateNovelData,
+  RATE_LIMIT_CONFIGS,
+} from "@/lib/api";
+
+// ===== GET /api/novels - Get all novels =====
+export const GET = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.STANDARD)
+)(async function (req: NextRequest, context) {
   try {
     const novels = await novelService.getAllNovels();
-    return NextResponse.json(novels);
-  } catch (error) {
-    console.error("Error fetching novels:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch novels" },
-      { status: 500 }
+    return createSuccessResponse(
+      novels,
+      `Retrieved ${novels.length} novels`,
+      context.requestId
     );
+  } catch (error) {
+    handleServiceError(error);
   }
-}
+});
 
-// POST /api/novels - Create a new novel
+// ===== POST /api/novels - Create a new novel =====
+export const POST = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.CREATION),
+  withValidation(CreateNovelSchema)
+)(async function (req: NextRequest, context, validatedData) {
+  try {
+    // Type assertion since we know validatedData is CreateNovelData from schema
+    const novelData = validatedData as CreateNovelData;
+    const novel = await novelService.createNovel(novelData);
+
+    return createSuccessResponse(
+      novel,
+      "Novel created successfully",
+      context.requestId
+    );
+  } catch (error) {
+    handleServiceError(error);
+  }
+});
+
+/* 
+===== COMPARISON: BEFORE VS AFTER =====
+
+BEFORE (Manual validation, inconsistent responses):
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -44,3 +82,17 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
+RESPONSE FORMAT:
+{
+  "success": true,
+  "data": { "id": "...", "title": "...", "description": "..." },
+  "message": "Novel created successfully",
+  "meta": {
+    "timestamp": "2025-08-19T...",
+    "requestId": "req_1692...",
+    "version": "1.0"
+  }
+}
+*/
