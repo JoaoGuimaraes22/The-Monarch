@@ -365,6 +365,8 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           onSceneClick={onSceneClick}
           onSceneRename={onSceneRename}
           onChapterRename={onChapterRename}
+          onChapterClick={onChapterClick} // ✨ NEW: Pass chapter focus handler
+          onActRename={onActRename}
           novel={novel}
         />
       </div>

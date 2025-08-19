@@ -213,8 +213,7 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                     <div className="flex-1">
                       {onChapterRename && chapterInfo ? (
                         <div className="mb-1">
-                          {/* ✨ Chapter identifier */}
-                          <div className="text-xs text-gray-400 mb-1">
+                          <div className="text-sm text-gray-400 mb-1">
                             CH{chapterInfo.order}
                           </div>
                           <EditableText
@@ -223,25 +222,23 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                               onChapterRename(chapterInfo.id, newTitle)
                             }
                             placeholder="Chapter title"
-                            className="text-lg text-white font-medium"
+                            className="text-xl text-white font-medium"
                             maxLength={200}
                           />
                         </div>
                       ) : (
                         <div>
                           {chapterInfo && (
-                            <div className="text-xs text-gray-400 mb-1">
+                            <div className="text-sm text-gray-400 mb-1">
                               CH{chapterInfo.order}
                             </div>
                           )}
-                          <h3 className="text-lg text-white font-medium mb-1">
-                            {chapterInfo?.title ||
-                              `Chapter ${sectionIndex + 1}`}
-                          </h3>
+                          <h2 className="text-xl text-white font-medium">
+                            {section.title}
+                          </h2>
                         </div>
                       )}
-
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-gray-400 text-sm mt-1">
                         {section.scenes.length} scene
                         {section.scenes.length !== 1 ? "s" : ""} •{" "}
                         {section.wordCount.toLocaleString()} words
