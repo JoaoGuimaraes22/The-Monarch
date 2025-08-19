@@ -1,9 +1,12 @@
 // src/hooks/manuscript/useManuscriptLogic.ts
-// ✨ UPDATED: Added complete auto-save system with toggle and manual save
+// ✨ PHASE 2: Refactored to use dedicated state management hook
+// ✅ FIXED: Infinite loop issue resolved
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback } from "react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/view-mode-selector";
+import { useAutoSave } from "./useAutoSave";
+import { useManuscriptState } from "./useManuscriptState";
 
 export interface ManuscriptLogicReturn {
   // State
@@ -15,7 +18,7 @@ export interface ManuscriptLogicReturn {
   viewMode: ViewMode;
   contentDisplayMode: "document" | "grid";
 
-  // ✨ NEW: Auto-save state
+  // Auto-save state
   isSavingContent: boolean;
   lastSaved: Date | null;
   autoSaveEnabled: boolean;
@@ -32,7 +35,7 @@ export interface ManuscriptLogicReturn {
   handleChapterSelect: (chapter: Chapter) => void;
   handleActSelect: (act: Act) => void;
 
-  // CRUD Handlers with proper signatures
+  // CRUD Handlers
   handleAddScene: (chapterId: string, afterSceneId?: string) => Promise<void>;
   handleAddChapter: (actId: string, afterChapterId?: string) => Promise<void>;
   handleAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
@@ -48,7 +51,7 @@ export interface ManuscriptLogicReturn {
   ) => Promise<void>;
   handleUpdateSceneName: (sceneId: string, newTitle: string) => Promise<void>;
 
-  // ✨ NEW: Content saving handlers
+  // Auto-save handlers
   handleSceneContentChange: (sceneId: string, content: string) => void;
   setAutoSaveEnabled: (enabled: boolean) => void;
   handleManualSave: () => Promise<void>;
@@ -60,48 +63,38 @@ export interface ManuscriptLogicReturn {
 }
 
 export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
-  // ===== STATE MANAGEMENT =====
-  const [novel, setNovel] = useState<NovelWithStructure | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
-  const [selectedAct, setSelectedAct] = useState<Act | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("scene");
-  const [contentDisplayMode, setContentDisplayMode] = useState<
-    "document" | "grid"
-  >("document");
+  // ✨ PHASE 2: Use dedicated state management hook
+  const { state, actions } = useManuscriptState();
 
-  // ✨ NEW: Auto-save state
-  const [isSavingContent, setIsSavingContent] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true); // Default ON
-  const [pendingChanges, setPendingChanges] = useState(false);
+  // ✨ PHASE 1: Use dedicated auto-save hook
+  const autoSave = useAutoSave({
+    novelId,
+    selectedScene: state.selectedScene,
+    delay: 2000,
+  });
 
-  // Track pending content changes and timeouts
-  const pendingContentRef = useRef<{ sceneId: string; content: string } | null>(
-    null
-  );
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // ===== CORE API OPERATIONS =====
+  // ===== NOVEL STRUCTURE LOADING (FIXED FOR INFINITE LOOP) =====
   const loadNovelStructure = useCallback(
     async (id: string) => {
       console.log("🔄 API CALL: loadNovelStructure called");
       try {
-        setLoading(true);
+        actions.setLoading(true);
         const response = await fetch(`/api/novels/${id}/structure`);
         if (response.ok) {
           const novelData = await response.json();
-          setNovel(novelData);
+          actions.setNovel(novelData);
+
+          // Get current scene ID to avoid dependency issues
+          const currentSceneId = state.selectedScene?.id;
 
           // Only auto-select if no scene is currently selected
           if (novelData.acts && novelData.acts.length > 0) {
             let sceneStillExists = false;
-            if (selectedScene) {
+            if (currentSceneId) {
               for (const act of novelData.acts) {
                 for (const chapter of act.chapters) {
                   if (
-                    chapter.scenes.some((s: Scene) => s.id === selectedScene.id)
+                    chapter.scenes.some((s: Scene) => s.id === currentSceneId)
                   ) {
                     sceneStillExists = true;
                     break;
@@ -111,13 +104,13 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
               }
             }
 
-            if (!selectedScene || !sceneStillExists) {
+            if (!currentSceneId || !sceneStillExists) {
               const firstAct = novelData.acts[0];
               if (firstAct && firstAct.chapters.length > 0) {
                 const firstChapter = firstAct.chapters[0];
                 if (firstChapter.scenes.length > 0) {
                   const firstScene = firstChapter.scenes[0];
-                  setSelectedScene(firstScene);
+                  actions.setSelectedScene(firstScene);
                   console.log("Auto-selected first scene:", firstScene.title);
                 }
               }
@@ -129,226 +122,117 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
       } catch (error) {
         console.error("Error loading novel structure:", error);
       } finally {
-        setLoading(false);
+        actions.setLoading(false);
       }
     },
-    [selectedScene]
+    // ✅ FIXED: Empty dependencies to stop infinite loop
+    []
   );
-
-  // ✨ CORE SAVE FUNCTION (used by both auto-save and manual save)
-  const saveSceneContent = useCallback(
-    async (sceneId: string, content: string) => {
-      if (!novelId) return false;
-
-      try {
-        setIsSavingContent(true);
-        console.log("💾 Saving scene content...", sceneId);
-
-        const response = await fetch(
-          `/api/novels/${novelId}/scenes/${sceneId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content }),
-          }
-        );
-
-        if (response.ok) {
-          const updatedScene = await response.json();
-          console.log("✅ Scene content saved successfully");
-
-          // Update local state - NO PAGE REFRESH
-          setNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) => ({
-                  ...chapter,
-                  scenes: chapter.scenes.map((scene) =>
-                    scene.id === sceneId
-                      ? {
-                          ...scene,
-                          content,
-                          wordCount: updatedScene.wordCount || scene.wordCount,
-                        }
-                      : scene
-                  ),
-                })),
-              })),
-            };
-          });
-
-          // Update selected scene if it's the one being edited
-          if (selectedScene?.id === sceneId) {
-            setSelectedScene((prevScene) =>
-              prevScene
-                ? {
-                    ...prevScene,
-                    content,
-                    wordCount: updatedScene.wordCount || prevScene.wordCount,
-                  }
-                : prevScene
-            );
-          }
-
-          setLastSaved(new Date());
-          setPendingChanges(false);
-          return true;
-        } else {
-          console.error("❌ Failed to save scene content");
-          return false;
-        }
-      } catch (error) {
-        console.error("❌ Error saving scene content:", error);
-        return false;
-      } finally {
-        setIsSavingContent(false);
-      }
-    },
-    [novelId, selectedScene]
-  );
-
-  // ✨ AUTO-SAVE: Debounced content saving (2 second delay)
-  const handleSceneContentChange = useCallback(
-    (sceneId: string, content: string) => {
-      // Always update pending changes
-      pendingContentRef.current = { sceneId, content };
-      setPendingChanges(true);
-
-      // Clear existing timeout
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-
-      // Only auto-save if enabled
-      if (autoSaveEnabled) {
-        saveTimeoutRef.current = setTimeout(() => {
-          if (pendingContentRef.current) {
-            saveSceneContent(
-              pendingContentRef.current.sceneId,
-              pendingContentRef.current.content
-            );
-          }
-        }, 2000); // 2 second delay
-      }
-    },
-    [autoSaveEnabled, saveSceneContent]
-  );
-
-  // ✨ MANUAL SAVE: Save immediately
-  const handleManualSave = useCallback(async () => {
-    if (!pendingContentRef.current) {
-      console.log("📝 No pending changes to save");
-      return;
-    }
-
-    const { sceneId, content } = pendingContentRef.current;
-    const success = await saveSceneContent(sceneId, content);
-
-    if (success) {
-      console.log("💾 Manual save completed");
-    } else {
-      console.error("❌ Manual save failed");
-    }
-  }, [saveSceneContent]);
 
   // ===== UI ACTION HANDLERS =====
   const handleContentDisplayModeChange = useCallback(
     (newMode: "document" | "grid") => {
-      setContentDisplayMode(newMode);
+      actions.setContentDisplayMode(newMode);
     },
-    []
+    [actions]
   );
 
   const handleViewModeChange = useCallback(
     (newViewMode: ViewMode) => {
-      if (selectedScene && novel?.acts) {
+      if (state.selectedScene && state.novel?.acts) {
         if (newViewMode === "chapter") {
-          for (const act of novel.acts) {
+          for (const act of state.novel.acts) {
             for (const chapter of act.chapters) {
               if (
-                chapter.scenes.some((scene) => scene.id === selectedScene.id)
+                chapter.scenes.some(
+                  (scene) => scene.id === state.selectedScene!.id
+                )
               ) {
                 console.log("Auto-selecting chapter:", chapter.title);
-                setSelectedChapter(chapter);
-                setSelectedAct(null);
-                setViewMode("chapter");
+                actions.setSelectedChapter(chapter);
+                actions.setSelectedAct(null);
+                actions.setViewMode("chapter");
                 return;
               }
             }
           }
         } else if (newViewMode === "act") {
-          for (const act of novel.acts) {
+          for (const act of state.novel.acts) {
             for (const chapter of act.chapters) {
               if (
-                chapter.scenes.some((scene) => scene.id === selectedScene.id)
+                chapter.scenes.some(
+                  (scene) => scene.id === state.selectedScene!.id
+                )
               ) {
                 console.log("Auto-selecting act:", act.title);
-                setSelectedAct(act);
-                setSelectedChapter(null);
-                setViewMode("act");
+                actions.setSelectedAct(act);
+                actions.setSelectedChapter(null);
+                actions.setViewMode("act");
                 return;
               }
             }
           }
         } else if (newViewMode === "scene") {
-          setSelectedChapter(null);
-          setSelectedAct(null);
-          setViewMode("scene");
+          actions.setSelectedChapter(null);
+          actions.setSelectedAct(null);
+          actions.setViewMode("scene");
           return;
         }
       }
-      setViewMode(newViewMode);
+      actions.setViewMode(newViewMode);
     },
-    [selectedScene, novel]
+    [state.selectedScene, state.novel, actions]
   );
 
   // ===== SELECTION HANDLERS =====
-  const handleSceneSelect = useCallback((sceneId: string, scene: Scene) => {
-    setSelectedScene(scene);
-    setViewMode("scene");
-    setSelectedChapter(null);
-    setSelectedAct(null);
-  }, []);
+  const handleSceneSelect = useCallback(
+    (sceneId: string, scene: Scene) => {
+      console.log("🖱️ Scene selected:", scene.title);
+      actions.setSelectedScene(scene);
+      actions.setViewMode("scene");
+      actions.setSelectedChapter(null);
+      actions.setSelectedAct(null);
+    },
+    [actions]
+  );
 
   const handleChapterSelect = useCallback(
     (chapter: Chapter) => {
-      setSelectedChapter(chapter);
-      setViewMode("chapter");
-      setSelectedAct(null);
-      if (selectedScene) {
+      console.log("🖱️ Chapter selected:", chapter.title);
+      actions.setSelectedChapter(chapter);
+      actions.setViewMode("chapter");
+      actions.setSelectedAct(null);
+      if (state.selectedScene) {
         const sceneInChapter = chapter.scenes.some(
-          (s) => s.id === selectedScene.id
+          (s) => s.id === state.selectedScene!.id
         );
         if (!sceneInChapter) {
-          setSelectedScene(null);
+          actions.setSelectedScene(null);
         }
       }
     },
-    [selectedScene]
+    [state.selectedScene, actions]
   );
 
   const handleActSelect = useCallback(
     (act: Act) => {
-      setSelectedAct(act);
-      setViewMode("act");
-      setSelectedChapter(null);
-      if (selectedScene) {
+      console.log("🖱️ Act selected:", act.title);
+      actions.setSelectedAct(act);
+      actions.setViewMode("act");
+      actions.setSelectedChapter(null);
+      if (state.selectedScene) {
         const sceneInAct = act.chapters.some((chapter) =>
-          chapter.scenes.some((scene) => scene.id === selectedScene.id)
+          chapter.scenes.some((scene) => scene.id === state.selectedScene!.id)
         );
         if (!sceneInAct) {
-          setSelectedScene(null);
+          actions.setSelectedScene(null);
         }
       }
     },
-    [selectedScene]
+    [state.selectedScene, actions]
   );
 
-  // ===== CREATE HANDLERS WITH PROPER STATE UPDATES =====
+  // ===== CREATE HANDLERS WITH LOCAL STATE UPDATES =====
 
   const handleAddScene = useCallback(
     async (chapterId: string, afterSceneId?: string) => {
@@ -358,7 +242,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         const requestBody = afterSceneId
           ? { insertAfterSceneId: afterSceneId }
           : {};
-
         const response = await fetch(
           `/api/novels/${novelId}/chapters/${chapterId}/scenes`,
           {
@@ -371,7 +254,45 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           const result = await response.json();
           console.log("✅ Scene created:", result.scene);
-          await loadNovelStructure(novelId);
+
+          // ✅ LOCAL STATE UPDATE - NO RELOAD
+          actions.updateNovel((prevNovel) => {
+            if (!prevNovel) return prevNovel;
+
+            return {
+              ...prevNovel,
+              acts: prevNovel.acts.map((act) => ({
+                ...act,
+                chapters: act.chapters.map((chapter) => {
+                  if (chapter.id === chapterId) {
+                    const scenes = [...chapter.scenes];
+                    let insertIndex = scenes.length;
+
+                    if (afterSceneId) {
+                      const afterIndex = scenes.findIndex(
+                        (s) => s.id === afterSceneId
+                      );
+                      if (afterIndex >= 0) {
+                        insertIndex = afterIndex + 1;
+                      }
+                    }
+
+                    scenes.splice(insertIndex, 0, result.scene);
+                    scenes.forEach((scene, index) => {
+                      scene.order = index + 1;
+                    });
+
+                    return { ...chapter, scenes };
+                  }
+                  return chapter;
+                }),
+              })),
+            };
+          });
+
+          // Auto-select new scene
+          actions.setSelectedScene(result.scene);
+          actions.setViewMode("scene");
         } else {
           const error = await response.json();
           console.error("Failed to create scene:", error);
@@ -382,18 +303,19 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error creating scene. Please try again.");
       }
     },
-    [novelId, loadNovelStructure]
+    [novelId, actions]
   );
+
+  // ===== REST OF CRUD HANDLERS (keeping existing for now) =====
+  // TODO: Convert these to local state updates in Phase 3
 
   const handleAddChapter = useCallback(
     async (actId: string, afterChapterId?: string) => {
       if (!novelId) return;
-
       try {
         const requestBody = afterChapterId
           ? { insertAfterChapterId: afterChapterId }
           : {};
-
         const response = await fetch(
           `/api/novels/${novelId}/acts/${actId}/chapters`,
           {
@@ -425,13 +347,11 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   const handleAddAct = useCallback(
     async (title?: string, insertAfterActId?: string) => {
       if (!novelId) return;
-
       try {
         const requestBody = {
           title: title || "New Act",
           ...(insertAfterActId && { insertAfterActId }),
         };
-
         const response = await fetch(`/api/novels/${novelId}/acts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -455,12 +375,11 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     [novelId, loadNovelStructure]
   );
 
-  // ===== DELETE HANDLERS =====
+  // ===== DELETE HANDLERS (keeping existing for now) =====
 
   const handleDeleteScene = useCallback(
     async (sceneId: string) => {
       if (!novelId) return;
-
       try {
         const response = await fetch(
           `/api/novels/${novelId}/scenes/${sceneId}`,
@@ -471,11 +390,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
         if (response.ok) {
           console.log("✅ Scene deleted:", sceneId);
-
-          if (selectedScene?.id === sceneId) {
-            setSelectedScene(null);
+          if (state.selectedScene?.id === sceneId) {
+            actions.setSelectedScene(null);
           }
-
           await loadNovelStructure(novelId);
         } else {
           console.error("Failed to delete scene");
@@ -486,13 +403,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error deleting scene. Please try again.");
       }
     },
-    [novelId, selectedScene, loadNovelStructure]
+    [novelId, state.selectedScene, actions, loadNovelStructure]
   );
 
   const handleDeleteChapter = useCallback(
     async (chapterId: string) => {
       if (!novelId) return;
-
       try {
         const response = await fetch(
           `/api/novels/${novelId}/chapters/${chapterId}`,
@@ -503,11 +419,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
         if (response.ok) {
           console.log("✅ Chapter deleted:", chapterId);
-
-          if (selectedChapter?.id === chapterId) {
-            setSelectedChapter(null);
+          if (state.selectedChapter?.id === chapterId) {
+            actions.setSelectedChapter(null);
           }
-
           await loadNovelStructure(novelId);
         } else {
           console.error("Failed to delete chapter");
@@ -518,13 +432,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error deleting chapter. Please try again.");
       }
     },
-    [novelId, selectedChapter, loadNovelStructure]
+    [novelId, state.selectedChapter, actions, loadNovelStructure]
   );
 
   const handleDeleteAct = useCallback(
     async (actId: string) => {
       if (!novelId) return;
-
       try {
         const response = await fetch(`/api/novels/${novelId}/acts/${actId}`, {
           method: "DELETE",
@@ -532,11 +445,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
         if (response.ok) {
           console.log("✅ Act deleted:", actId);
-
-          if (selectedAct?.id === actId) {
-            setSelectedAct(null);
+          if (state.selectedAct?.id === actId) {
+            actions.setSelectedAct(null);
           }
-
           await loadNovelStructure(novelId);
         } else {
           console.error("Failed to delete act");
@@ -547,7 +458,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error deleting act. Please try again.");
       }
     },
-    [novelId, selectedAct, loadNovelStructure]
+    [novelId, state.selectedAct, actions, loadNovelStructure]
   );
 
   // ===== UPDATE HANDLERS =====
@@ -555,7 +466,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   const handleUpdateActName = useCallback(
     async (actId: string, newTitle: string) => {
       if (!novelId) return;
-
       try {
         const response = await fetch(`/api/novels/${novelId}/acts/${actId}`, {
           method: "PUT",
@@ -565,10 +475,8 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
         if (response.ok) {
           console.log("✅ Act name updated:", newTitle);
-
-          setNovel((prevNovel) => {
+          actions.updateNovel((prevNovel) => {
             if (!prevNovel) return prevNovel;
-
             return {
               ...prevNovel,
               acts: prevNovel.acts.map((act) =>
@@ -585,13 +493,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         throw error;
       }
     },
-    [novelId]
+    [novelId, actions]
   );
 
   const handleUpdateChapterName = useCallback(
     async (chapterId: string, newTitle: string) => {
       if (!novelId) return;
-
       try {
         const response = await fetch(
           `/api/novels/${novelId}/chapters/${chapterId}`,
@@ -604,10 +511,8 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
         if (response.ok) {
           console.log("✅ Chapter name updated:", newTitle);
-
-          setNovel((prevNovel) => {
+          actions.updateNovel((prevNovel) => {
             if (!prevNovel) return prevNovel;
-
             return {
               ...prevNovel,
               acts: prevNovel.acts.map((act) => ({
@@ -629,13 +534,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         throw error;
       }
     },
-    [novelId]
+    [novelId, actions]
   );
 
   const handleUpdateSceneName = useCallback(
     async (sceneId: string, newTitle: string) => {
       if (!novelId) return;
-
       try {
         const response = await fetch(
           `/api/novels/${novelId}/scenes/${sceneId}`,
@@ -649,9 +553,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         if (response.ok) {
           console.log("✅ Scene name updated:", newTitle);
 
-          setNovel((prevNovel) => {
+          // Update the novel state
+          actions.updateNovel((prevNovel) => {
             if (!prevNovel) return prevNovel;
-
             return {
               ...prevNovel,
               acts: prevNovel.acts.map((act) => ({
@@ -666,10 +570,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
             };
           });
 
-          if (selectedScene?.id === sceneId) {
-            setSelectedScene((prevScene) =>
-              prevScene ? { ...prevScene, title: newTitle } : prevScene
-            );
+          // ✅ FIXED: Update selected scene directly
+          if (state.selectedScene?.id === sceneId) {
+            actions.setSelectedScene({
+              ...state.selectedScene,
+              title: newTitle,
+            });
           }
         } else {
           console.error("Failed to update scene name");
@@ -680,27 +586,8 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         throw error;
       }
     },
-    [novelId, selectedScene]
+    [novelId, state.selectedScene, actions]
   );
-
-  // ===== CLEANUP AND EFFECTS =====
-
-  // Cleanup timeout on unmount or when auto-save is disabled
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Clear timeout when auto-save is disabled
-  useEffect(() => {
-    if (!autoSaveEnabled && saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-  }, [autoSaveEnabled]);
 
   // ===== UTILITY FUNCTIONS =====
 
@@ -719,29 +606,24 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
   // ===== COMPUTED VALUES =====
 
-  const hasStructure = novel && novel.acts && novel.acts.length > 0;
+  const hasStructure =
+    state.novel && state.novel.acts && state.novel.acts.length > 0;
 
-  // ===== RETURN INTERFACE =====
+  // ===== RETURN INTERFACE (unchanged - components don't need to change) =====
 
   return {
-    // State
-    novel,
-    loading,
-    selectedScene,
-    selectedChapter,
-    selectedAct,
-    viewMode,
-    contentDisplayMode,
+    // ✨ State from useManuscriptState hook
+    ...state,
 
-    // ✨ NEW: Auto-save state
-    isSavingContent,
-    lastSaved,
-    autoSaveEnabled,
-    pendingChanges,
+    // Auto-save state from useAutoSave hook
+    isSavingContent: autoSave.state.isSaving,
+    lastSaved: autoSave.state.lastSaved,
+    autoSaveEnabled: autoSave.state.enabled,
+    pendingChanges: autoSave.state.pendingChanges,
 
-    // UI Actions
-    setViewMode,
-    setContentDisplayMode,
+    // UI Actions (direct pass-through)
+    setViewMode: actions.setViewMode,
+    setContentDisplayMode: actions.setContentDisplayMode,
     handleViewModeChange,
     handleContentDisplayModeChange,
 
@@ -763,10 +645,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     handleUpdateChapterName,
     handleUpdateSceneName,
 
-    // ✨ NEW: Content saving handlers
-    handleSceneContentChange,
-    setAutoSaveEnabled,
-    handleManualSave,
+    // Auto-save handlers from useAutoSave hook
+    handleSceneContentChange: autoSave.actions.handleContentChange,
+    setAutoSaveEnabled: autoSave.actions.setEnabled,
+    handleManualSave: async () => {
+      await autoSave.actions.handleManualSave();
+    },
 
     // Utility
     handleRefresh,

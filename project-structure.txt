@@ -101,6 +101,7 @@
 │   │   │   │       │   └── ⚛️  view-mode-selector.tsx
 │   │   │   │       ├── ⚛️  index.ts
 │   │   │   │       ├── 📁 layout/
+│   │   │   │       │   ├── ⚛️  compact-auto-save-tools.tsx
 │   │   │   │       │   ├── ⚛️  delete-all-button.tsx
 │   │   │   │       │   ├── ⚛️  index.ts
 │   │   │   │       │   ├── ⚛️  manuscript-header.tsx
@@ -147,7 +148,9 @@
 │   │   └── ⚛️  page.tsx
 │   ├── 📁 hooks/
 │   │   ├── 📁 manuscript/
-│   │   │   └── ⚛️  useManuscriptLogic.ts
+│   │   │   ├── ⚛️  useAutoSave.ts
+│   │   │   ├── ⚛️  useManuscriptLogic.ts
+│   │   │   └── ⚛️  useManuscriptState.ts
 │   │   ├── 📁 novels/
 │   │   └── ⚛️  useNovels.ts
 │   └── 📁 lib/
@@ -178,7 +181,7 @@
 │       └── ⚛️  prisma.ts
 └── 📋 tsconfig.json
 
-Generated on: Mon, Aug 18, 2025  4:57:13 PM
+Generated on: Tue, Aug 19, 2025  1:28:56 AM
 Directory: /c/Users/jssgm/Dev/Projects/ProdMonarch/themonarch
 Max depth: 14
 Include hidden: false

@@ -1,17 +1,10 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// ✨ UPDATED: Added auto-save controls to TOOLS section
+// ✨ UPDATED: Compact auto-save design with hide/show details functionality
 
 import React, { useState, useEffect } from "react";
-import {
-  BookOpen,
-  Save,
-  RotateCcw,
-  Power,
-  PowerOff,
-  Clock,
-} from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { CollapsibleSidebar } from "@/app/components/ui";
-import { DeleteAllManuscriptButton } from "./delete-all-button";
+import { CompactAutoSaveTools } from "./compact-auto-save-tools";
 import { DraggableManuscriptTree } from "../../chapter-tree/draggable-manuscript-tree";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
@@ -39,7 +32,7 @@ interface ManuscriptStructureSidebarProps {
   onToggleCollapse: () => void;
   left: string;
   width: string;
-  // ✨ NEW: Auto-save props
+  // ✨ Auto-save props
   autoSaveEnabled: boolean;
   setAutoSaveEnabled: (enabled: boolean) => void;
   handleManualSave: () => Promise<void>;
@@ -47,114 +40,6 @@ interface ManuscriptStructureSidebarProps {
   isSavingContent: boolean;
   lastSaved: Date | null;
 }
-
-// ✨ NEW: Auto-Save Tools Component
-const AutoSaveTools: React.FC<{
-  autoSaveEnabled: boolean;
-  setAutoSaveEnabled: (enabled: boolean) => void;
-  handleManualSave: () => Promise<void>;
-  pendingChanges: boolean;
-  isSavingContent: boolean;
-  lastSaved: Date | null;
-}> = ({
-  autoSaveEnabled,
-  setAutoSaveEnabled,
-  handleManualSave,
-  pendingChanges,
-  isSavingContent,
-  lastSaved,
-}) => {
-  const [isManualSaving, setIsManualSaving] = useState(false);
-
-  const handleManualSaveClick = async () => {
-    setIsManualSaving(true);
-    try {
-      await handleManualSave();
-    } finally {
-      setIsManualSaving(false);
-    }
-  };
-
-  const formatLastSaved = (date: Date | null) => {
-    if (!date) return "Never";
-
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-
-    if (diffMinutes < 1) return "Just now";
-    if (diffMinutes === 1) return "1 minute ago";
-    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
-
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours === 1) return "1 hour ago";
-    if (diffHours < 24) return `${diffHours} hours ago`;
-
-    return date.toLocaleDateString();
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Auto-Save Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          {autoSaveEnabled ? (
-            <Power className="w-4 h-4 text-green-400" />
-          ) : (
-            <PowerOff className="w-4 h-4 text-gray-400" />
-          )}
-          <span className="text-sm font-medium text-white">Auto-Save</span>
-        </div>
-        <button
-          onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            autoSaveEnabled ? "bg-green-600" : "bg-gray-600"
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              autoSaveEnabled ? "translate-x-6" : "translate-x-1"
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Manual Save Button */}
-      <button
-        onClick={handleManualSaveClick}
-        disabled={isManualSaving || isSavingContent || !pendingChanges}
-        className={`w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-          pendingChanges && !isSavingContent && !isManualSaving
-            ? "bg-blue-600 hover:bg-blue-700 text-white"
-            : "bg-gray-700 text-gray-400 cursor-not-allowed"
-        }`}
-      >
-        <Save className="w-4 h-4" />
-        <span>
-          {isManualSaving || isSavingContent
-            ? "Saving..."
-            : pendingChanges
-            ? "Save Now"
-            : "No Changes"}
-        </span>
-      </button>
-
-      {/* Save Status */}
-      <div className="flex items-center space-x-2 text-xs text-gray-400">
-        <Clock className="w-3 h-3" />
-        <span>Last saved: {formatLastSaved(lastSaved)}</span>
-      </div>
-
-      {/* Pending Changes Indicator */}
-      {pendingChanges && (
-        <div className="flex items-center space-x-2 text-xs text-amber-400">
-          <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-          <span>Unsaved changes</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const ManuscriptStructureSidebar: React.FC<
   ManuscriptStructureSidebarProps
@@ -180,7 +65,7 @@ export const ManuscriptStructureSidebar: React.FC<
   onToggleCollapse,
   left,
   width,
-  // ✨ NEW: Auto-save props
+  // Auto-save props
   autoSaveEnabled,
   setAutoSaveEnabled,
   handleManualSave,
@@ -211,24 +96,25 @@ export const ManuscriptStructureSidebar: React.FC<
     if (isFirstLoad) {
       if (selectedScene) {
         // Find and expand the chapter containing the selected scene
-        for (const act of novel.acts) {
-          for (const chapter of act.chapters) {
-            if (chapter.scenes.some((scene) => scene.id === selectedScene.id)) {
-              setExpandedChapters(new Set([chapter.id]));
-              setIsFirstLoad(false);
-              return;
-            }
-          }
+        const selectedChapter = novel.acts
+          .flatMap((act) => act.chapters)
+          .find((chapter) =>
+            chapter.scenes.some((scene) => scene.id === selectedScene.id)
+          );
+
+        if (selectedChapter) {
+          setExpandedChapters(new Set([selectedChapter.id]));
         }
-      } else if (selectedChapterId) {
-        setExpandedChapters(new Set([selectedChapterId]));
+      } else if (allChapterIds.length <= 5) {
+        // Auto-expand if few chapters
+        setExpandedChapters(new Set(allChapterIds));
       } else {
-        // Default to expanding the first chapter
+        // Expand only first chapter
         setExpandedChapters(new Set([allChapterIds[0]]));
       }
       setIsFirstLoad(false);
     }
-  }, [novel.acts, selectedScene, selectedChapterId, isFirstLoad]);
+  }, [novel.acts, selectedScene, isFirstLoad]);
 
   // Collapsed content
   const collapsedContent = (
@@ -245,8 +131,8 @@ export const ManuscriptStructureSidebar: React.FC<
     <CollapsibleSidebar
       isCollapsed={isCollapsed}
       onToggleCollapse={onToggleCollapse}
-      title="Manuscript Structure"
-      subtitle="Navigate your story • Drag to reorder"
+      title="Structure"
+      subtitle="Acts, chapters & scenes"
       icon={BookOpen}
       position="left"
       width={width}
@@ -254,37 +140,40 @@ export const ManuscriptStructureSidebar: React.FC<
       collapsedContent={collapsedContent}
       className="z-30"
     >
-      <div className="h-full flex flex-col">
-        {/* ✨ UPDATED: TOOLS Section with Auto-Save Controls */}
-        <div className="p-4 border-b border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-300">TOOLS</h3>
-          </div>
+      <div className="flex flex-col h-full">
+        {/* ✨ COMPACT: Tools Section with 2-line design */}
+        <div className="border-b border-gray-700 bg-gray-800">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-white">TOOLS</h3>
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() =>
+                    setViewDensity(
+                      viewDensity === "clean" ? "detailed" : "clean"
+                    )
+                  }
+                  className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+                  title={`Switch to ${
+                    viewDensity === "clean" ? "detailed" : "clean"
+                  } view`}
+                >
+                  {viewDensity === "clean" ? "Detailed" : "Clean"}
+                </button>
+              </div>
+            </div>
 
-          <div className="space-y-4">
-            {/* Auto-Save Tools */}
-            <AutoSaveTools
+            {/* ✨ NEW: Compact Auto-Save Tools */}
+            <CompactAutoSaveTools
               autoSaveEnabled={autoSaveEnabled}
               setAutoSaveEnabled={setAutoSaveEnabled}
               handleManualSave={handleManualSave}
               pendingChanges={pendingChanges}
               isSavingContent={isSavingContent}
               lastSaved={lastSaved}
+              novelId={novel.id}
+              onRefresh={onRefresh}
             />
-
-            {/* Existing Tools */}
-            <div className="flex space-x-2">
-              <button className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-                <BookOpen className="w-4 h-4" />
-                <span>Details</span>
-              </button>
-
-              <DeleteAllManuscriptButton
-                novelId={novel.id}
-                onSuccess={onRefresh}
-                size="sm"
-              />
-            </div>
           </div>
         </div>
 

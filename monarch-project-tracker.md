@@ -28,7 +28,7 @@ src/
 │   │   └── [novelId]/
 │   │       ├── layout.tsx         # Workspace wrapper layout
 │   │       ├── dashboard/page.tsx # Main workspace dashboard
-│   │       ├── manuscript/page.tsx # ✅ REFACTORED: Clean with custom hook
+│   │       ├── manuscript/page.tsx # ✅ REFACTORED: Clean with modular hooks
 │   │       └── characters/page.tsx # Placeholder
 │   ├── components/
 │   │   ├── ui/                    # ✅ ENHANCED: Reusable UI components with shared patterns
@@ -65,7 +65,7 @@ src/
 │   │       ├── manuscript-editor/ # ✅ COMPLETE: Organized by function
 │   │       │   ├── layout/                    # Layout components
 │   │       │   │   ├── manuscript-header.tsx
-│   │       │   │   ├── manuscript-structure-sidebar.tsx  # ✅ ENHANCED: View density toggle
+│   │       │   │   ├── manuscript-structure-sidebar.tsx  # ✅ ENHANCED: Compact auto-save UI
 │   │       │   │   ├── manuscript-metadata-sidebar.tsx   # ✅ UPDATED: Uses shared components
 │   │       │   │   ├── delete-all-button.tsx             # ✅ ENHANCED: Size prop & compact UI
 │   │       │   │   └── index.ts
@@ -100,29 +100,31 @@ src/
 │   └── api/
 │       └── novels/
 │           ├── route.ts           # GET, POST /api/novels
-│           ├── [id]/
-│           │   ├── route.ts       # GET, PUT, DELETE /api/novels/[id]
-│           │   ├── import/route.ts # Enhanced import with issue detection
-│           │   ├── auto-fix/route.ts # Server-side auto-fix
-│           │   ├── import-fixed/route.ts # Import fixed structure
-│           │   ├── structure/route.ts # GET, DELETE /api/novels/[id]/structure
-│           │   ├── acts/
-│           │   │   ├── route.ts   # POST /api/novels/[id]/acts (create act)
-│           │   │   └── [actId]/
-│           │   │       ├── route.ts # PUT, DELETE /api/novels/[id]/acts/[actId]
-│           │   │       └── chapters/
-│           │   │           └── route.ts # POST /api/novels/[id]/acts/[actId]/chapters
-│           │   ├── chapters/[chapterId]/
-│           │   │   ├── route.ts # PUT, DELETE /api/novels/[id]/chapters/[chapterId]
-│           │   │   ├── reorder/route.ts # ✅ COMPLETE: Chapter reordering API
-│           │   │   └── scenes/
-│           │   │       └── route.ts # POST /api/novels/[id]/chapters/[chapterId]/scenes
-│           │   └── scenes/[sceneId]/
-│           │       ├── route.ts # PUT, DELETE /api/novels/[id]/scenes/[sceneId]
-│           │       └── reorder/route.ts # ✅ COMPLETE: Scene reordering API
+│           └── [id]/
+│               ├── route.ts       # GET, PUT, DELETE /api/novels/[id]
+│               ├── import/route.ts # Enhanced import with issue detection
+│               ├── auto-fix/route.ts # Server-side auto-fix
+│               ├── import-fixed/route.ts # Import fixed structure
+│               ├── structure/route.ts # GET, DELETE /api/novels/[id]/structure
+│               ├── acts/
+│               │   ├── route.ts   # POST /api/novels/[id]/acts (create act)
+│               │   └── [actId]/
+│               │       ├── route.ts # PUT, DELETE /api/novels/[id]/acts/[actId]
+│               │       └── chapters/
+│               │           └── route.ts # POST /api/novels/[id]/acts/[actId]/chapters
+│               ├── chapters/[chapterId]/
+│               │   ├── route.ts # PUT, DELETE /api/novels/[id]/chapters/[chapterId]
+│               │   ├── reorder/route.ts # ✅ COMPLETE: Chapter reordering API
+│               │   └── scenes/
+│               │       └── route.ts # POST /api/novels/[id]/chapters/[chapterId]/scenes
+│               └── scenes/[sceneId]/
+│                   ├── route.ts # PUT, DELETE /api/novels/[id]/scenes/[sceneId]
+│                   └── reorder/route.ts # ✅ COMPLETE: Scene reordering API
 ├── hooks/
-│   └── manuscript/               # ✅ NEW: Clean architecture
-│       └── useManuscriptLogic.ts # ✅ COMPLETE: All manuscript logic extracted
+│   └── manuscript/               # ✅ NEW: Modular hook architecture
+│       ├── useManuscriptLogic.ts # ✅ REFACTORED: Main orchestrator hook
+│       ├── useManuscriptState.ts # ✅ NEW: Dedicated state management
+│       └── useAutoSave.ts        # ✅ NEW: Dedicated auto-save functionality
 ├── lib/
 │   ├── prisma.ts                 # Database client
 │   ├── novels/                   # ✅ REFACTORED: Modular service architecture
@@ -212,6 +214,89 @@ model Scene {
 ```
 
 ## ✅ Recently Completed Features
+
+### **🎉 FINALIZED: Modular Hook Architecture - Phase 1 & 2**
+
+**Achievement**: Successfully refactored the massive `useManuscriptLogic` hook into clean, focused, testable modules
+
+**Phase 1 Implementation**:
+
+1. **✅ COMPLETE: useAutoSave Hook Extraction**
+
+   - **Dedicated Auto-Save Logic**: All auto-save functionality isolated into `useAutoSave.ts`
+   - **2-Second Debouncing**: Maintained existing auto-save timing and behavior
+   - **Manual Save Override**: Preserved manual save functionality with proper error handling
+   - **Memory Management**: Proper cleanup of timeouts and references
+   - **Same Interface**: Components require zero changes - seamless integration
+
+2. **✅ COMPLETE: Clean Separation**
+   - **Focused Responsibility**: Auto-save hook only handles content saving
+   - **Reusable Logic**: Hook can be used for other content types in future
+   - **Independent Testing**: Auto-save can be unit tested separately
+   - **Type Safety**: Complete TypeScript coverage with proper interfaces
+
+**Phase 2 Implementation**:
+
+3. **✅ COMPLETE: useManuscriptState Hook Extraction**
+
+   - **Core State Management**: All state logic isolated into `useManuscriptState.ts`
+   - **Clean State Object**: Novel, loading, selections, and view modes properly organized
+   - **Action Creators**: Memoized action functions for optimal performance
+   - **Convenience Methods**: Added `updateNovel` helper for complex state updates
+   - **Infinite Loop Fix**: Resolved critical `loadNovelStructure` dependency issue
+
+4. **✅ COMPLETE: Orchestrator Hook**
+
+   - **Main Coordinator**: `useManuscriptLogic` now orchestrates smaller hooks
+   - **Same Public API**: Zero breaking changes for existing components
+   - **Better Dependencies**: Cleaner dependency arrays and memoization
+   - **Easier Debugging**: Issues can be isolated to specific hooks
+
+5. **✅ COMPLETE: Production Stability**
+   - **No Page Refreshes**: Fixed infinite loop that caused continuous reloading
+   - **All Features Working**: Auto-save, selections, CRUD operations all functional
+   - **Type Safety**: Complete TypeScript compliance across all new hooks
+   - **Performance Optimized**: Better memoization and reduced re-renders
+
+### **🎉 FINALIZED: Smart Auto-Save System with Professional Controls**
+
+**Achievement**: Complete debounced content saving system with manual override and comprehensive UI controls
+
+**Final Implementation**:
+
+1. **✅ COMPLETE: Smart Auto-Save Engine**
+
+   - **2-Second Debounced Saving**: Automatic content persistence without page refreshes
+   - **Toggle Control**: Professional on/off switch with visual indicators (green/gray states)
+   - **Pending Changes Tracking**: Real-time monitoring of unsaved content modifications
+   - **Graceful Degradation**: System works perfectly with auto-save disabled
+
+2. **✅ COMPLETE: Manual Save Override System**
+
+   - **Save Now Button**: Immediate save capability with visual feedback
+   - **Smart State Management**: Button enables only when changes exist
+   - **Loading Indicators**: Clear saving status with "Saving..." feedback
+   - **Error Resilience**: Comprehensive error handling with user notifications
+
+3. **✅ COMPLETE: Professional Auto-Save UI Controls**
+
+   - **Auto-Save Tools Panel**: Integrated into structure sidebar with clean layout
+   - **Status Indicators**: Real-time save status with timestamp formatting
+   - **Pending Changes Alerts**: Amber indicator for unsaved modifications
+   - **Last Saved Display**: Human-readable timestamps ("Just now", "2 minutes ago")
+
+4. **✅ COMPLETE: Robust Content Persistence**
+
+   - **Real-Time Word Count Updates**: Automatic recalculation on content changes
+   - **State Synchronization**: Selected scene updates without page refresh
+   - **Memory Efficiency**: Proper cleanup of timeouts and references
+   - **TypeScript Safety**: Complete type coverage for all auto-save functionality
+
+5. **✅ COMPLETE: Advanced Integration Architecture**
+   - **Custom Hook Integration**: Full auto-save logic in useManuscriptLogic hook
+   - **Component Prop Chains**: Complete data flow from page to all editor components
+   - **API Layer Updates**: Enhanced scene content saving with word count recalculation
+   - **UI Consistency**: Auto-save controls match existing design system patterns
 
 ### **🎉 FINALIZED: Complete Universal Renaming System**
 
@@ -324,10 +409,11 @@ model Scene {
 
 ### **🎯 HIGH PRIORITY: Ready for Implementation**
 
-1. **💾 Smart Auto-Save System** - Debounced content saving without page refreshes (2-second delay)
-2. **📝 Enhanced Scene Text Editor** - Professional Tiptap editor with auto-save indicators
-3. **👥 Character Management System** - Track characters, relationships, and scene appearances
+1. **🔧 Hook Architecture Phase 3** - Complete CRUD operations with local state updates (eliminate remaining page refreshes)
+2. **📝 Enhanced Scene Text Editor** - Professional Tiptap editor with rich text formatting and auto-save integration
+3. **👥 Character Management System** - Track characters, relationships, and scene appearances with auto-save
 4. **🔍 Global Search & Find** - Search across all scenes/chapters/acts with advanced filtering
+5. **📋 Scene Metadata Enhancement** - Extended scene properties (mood, tension, conflicts) with auto-save
 
 ### **📋 MEDIUM PRIORITY: Planning Phase**
 
@@ -345,44 +431,61 @@ model Scene {
 
 ## 🔧 Technical Achievements
 
+### **✅ Modular Hook Architecture Excellence**:
+
+- **Clean Separation**: Auto-save, state management, and business logic in focused hooks
+- **Reusable Components**: Auto-save hook can be used for other content types
+- **Easy Testing**: Each hook can be unit tested independently
+- **Performance Optimized**: Better memoization and reduced re-renders
+- **Type Safety**: Complete TypeScript coverage across all hooks
+
+### **✅ Auto-Save System Excellence**:
+
+- **Smart Debouncing**: 2-second delay prevents excessive API calls while ensuring data safety
+- **Professional UI Controls**: Toggle switch, manual save button, and comprehensive status display
+- **Real-Time Feedback**: Live pending changes tracking with timestamp formatting
+- **Graceful Degradation**: Full functionality with auto-save disabled for user preference
+- **Memory Safe**: Proper cleanup of timeouts and references preventing memory leaks
+
 ### **✅ Renaming System Excellence**:
 
-- **Universal Coverage** - Inline editing for Acts, Chapters, and Scenes across all views
-- **Smart Pattern Recognition** - Advanced auto-fix with comprehensive title format support
-- **Consistent UX** - Same editing patterns and visual feedback throughout the application
-- **Type-Safe Implementation** - Complete TypeScript coverage with proper interface definitions
+- **Universal Coverage**: Inline editing for Acts, Chapters, and Scenes across all views
+- **Smart Pattern Recognition**: Advanced auto-fix with comprehensive title format support
+- **Consistent UX**: Same editing patterns and visual feedback throughout the application
+- **Type-Safe Implementation**: Complete TypeScript coverage with proper interface definitions
 
 ### **✅ Architecture Excellence**:
 
-- **Professional EditableText** - Advanced lifecycle management with flexible layout options
-- **Optimized Performance** - Efficient state updates and minimal re-renders
-- **Scalable Component Library** - Reusable patterns ready for advanced features
-- **Clean Separation of Concerns** - Logic extracted to custom hooks with proper abstraction
+- **Professional EditableText**: Advanced lifecycle management with flexible layout options
+- **Optimized Performance**: Efficient state updates and minimal re-renders
+- **Scalable Component Library**: Reusable patterns ready for advanced features
+- **Clean Separation of Concerns**: Logic extracted to custom hooks with proper abstraction
 
 ### **✅ User Experience Excellence**:
 
-- **Intuitive Interactions** - Professional editing experience with smooth animations
-- **Error Resilience** - Comprehensive error handling with user-friendly feedback
-- **Accessibility First** - Full keyboard navigation and screen reader support
-- **Consistent Visual Design** - Clean layouts with optimized button placement and spacing
+- **Intuitive Interactions**: Professional editing experience with smooth animations
+- **Error Resilience**: Comprehensive error handling with user-friendly feedback
+- **Accessibility First**: Full keyboard navigation and screen reader support
+- **Consistent Visual Design**: Clean layouts with optimized button placement and spacing
 
 ## 🎉 Development Status
 
 **Your Monarch Story Platform now features:**
 
+✅ **FINALIZED: Modular Hook Architecture** - Clean, testable, focused hooks for maintainable code  
+✅ **FINALIZED: Smart Auto-Save System** - Complete debounced content saving with professional UI controls  
 ✅ **FINALIZED: Universal Renaming System** - Complete inline editing for all manuscript elements  
 ✅ **FINALIZED: Act Document View with Chapter Boundaries** - Perfect chapter separation with proper add buttons  
 ✅ **FINALIZED: Complete UI Layout & Error Resolution** - Professional layout with perfect sidebar spacing  
-✅ **Professional Editing Experience** - Advanced EditableText with lifecycle management  
-✅ **Smart Auto-Fix Integration** - Pattern recognition for imported content with title preservation  
+✅ **Professional Auto-Save Experience** - 2-second debouncing with manual override and real-time status  
+✅ **Advanced EditableText Components** - Lifecycle management with flexible layout options  
+✅ **Smart Content Persistence** - Real-time word count updates without page refreshes  
+✅ **Comprehensive Status Tracking** - Pending changes monitoring with timestamp formatting  
 ✅ **Type-Safe Architecture** - Complete TypeScript coverage with proper interfaces  
-✅ **Consistent UX Patterns** - Same editing experience across all views and components  
-✅ **Performance Optimized** - Efficient state management and minimal re-renders  
-✅ **Error Resilient** - Comprehensive error handling and runtime stability  
-✅ **Production Ready Core** - All fundamental manuscript editing features complete
+✅ **Production Ready Core** - All fundamental manuscript editing features with modular architecture
 
-**The manuscript editor now provides a complete professional writing experience with perfect UI layout and chapter boundaries! Next: Smart auto-save system.** 🎉
+**The manuscript editor now provides a complete professional writing experience with modular hook architecture, smart auto-save, perfect UI layout, and comprehensive content management! Next: Phase 3 CRUD refactoring.** 🎉
 
 ---
 
-_Complete story platform with finalized universal renaming system, perfect Act document view with chapter boundaries, optimized layouts, professional component library, and comprehensive inline editing. Ready for enhanced text editing, character management, and advanced writing features._
+_Complete story platform with finalized modular hook architecture, smart auto-save system, universal renaming capabilities, perfect Act document view with chapter boundaries, optimized layouts, professional component library, and comprehensive content management. Ready for Phase 3 CRUD refactoring, enhanced rich text editing, and character management features._
