@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/manuscript-content-area.tsx
-// ✨ UPDATED: Tightened styling with smaller titles, compact boxes, and reduced spacing
+// ✅ FINAL: Complete with breadcrumbs, focus buttons ONLY in act view, and Add Scene button
 
 import React from "react";
 import { FileText, Plus } from "lucide-react";
@@ -21,6 +21,7 @@ interface ManuscriptContentAreaProps {
   contentDisplayMode: ContentDisplayMode;
   onContentChange: (content: string) => void;
   onSceneClick: (sceneId: string, scene: Scene) => void;
+  onChapterClick?: (chapter: Chapter) => void; // ✅ Handler for chapter focus
   onSceneRename?: (sceneId: string, newTitle: string) => Promise<void>;
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
   onAddChapter?: (actId: string, afterChapterId?: string) => void;
@@ -32,7 +33,7 @@ interface ManuscriptContentAreaProps {
   marginRight?: string;
 }
 
-// ✨ UPDATED: Compact Scene Editor with tighter spacing
+// ✨ Scene Editor Component for Document Views
 const SceneEditor: React.FC<{
   scene: Scene;
   onSceneClick: (sceneId: string, scene: Scene) => void;
@@ -67,7 +68,7 @@ const SceneEditor: React.FC<{
         <div className="flex-1">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-medium text-gray-400">
-              Scene {scene.order}
+              SC{scene.order}
             </span>
             {onSceneRename ? (
               <EditableText
@@ -124,12 +125,13 @@ const SceneEditor: React.FC<{
   );
 };
 
-// ✅ ENHANCED: Chapter Header with order number and grey styling
+// ✅ Chapter Header with conditional Focus button (only in act view)
 const ChapterHeader: React.FC<{
   chapter: Chapter;
   onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
+  onChapterClick?: (chapter: Chapter) => void;
   showWordCount?: boolean;
-}> = ({ chapter, onChapterRename, showWordCount = true }) => {
+}> = ({ chapter, onChapterRename, onChapterClick, showWordCount = true }) => {
   const totalWords = chapter.scenes.reduce(
     (sum, scene) => sum + scene.wordCount,
     0
@@ -138,7 +140,7 @@ const ChapterHeader: React.FC<{
   return (
     <div className="my-4 p-3 border border-yellow-600/40 rounded bg-gray-800/30">
       <div className="flex items-center space-x-3">
-        {/* ✅ NEW: Compact chapter order number */}
+        {/* Compact chapter order number */}
         <span className="text-sm font-medium text-gray-400 flex-shrink-0">
           CH{chapter.order}
         </span>
@@ -164,12 +166,22 @@ const ChapterHeader: React.FC<{
             </p>
           )}
         </div>
+
+        {/* ✅ CRITICAL: Focus button only shows when onChapterClick is provided */}
+        {onChapterClick && (
+          <button
+            onClick={() => onChapterClick(chapter)}
+            className="px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+          >
+            Focus
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-// ✨ UPDATED: Compact Add Chapter Button with golden theme
+// Add Chapter Button with golden theme
 const AddChapterButton: React.FC<{
   actId: string;
   afterChapterId?: string;
@@ -188,7 +200,7 @@ const AddChapterButton: React.FC<{
   );
 };
 
-// ✅ ENHANCED: Act Document View Header with order number and left-aligned stats
+// Act Document View Header
 const ActDocumentViewHeader: React.FC<{
   act: Act;
   onActRename?: (actId: string, newTitle: string) => Promise<void>;
@@ -211,7 +223,6 @@ const ActDocumentViewHeader: React.FC<{
   return (
     <div className="mb-4 p-4 border-b border-red-700/40 bg-gray-800/50">
       <div className="flex items-center space-x-3">
-        {/* ✅ NEW: Compact act order number */}
         <span className="text-sm font-medium text-gray-400 flex-shrink-0">
           ACT{act.order}
         </span>
@@ -229,7 +240,6 @@ const ActDocumentViewHeader: React.FC<{
             <h1 className="text-xl font-bold text-white">{act.title}</h1>
           )}
 
-          {/* ✅ UPDATED: Left-aligned stats instead of centered */}
           <p className="text-gray-400 mt-1 text-sm">
             Act view • {totalChapters} chapter{totalChapters !== 1 ? "s" : ""} •{" "}
             {totalScenes} scene{totalScenes !== 1 ? "s" : ""} •{" "}
@@ -241,7 +251,7 @@ const ActDocumentViewHeader: React.FC<{
   );
 };
 
-// Helper functions to find chapter/act info - PROPERLY TYPED
+// Helper functions to find chapter/act info
 const findChapterFromSection = (
   novel: NovelWithStructure | undefined,
   section: ContentSection
@@ -302,6 +312,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
   contentDisplayMode,
   onContentChange,
   onSceneClick,
+  onChapterClick,
   onSceneRename,
   onAddScene,
   onAddChapter,
@@ -338,7 +349,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ Grid view - Enhanced with rename functionality
+  // Grid view
   if (
     (viewMode === "chapter" || viewMode === "act") &&
     contentDisplayMode === "grid"
@@ -360,29 +371,62 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ Single scene view - uses main onContentChange
+  // ✅ Scene view with breadcrumbs and Add Scene button
   if (viewMode === "scene") {
     const section = aggregatedContent.sections[0];
+    const scene = section.scenes[0];
+
+    // Find chapter and act info for breadcrumbs
+    const chapterInfo = findChapterFromSection(novel, section);
+    const actInfo = chapterInfo ? findActFromSection(novel, section) : null;
+
     return (
       <div
-        className="flex-1 p-6 transition-all duration-300"
+        className="flex-1 transition-all duration-300"
         style={{ marginLeft, marginRight }}
       >
-        <SceneTextEditor
-          content={section.content}
-          onContentChange={onContentChange}
-          placeholder="Start writing your scene..."
-          readOnly={false}
-        />
+        <div className="p-6 h-full flex flex-col">
+          {/* ✅ Breadcrumb navigation */}
+          {actInfo && chapterInfo && (
+            <div className="text-xs text-gray-500 mb-3 border-b border-gray-700 pb-2">
+              ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order} -{" "}
+              {chapterInfo.title}
+            </div>
+          )}
+
+          {/* Scene Content */}
+          <div className="flex-1">
+            <SceneTextEditor
+              content={section.content}
+              onContentChange={onContentChange}
+              placeholder="Start writing your scene..."
+              readOnly={false}
+            />
+          </div>
+
+          {/* Add Scene Button at bottom */}
+          {onAddScene && chapterInfo && (
+            <div className="flex justify-center py-3 border-t border-gray-700 mt-4">
+              <button
+                onClick={() => onAddScene(chapterInfo.id, scene.id)}
+                className="flex items-center space-x-2 px-4 py-2 border border-dashed border-blue-600 rounded bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200 text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="font-medium">Add Scene</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
-  // ✅ UPDATED: Chapter Document View with tighter spacing
+  // ✅ Chapter view with breadcrumbs - NO focus button
   if (viewMode === "chapter") {
     const section = aggregatedContent.sections[0];
     const scenes = section.scenes;
     const chapterInfo = findChapterFromSection(novel, section);
+    const actInfo = chapterInfo ? findActFromSection(novel, section) : null;
     const actId = chapterInfo
       ? findActIdForChapter(novel, chapterInfo.id)
       : null;
@@ -393,10 +437,19 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         style={{ marginLeft, marginRight }}
       >
         <div className="p-4 space-y-4">
+          {/* ✅ Breadcrumb navigation for chapter view */}
+          {actInfo && (
+            <div className="text-xs text-gray-500 mb-3 border-b border-gray-700 pb-2">
+              ACT{actInfo.order} - {actInfo.title}
+            </div>
+          )}
+
           {chapterInfo && (
             <ChapterHeader
               chapter={chapterInfo}
               onChapterRename={onChapterRename}
+              // ✅ CRITICAL: NO focus button in chapter view - we're already there!
+              onChapterClick={undefined}
             />
           )}
 
@@ -426,7 +479,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ UPDATED: Act Document View with much tighter spacing
+  // ✅ Act view with focus buttons on chapters
   if (viewMode === "act") {
     const firstSection = aggregatedContent.sections[0];
     const actInfo = findActFromSection(novel, firstSection);
@@ -466,6 +519,8 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                 <ChapterHeader
                   chapter={chapter}
                   onChapterRename={onChapterRename}
+                  // ✅ CRITICAL: Focus button ONLY in act view
+                  onChapterClick={onChapterClick}
                   showWordCount={true}
                 />
 

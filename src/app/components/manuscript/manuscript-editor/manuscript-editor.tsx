@@ -252,6 +252,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           onAddScene={onAddScene}
           onAddChapter={onAddChapter}
           novel={novel}
+          onChapterClick={onChapterSelect}
           // ✨ NEW: Pass the individual scene change handler
           onIndividualSceneChange={handleIndividualSceneChange}
           marginLeft="0"
