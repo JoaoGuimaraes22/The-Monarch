@@ -294,67 +294,78 @@ export const DocxUploader: React.FC<DocxUploaderProps> = ({
         body: formData,
       });
 
+      // ✅ FIXED: Only call response.json() once
+      if (!response.ok) {
+        // Handle HTTP error
+        let errorMessage = "Auto-fix failed";
+        try {
+          const errorResult = await response.json();
+          errorMessage =
+            errorResult.error || errorResult.message || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse successful response
       const result = await response.json();
 
-      if (response.ok) {
-        // ✅ UPDATED: Handle both old and new standardized response formats
-        const success = result.success !== undefined ? result.success : true;
+      // ✅ UPDATED: Handle both old and new standardized response formats
+      const success = result.success !== undefined ? result.success : true;
 
-        if (success) {
-          console.log("✅ Server-side auto-fix completed successfully");
+      if (success) {
+        console.log("✅ Server-side auto-fix completed successfully");
 
-          // ✅ FIXED: Extract auto-fix data from either format
-          const autoFixData = result.data ? result.data : result;
+        // ✅ FIXED: Extract auto-fix data from either format
+        const autoFixData = result.data ? result.data : result;
 
-          console.log("📊 Updated structure:", autoFixData.structure);
+        console.log("📊 Updated structure:", autoFixData.structure);
 
-          // Store the fixed structure data for preview and import
-          setFixedStructureData(autoFixData.fixedStructureData);
+        // Store the fixed structure data for preview and import
+        setFixedStructureData(autoFixData.fixedStructureData);
 
-          // Update the import result to show the changes
-          setImportResult((prev) => {
-            if (!prev) return prev;
+        // Update the import result to show the changes
+        setImportResult((prev) => {
+          if (!prev) return prev;
 
-            return {
-              ...prev,
-              // Update structure and validation based on format
-              ...(prev.data
-                ? {
-                    data: {
-                      ...prev.data,
-                      structure: autoFixData.structure,
-                      validation: autoFixData.validation,
-                    },
-                  }
-                : {
+          return {
+            ...prev,
+            // Update structure and validation based on format
+            ...(prev.data
+              ? {
+                  data: {
+                    ...prev.data,
                     structure: autoFixData.structure,
                     validation: autoFixData.validation,
-                  }),
-              issuesDetected: autoFixData.issuesDetected,
-              isFixed: true,
-              fixApplied: issue.type,
-            };
-          });
+                  },
+                }
+              : {
+                  structure: autoFixData.structure,
+                  validation: autoFixData.validation,
+                }),
+            issuesDetected: autoFixData.issuesDetected,
+            isFixed: true,
+            fixApplied: issue.type,
+          };
+        });
 
-          // Show success feedback
-          const message = `✅ Auto-fix applied successfully!\n\n${
-            result.message || "Structure has been fixed"
-          }\n\n📊 Updated Structure:\n• Acts: ${
-            autoFixData.structure?.acts || 0
-          }\n• Chapters: ${autoFixData.structure?.chapters || 0}\n• Scenes: ${
-            autoFixData.structure?.scenes || 0
-          }\n• Words: ${(
-            autoFixData.structure?.wordCount || 0
-          ).toLocaleString()}\n\n⚠️ Preview the changes below and click "Import Fixed Structure" to save to database.`;
+        // Show success feedback
+        const message = `✅ Auto-fix applied successfully!\n\n${
+          result.message || "Structure has been fixed"
+        }\n\n📊 Updated Structure:\n• Acts: ${
+          autoFixData.structure?.acts || 0
+        }\n• Chapters: ${autoFixData.structure?.chapters || 0}\n• Scenes: ${
+          autoFixData.structure?.scenes || 0
+        }\n• Words: ${(
+          autoFixData.structure?.wordCount || 0
+        ).toLocaleString()}\n\n⚠️ Preview the changes below and click "Import Fixed Structure" to save to database.`;
 
-          alert(message);
-          console.log("🎉 Auto-fix UI updated successfully");
-        } else {
-          throw new Error(result.error || result.message || "Auto-fix failed");
-        }
+        alert(message);
+        console.log("🎉 Auto-fix UI updated successfully");
       } else {
-        const error = await response.json();
-        throw new Error(error.error || error.message || "Auto-fix failed");
+        throw new Error(result.error || result.message || "Auto-fix failed");
       }
     } catch (networkError) {
       console.error("❌ Network error during auto-fix:", networkError);
