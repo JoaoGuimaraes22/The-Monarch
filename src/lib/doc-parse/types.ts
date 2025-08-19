@@ -11,6 +11,8 @@ export interface ParsedStructure {
     fileSize?: number;
     parseDate?: string;
   };
+  // ✅ ADD: Optional issues property
+  issues?: StructureIssue[];
 }
 
 export interface ParsedAct {

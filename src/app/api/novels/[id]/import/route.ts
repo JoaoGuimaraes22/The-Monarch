@@ -1,11 +1,12 @@
 // src/app/api/novels/[id]/import/route.ts
-// Document import with full middleware stack
+// FIXED: Correct method names and proper typing
 
 import { NextRequest } from "next/server";
 import {
   EnhancedDocxParser,
   StructureAnalyzer,
   ParsedStructure,
+  StructureIssue,
 } from "@/lib/doc-parse";
 import { novelService } from "@/lib/novels";
 import {
@@ -29,16 +30,7 @@ interface ImportResponseData {
   validation: {
     isValid: boolean;
     errors: string[];
-    warnings: Array<{
-      type: string;
-      severity: "error" | "warning";
-      message: string;
-      autoFixable: boolean;
-      fixAction?: {
-        type: string;
-        description: string;
-      };
-    }>;
+    warnings: StructureIssue[];
   };
   novel?: {
     id: string;
@@ -95,14 +87,25 @@ export const POST = composeMiddleware(
       wordCount: parsedStructure.wordCount,
     });
 
-    // Analyze structure for issues
+    // ✅ FIXED: Use correct method name and handle the structure
     console.log("🔍 Analyzing structure for issues...");
-    const validation = StructureAnalyzer.analyzeStructure(parsedStructure);
+    const validation = StructureAnalyzer.validateStructure(parsedStructure);
+
+    // Get additional issues from the parsed structure (if any)
+    const additionalIssues = parsedStructure.issues || [];
+    const allWarnings = [...validation.warnings, ...additionalIssues];
+
+    // Create final validation object with proper typing
+    const finalValidation = {
+      isValid: validation.isValid,
+      errors: validation.errors,
+      warnings: allWarnings,
+    };
 
     console.log("📋 Structure validation:", {
-      isValid: validation.isValid,
-      errors: validation.errors.length,
-      warnings: validation.warnings.length,
+      isValid: finalValidation.isValid,
+      errors: finalValidation.errors.length,
+      warnings: finalValidation.warnings.length,
     });
 
     // Calculate structure statistics
@@ -120,12 +123,12 @@ export const POST = composeMiddleware(
       wordCount: parsedStructure.wordCount,
     };
 
-    // If document is valid and has no fixable issues, auto-import
-    const hasFixableIssues = validation.warnings.some(
-      (issue) => issue.autoFixable
+    // ✅ FIXED: Check for fixable issues with proper typing
+    const hasFixableIssues = finalValidation.warnings.some(
+      (issue: StructureIssue) => issue.autoFixable
     );
 
-    if (validation.isValid && !hasFixableIssues) {
+    if (finalValidation.isValid && !hasFixableIssues) {
       console.log("✅ Document structure is perfect - auto-importing...");
 
       // Import directly to database
@@ -135,7 +138,7 @@ export const POST = composeMiddleware(
 
       const responseData: ImportResponseData = {
         structure,
-        validation,
+        validation: finalValidation,
         novel: {
           id: updatedNovel.id,
           title: updatedNovel.title,
@@ -154,14 +157,14 @@ export const POST = composeMiddleware(
     // Return structure for review (with potential issues)
     const responseData: ImportResponseData = {
       structure,
-      validation,
+      validation: finalValidation,
       parsedStructure, // Include for potential auto-fix
     };
 
     return createSuccessResponse(
       responseData,
       hasFixableIssues
-        ? `Document parsed with ${validation.warnings.length} fixable issues`
+        ? `Document parsed with ${finalValidation.warnings.length} fixable issues`
         : "Document parsed successfully - ready for import",
       context.requestId
     );
@@ -170,3 +173,37 @@ export const POST = composeMiddleware(
     handleServiceError(error);
   }
 });
+
+/*
+===== FIXES APPLIED =====
+
+✅ FIXED METHOD NAME: 
+   - Changed `StructureAnalyzer.analyzeStructure()` 
+   - To `StructureAnalyzer.validateStructure()`
+
+✅ FIXED TYPE ISSUES:
+   - Added proper import for `StructureIssue` type
+   - Typed the `issue` parameter in the `.some()` callback
+   - Combined validation warnings with parsed structure issues
+
+✅ ENHANCED VALIDATION:
+   - Merge validation warnings with any issues from parsed structure
+   - Properly handle both validation errors and structural issues
+   - Maintain type safety throughout the validation process
+
+===== STRUCTURE ANALYSIS FLOW =====
+
+1. Parse document with EnhancedDocxParser.parseFromBuffer()
+2. Get basic validation with StructureAnalyzer.validateStructure()
+3. Combine with any additional issues from parsedStructure.issues
+4. Check for auto-fixable issues with proper typing
+5. Auto-import if perfect, or return for user review
+
+===== RESPONSE DATA =====
+
+The response now includes:
+- structure: Statistics (acts, chapters, scenes, word count)
+- validation: Combined validation results with proper typing
+- autoImported: Boolean flag for perfect documents
+- parsedStructure: Full structure for potential auto-fix operations
+*/
