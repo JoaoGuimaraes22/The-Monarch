@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/layout/compact-auto-save-tools.tsx
-// ✨ NEW: Compact 2-line auto-save tools design
+// ✨ UPDATED: Added contextual import button integration
 
 import React, { useState } from "react";
 import {
@@ -22,7 +22,7 @@ interface CompactAutoSaveToolsProps {
   lastSaved: Date | null;
   novelId: string;
   onRefresh: () => void;
-  onOpenContextualImport?: () => void; // ADD THIS LINE
+  onOpenContextualImport?: () => void; // ✨ NEW: Contextual import handler
 }
 
 export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
@@ -68,13 +68,18 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
 
   return (
     <div className="space-y-2">
-      <button
-        onClick={onOpenContextualImport}
-        className="flex items-center space-x-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-      >
-        <Upload className="w-3 h-3" />
-        <span>Import</span>
-      </button>
+      {/* ✨ NEW: Import Button - Top of tools */}
+      {onOpenContextualImport && (
+        <button
+          onClick={onOpenContextualImport}
+          className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+          title="Import document content"
+        >
+          <Upload className="w-4 h-4" />
+          <span>Import Document</span>
+        </button>
+      )}
+
       {/* Line 1: Auto-Save Toggle + Save Now Button */}
       <div className="flex items-center justify-between space-x-2">
         {/* Auto-Save Toggle */}
@@ -172,46 +177,42 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
               <span
                 className={autoSaveEnabled ? "text-green-400" : "text-gray-400"}
               >
-                {autoSaveEnabled ? "Enabled (2s delay)" : "Disabled"}
+                {autoSaveEnabled ? "Active" : "Disabled"}
               </span>
             </div>
-
             <div className="flex justify-between">
-              <span className="text-gray-400">Last Action:</span>
-              <span className="text-gray-300">
-                {isSavingContent ? "Saving..." : "Idle"}
+              <span className="text-gray-400">Content Status:</span>
+              <span
+                className={
+                  isSavingContent
+                    ? "text-blue-400"
+                    : pendingChanges
+                    ? "text-amber-400"
+                    : "text-green-400"
+                }
+              >
+                {isSavingContent
+                  ? "Saving..."
+                  : pendingChanges
+                  ? "Unsaved changes"
+                  : "All saved"}
               </span>
             </div>
-
-            {lastSaved && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Last Save Time:</span>
-                <span className="text-gray-300">
-                  {lastSaved.toLocaleTimeString()}
-                </span>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <span className="text-gray-400">Last Saved:</span>
+              <span className="text-gray-300">
+                {formatLastSaved(lastSaved)}
+              </span>
+            </div>
           </div>
 
-          {/* Manual Save Actions */}
-          <div className="space-y-2">
-            <button
-              onClick={handleManualSaveClick}
-              disabled={isManualSaving || isSavingContent || !pendingChanges}
-              className={`w-full flex items-center justify-center space-x-2 px-3 py-2 rounded text-sm font-medium transition-colors ${
-                pendingChanges && !isSavingContent && !isManualSaving
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              <Save className="w-4 h-4" />
-              <span>Force Save Now</span>
-            </button>
-
-            {/* Additional controls can go here */}
-            <div className="text-xs text-gray-500 text-center">
-              Changes auto-save every 2 seconds when enabled
-            </div>
+          {/* Help Text */}
+          <div className="text-xs text-gray-500 bg-gray-800 rounded p-2">
+            <p className="mb-1 font-medium">Auto-Save Info:</p>
+            <p>
+              Changes are automatically saved after 2 seconds of inactivity when
+              auto-save is enabled. Use &#34;Save Now&#34; for immediate saves.
+            </p>
           </div>
         </div>
       )}

@@ -1,71 +1,24 @@
 // src/app/components/manuscript/contextual-import/utils.ts
-// Utility functions for contextual import system
+// Clean utility functions for explicit target selection flow
 
-import { NovelWithStructure, Scene } from "@/lib/novels";
-import { ImportContext, ImportTarget, ImportMode, ViewMode } from "./types";
+import { NovelWithStructure } from "@/lib/novels";
+import { ImportContext, ImportTarget, ImportMode } from "./types";
 
 // ===== IMPORT CONTEXT CREATION =====
 
 interface CreateImportContextParams {
   novel: NovelWithStructure;
-  selectedScene?: Scene | null;
-  selectedChapterId?: string;
-  selectedActId?: string;
-  contentDisplayMode?: string;
 }
 
 /**
- * Create import context from current manuscript editor state
+ * Create import context - now just novel structure, no "current" context needed
  */
 export function createImportContext(
   params: CreateImportContextParams
 ): ImportContext {
-  const {
-    novel,
-    selectedScene,
-    selectedChapterId,
-    selectedActId,
-    contentDisplayMode,
-  } = params;
+  const { novel } = params;
 
-  // Find current act
-  let currentAct = selectedActId
-    ? novel.acts.find((act) => act.id === selectedActId)
-    : null;
-
-  // If no act selected but we have a scene, find the act through the scene's chapter
-  if (!currentAct && selectedScene) {
-    const sceneChapter = novel.acts
-      .flatMap((act) => act.chapters)
-      .find((ch) => ch.id === selectedScene.chapterId);
-    if (sceneChapter) {
-      currentAct = novel.acts.find((act) => act.id === sceneChapter.actId);
-    }
-  }
-
-  // Find current chapter
-  let currentChapter = selectedChapterId
-    ? novel.acts
-        .flatMap((act) => act.chapters)
-        .find((ch) => ch.id === selectedChapterId)
-    : null;
-
-  // If no chapter selected but we have a scene, find the chapter
-  if (!currentChapter && selectedScene) {
-    currentChapter = novel.acts
-      .flatMap((act) => act.chapters)
-      .find((ch) => ch.id === selectedScene.chapterId);
-  }
-
-  // Determine view mode
-  const viewMode = determineViewMode({
-    contentDisplayMode,
-    hasSelectedScene: !!selectedScene,
-    hasSelectedChapter: !!selectedChapterId,
-    hasSelectedAct: !!selectedActId,
-  });
-
-  // Build available acts structure
+  // Build complete acts structure with full hierarchy for selection
   const availableActs = novel.acts.map((act) => ({
     id: act.id,
     title: act.title,
@@ -74,78 +27,25 @@ export function createImportContext(
       id: chapter.id,
       title: chapter.title,
       order: chapter.order,
+      scenes: chapter.scenes.map((scene) => ({
+        id: scene.id,
+        title: scene.title || `Scene ${scene.order}`,
+        order: scene.order,
+      })),
     })),
   }));
 
   return {
     novelId: novel.id,
-    currentAct: currentAct
-      ? {
-          id: currentAct.id,
-          title: currentAct.title,
-          order: currentAct.order,
-        }
-      : undefined,
-    currentChapter: currentChapter
-      ? {
-          id: currentChapter.id,
-          title: currentChapter.title,
-          order: currentChapter.order,
-          actId: currentChapter.actId,
-        }
-      : undefined,
-    currentScene: selectedScene
-      ? {
-          id: selectedScene.id,
-          title: selectedScene.title || `Scene ${selectedScene.order}`,
-          order: selectedScene.order,
-          chapterId: selectedScene.chapterId,
-        }
-      : undefined,
-    viewMode,
+    novelTitle: novel.title,
     availableActs,
   };
 }
 
-// ===== VIEW MODE DETERMINATION =====
-
-interface DetermineViewModeParams {
-  contentDisplayMode?: string;
-  hasSelectedScene: boolean;
-  hasSelectedChapter: boolean;
-  hasSelectedAct: boolean;
-}
+// ===== EXPLICIT TARGET VALIDATION =====
 
 /**
- * Determine the current view mode from editor state
- */
-export function determineViewMode(params: DetermineViewModeParams): ViewMode {
-  const {
-    contentDisplayMode,
-    hasSelectedScene,
-    hasSelectedChapter,
-    hasSelectedAct,
-  } = params;
-
-  // Check if we're in document view mode
-  if (contentDisplayMode === "document") {
-    if (hasSelectedScene) return "scene";
-    if (hasSelectedChapter) return "chapter";
-    if (hasSelectedAct) return "act";
-    return "novel";
-  }
-
-  // Check grid or sidebar view
-  if (hasSelectedScene) return "scene";
-  if (hasSelectedChapter) return "chapter";
-  if (hasSelectedAct) return "act";
-  return "novel";
-}
-
-// ===== IMPORT TARGET VALIDATION =====
-
-/**
- * Validate that an import target is compatible with the current context
+ * Validate import target based on explicit selection flow
  */
 export function validateImportTarget(
   target: ImportTarget,
@@ -158,70 +58,125 @@ export function validateImportTarget(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Check mode-specific requirements
+  // Validate based on mode
   switch (target.mode) {
-    case "add-to-act":
-      if (!target.targetId) {
-        errors.push("Target act must be selected for add-to-act mode");
-      } else if (
-        !context.availableActs.find((act) => act.id === target.targetId)
-      ) {
-        errors.push("Selected target act does not exist");
+    case "new-act":
+      // New act only requires position selection
+      if (!target.position || target.position === "replace") {
+        errors.push("Position must be selected for new act");
+      }
+      if (target.position === "specific" && !target.specificPosition) {
+        errors.push("Specific position number is required");
       }
       break;
 
-    case "add-to-chapter":
-      if (!target.targetId) {
-        errors.push("Target chapter must be selected for add-to-chapter mode");
+    case "new-chapter":
+      // New chapter requires act selection and position
+      if (!target.targetActId) {
+        errors.push("Target act must be selected for new chapter");
+      } else {
+        const targetAct = context.availableActs.find(
+          (act) => act.id === target.targetActId
+        );
+        if (!targetAct) {
+          errors.push("Selected target act does not exist");
+        }
+      }
+      if (!target.position || target.position === "replace") {
+        errors.push("Position must be selected for new chapter");
+      }
+      if (target.position === "specific" && !target.specificPosition) {
+        errors.push("Specific position number is required");
+      }
+      break;
+
+    case "new-scene":
+      // New scene requires act and chapter selection and position
+      if (!target.targetActId) {
+        errors.push("Target act must be selected for new scene");
+      }
+      if (!target.targetChapterId) {
+        errors.push("Target chapter must be selected for new scene");
       } else {
         const targetChapter = context.availableActs
           .flatMap((act) => act.chapters)
-          .find((ch) => ch.id === target.targetId);
+          .find((ch) => ch.id === target.targetChapterId);
         if (!targetChapter) {
           errors.push("Selected target chapter does not exist");
+        }
+      }
+      if (!target.position || target.position === "replace") {
+        errors.push("Position must be selected for new scene");
+      }
+      if (target.position === "specific" && !target.specificPosition) {
+        errors.push("Specific position number is required");
+      }
+      break;
+
+    case "replace-act":
+      // Replace act requires act selection only
+      if (!target.targetActId) {
+        errors.push("Target act must be selected for replacement");
+      } else {
+        const targetAct = context.availableActs.find(
+          (act) => act.id === target.targetActId
+        );
+        if (!targetAct) {
+          errors.push("Selected target act does not exist");
+        } else {
+          warnings.push(`Act "${targetAct.title}" will be completely replaced`);
+        }
+      }
+      break;
+
+    case "replace-chapter":
+      // Replace chapter requires act and chapter selection
+      if (!target.targetActId) {
+        errors.push("Target act must be selected");
+      }
+      if (!target.targetChapterId) {
+        errors.push("Target chapter must be selected for replacement");
+      } else {
+        const targetChapter = context.availableActs
+          .flatMap((act) => act.chapters)
+          .find((ch) => ch.id === target.targetChapterId);
+        if (!targetChapter) {
+          errors.push("Selected target chapter does not exist");
+        } else {
+          warnings.push(
+            `Chapter "${targetChapter.title}" will be completely replaced`
+          );
         }
       }
       break;
 
     case "replace-scene":
-      if (!context.currentScene) {
-        errors.push("No current scene selected for replacement");
+      // Replace scene requires act, chapter, and scene selection
+      if (!target.targetActId) {
+        errors.push("Target act must be selected");
       }
-      break;
-
-    case "insert-scene":
-      if (!context.currentScene) {
-        errors.push("No current scene selected for insertion reference");
+      if (!target.targetChapterId) {
+        errors.push("Target chapter must be selected");
       }
-      if (
-        !target.position ||
-        (target.position !== "before" && target.position !== "after")
-      ) {
-        errors.push(
-          'Insert position must be "before" or "after" for scene insertion'
-        );
+      if (!target.targetSceneId) {
+        errors.push("Target scene must be selected for replacement");
+      } else {
+        const targetScene = context.availableActs
+          .flatMap((act) => act.chapters)
+          .flatMap((ch) => ch.scenes)
+          .find((sc) => sc.id === target.targetSceneId);
+        if (!targetScene) {
+          errors.push("Selected target scene does not exist");
+        } else {
+          warnings.push(
+            `Scene "${targetScene.title}" will be completely replaced`
+          );
+        }
       }
-      break;
-
-    case "new-act":
-    case "new-chapter":
-      // These don't require additional validation
       break;
 
     default:
       errors.push(`Unknown import mode: ${target.mode}`);
-  }
-
-  // Add contextual warnings
-  if (target.mode === "replace-scene" && context.currentScene) {
-    warnings.push("Current scene content will be completely replaced");
-  }
-
-  if (
-    target.mode === "add-to-act" &&
-    context.currentAct?.id === target.targetId
-  ) {
-    warnings.push("Adding content to the currently active act");
   }
 
   return {
@@ -242,131 +197,209 @@ export function formatImportDescription(
 ): string {
   switch (target.mode) {
     case "new-act":
-      return "Create a new act with the imported content";
-
-    case "add-to-act":
-      const targetAct = context.availableActs.find(
-        (act) => act.id === target.targetId
+      const actPosition = getPositionDescription(
+        target.position,
+        target.specificPosition
       );
-      return `Add chapters to "${targetAct?.title || "selected act"}"`;
+      return `Create a new act ${actPosition}`;
 
     case "new-chapter":
-      if (context.currentAct) {
-        return `Create a new chapter in "${context.currentAct.title}"`;
-      }
-      return "Create a new chapter";
+      const targetAct = context.availableActs.find(
+        (act) => act.id === target.targetActId
+      );
+      const chapterPosition = getPositionDescription(
+        target.position,
+        target.specificPosition
+      );
+      return `Create a new chapter in "${
+        targetAct?.title || "selected act"
+      }" ${chapterPosition}`;
 
-    case "add-to-chapter":
-      if (context.currentChapter) {
-        return `Add scenes to "${context.currentChapter.title}"`;
-      }
-      return "Add scenes to current chapter";
+    case "new-scene":
+      const targetActForScene = context.availableActs.find(
+        (act) => act.id === target.targetActId
+      );
+      const targetChapter = targetActForScene?.chapters.find(
+        (ch) => ch.id === target.targetChapterId
+      );
+      const scenePosition = getPositionDescription(
+        target.position,
+        target.specificPosition
+      );
+      return `Create new scenes in "${
+        targetChapter?.title || "selected chapter"
+      }" ${scenePosition}`;
+
+    case "replace-act":
+      const replaceAct = context.availableActs.find(
+        (act) => act.id === target.targetActId
+      );
+      return `Replace "${
+        replaceAct?.title || "selected act"
+      }" with imported content`;
+
+    case "replace-chapter":
+      const replaceActForChapter = context.availableActs.find(
+        (act) => act.id === target.targetActId
+      );
+      const replaceChapter = replaceActForChapter?.chapters.find(
+        (ch) => ch.id === target.targetChapterId
+      );
+      return `Replace "${
+        replaceChapter?.title || "selected chapter"
+      }" with imported content`;
 
     case "replace-scene":
-      if (context.currentScene) {
-        return `Replace "${context.currentScene.title}" with imported content`;
-      }
-      return "Replace current scene";
-
-    case "insert-scene":
-      if (context.currentScene) {
-        const position = target.position === "before" ? "before" : "after";
-        return `Insert new scene ${position} "${context.currentScene.title}"`;
-      }
-      return "Insert new scene";
+      const replaceActForScene = context.availableActs.find(
+        (act) => act.id === target.targetActId
+      );
+      const replaceChapterForScene = replaceActForScene?.chapters.find(
+        (ch) => ch.id === target.targetChapterId
+      );
+      const replaceScene = replaceChapterForScene?.scenes.find(
+        (sc) => sc.id === target.targetSceneId
+      );
+      return `Replace "${
+        replaceScene?.title || "selected scene"
+      }" with imported content`;
 
     default:
       return "Import document content";
   }
 }
 
-// ===== CONTEXT DISPLAY HELPERS =====
-
 /**
- * Get the current context as a readable string
+ * Get a human-readable position description
  */
-export function getContextDisplayString(context: ImportContext): string {
-  const parts: string[] = [];
-
-  if (context.currentAct) parts.push(context.currentAct.title);
-  if (context.currentChapter) parts.push(context.currentChapter.title);
-  if (context.currentScene) parts.push(context.currentScene.title);
-
-  return parts.length > 0 ? parts.join(" > ") : "Novel Root";
-}
-
-/**
- * Get a short context description for tooltips
- */
-export function getContextTooltip(context: ImportContext): string {
-  switch (context.viewMode) {
-    case "scene":
-      return `Current: ${context.currentScene?.title || "Scene"}`;
-    case "chapter":
-      return `Current: ${context.currentChapter?.title || "Chapter"}`;
-    case "act":
-      return `Current: ${context.currentAct?.title || "Act"}`;
-    case "novel":
-      return "Novel level";
+function getPositionDescription(
+  position: ImportTarget["position"],
+  specificPosition?: number
+): string {
+  switch (position) {
+    case "beginning":
+      return "at the beginning";
+    case "end":
+      return "at the end";
+    case "specific":
+      return `at position ${specificPosition}`;
     default:
-      return "Unknown context";
+      return "";
   }
 }
 
-// ===== IMPORT MODE HELPERS =====
+// ===== SELECTION HELPERS =====
 
 /**
- * Get recommended import modes based on current context
+ * Get display text for target selection (Order • Title format)
  */
-export function getRecommendedModes(context: ImportContext): ImportMode[] {
-  const recommended: ImportMode[] = [];
-
-  switch (context.viewMode) {
-    case "scene":
-      recommended.push("add-to-chapter", "insert-scene", "replace-scene");
-      break;
-    case "chapter":
-      recommended.push("add-to-chapter", "add-to-act", "new-chapter");
-      break;
-    case "act":
-      recommended.push("add-to-act", "new-chapter", "new-act");
-      break;
-    case "novel":
-      recommended.push("new-act", "new-chapter");
-      break;
-  }
-
-  return recommended;
+export function getTargetDisplayText(
+  type: "act" | "chapter" | "scene",
+  item: { order: number; title: string }
+): string {
+  const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+  return `${typeLabel} ${item.order} • ${item.title}`;
 }
 
 /**
- * Check if an import mode is available in the current context
+ * Get chapters for a specific act
  */
-export function isModeAvailable(
-  mode: ImportMode,
-  context: ImportContext
-): boolean {
-  switch (mode) {
-    case "new-act":
-    case "new-chapter":
-      return true; // Always available
+export function getChaptersForAct(
+  context: ImportContext,
+  actId: string
+): Array<{
+  id: string;
+  title: string;
+  order: number;
+  scenes: Array<{ id: string; title: string; order: number }>;
+}> {
+  const act = context.availableActs.find((act) => act.id === actId);
+  return act?.chapters || [];
+}
 
-    case "add-to-act":
-      return context.availableActs.length > 0;
+/**
+ * Get scenes for a specific chapter
+ */
+export function getScenesForChapter(
+  context: ImportContext,
+  chapterId: string
+): Array<{ id: string; title: string; order: number }> {
+  const chapter = context.availableActs
+    .flatMap((act) => act.chapters)
+    .find((ch) => ch.id === chapterId);
+  return chapter?.scenes || [];
+}
 
-    case "add-to-chapter":
-      return (
-        !!context.currentChapter ||
-        context.availableActs.some((act) => act.chapters.length > 0)
-      );
+// ===== POSITION HELPERS =====
 
-    case "replace-scene":
-    case "insert-scene":
-      return !!context.currentScene;
+/**
+ * Calculate what happens to existing items when inserting at a specific position
+ */
+export function calculatePositionBumping(
+  targetPosition: number,
+  existingItems: Array<{ order: number; title: string }>,
+  newItemCount: number = 1
+): {
+  itemsToMove: Array<{
+    title: string;
+    oldPosition: number;
+    newPosition: number;
+  }>;
+  preview: string;
+} {
+  const itemsToMove = existingItems
+    .filter((item) => item.order >= targetPosition)
+    .map((item) => ({
+      title: item.title,
+      oldPosition: item.order,
+      newPosition: item.order + newItemCount,
+    }));
 
-    default:
-      return false;
+  let preview = "";
+  if (itemsToMove.length > 0) {
+    if (itemsToMove.length === 1) {
+      preview = `${itemsToMove[0].title} becomes position ${itemsToMove[0].newPosition}`;
+    } else {
+      preview = `${itemsToMove.length} items shift to positions ${itemsToMove[0].newPosition}+`;
+    }
   }
+
+  return { itemsToMove, preview };
+}
+
+/**
+ * Get available positions for a target
+ */
+export function getAvailablePositions(
+  existingItems: Array<{ order: number }>
+): Array<{ value: number; label: string; description?: string }> {
+  const maxOrder = existingItems.length;
+  const positions = [];
+
+  // Beginning
+  positions.push({
+    value: 1,
+    label: "Beginning",
+    description: "Insert at the very start",
+  });
+
+  // Specific positions (2 through max+1)
+  for (let i = 2; i <= maxOrder + 1; i++) {
+    if (i === maxOrder + 1) {
+      positions.push({
+        value: i,
+        label: "End",
+        description: "Insert at the very end",
+      });
+    } else {
+      positions.push({
+        value: i,
+        label: `Position ${i}`,
+        description: `Insert before current position ${i}`,
+      });
+    }
+  }
+
+  return positions;
 }
 
 // ===== FILE VALIDATION =====
@@ -424,7 +457,11 @@ export function calculateMergePreview(
       (sum, act) => sum + act.chapters.length,
       0
     ),
-    scenes: 0, // Would need to be calculated from full novel structure
+    scenes: context.availableActs.reduce(
+      (sum, act) =>
+        sum + act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+      0
+    ),
     wordCount: 0, // Would need to be calculated from full novel structure
   };
 
@@ -438,26 +475,19 @@ export function calculateMergePreview(
       newStructure.scenes += importedStructure.scenes || 0;
       break;
 
-    case "add-to-act":
-      newStructure.chapters += importedStructure.chapters || 0;
-      newStructure.scenes += importedStructure.scenes || 0;
-      break;
-
     case "new-chapter":
       newStructure.chapters += 1;
       newStructure.scenes += importedStructure.scenes || 0;
       break;
 
-    case "add-to-chapter":
+    case "new-scene":
       newStructure.scenes += importedStructure.scenes || 0;
       break;
 
+    case "replace-act":
+    case "replace-chapter":
     case "replace-scene":
-      // Scene count stays the same, just content changes
-      break;
-
-    case "insert-scene":
-      newStructure.scenes += importedStructure.scenes || 1;
+      // Structure count stays the same for replacements, just content changes
       break;
   }
 

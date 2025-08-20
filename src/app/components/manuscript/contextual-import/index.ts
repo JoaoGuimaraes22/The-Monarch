@@ -8,7 +8,22 @@ export { default as ContextualImportDialog } from "./contextual-import-dialog";
 export { createImportContext } from "./utils";
 export { validateImportTarget } from "./utils";
 export { formatImportDescription } from "./utils";
-export { determineViewMode } from "./utils";
+
+// ===== NEW SELECTION HELPERS =====
+export { getTargetDisplayText } from "./utils";
+export { getChaptersForAct } from "./utils";
+export { getScenesForChapter } from "./utils";
+
+// ===== POSITION HELPERS =====
+export { calculatePositionBumping } from "./utils";
+export { getAvailablePositions } from "./utils";
+
+// ===== FILE & PREVIEW HELPERS =====
+export { validateImportFile } from "./utils";
+export { calculateMergePreview } from "./utils";
+
+// ===== HOOKS =====
+export { useContextualImport } from "@/hooks/manuscript/useContextualImport";
 
 // ===== TYPES =====
 export type {
@@ -37,8 +52,9 @@ export type {
 // ===== TYPE GUARDS =====
 export {
   isNewContentMode,
-  isContextualMode,
+  isReplaceMode,
   requiresTargetSelection,
+  requiresPositionSelection,
   isSceneMode,
   isActMode,
   isChapterMode,
@@ -49,9 +65,9 @@ export {
 
 ✅ CREATED:
 - types.ts                         # TypeScript interfaces
-- utils.ts                         # Utility functions (fixed)
+- utils.ts                         # ✅ UPDATED: Clean explicit selection utils
 - contextual-import-dialog.tsx     # Main dialog component
-- index.ts                         # This file - cleaned up
+- index.ts                         # ✅ UPDATED: Complete exports
 
 ⏳ NOT CREATED YET (commented out):
 - import-mode-selector.tsx         # Will create later
@@ -61,12 +77,32 @@ export {
 - hooks/useContextualImport.ts     # Will create later
 - hooks/useImportDialog.ts         # Will create later
 
+===== NEW EXPORTS ADDED =====
+
+✅ Selection Helpers:
+- getTargetDisplayText()          # Format "Act 1 • Title" display
+- getChaptersForAct()             # Get chapters for selected act
+- getScenesForChapter()           # Get scenes for selected chapter
+
+✅ Position Helpers:
+- calculatePositionBumping()      # Show what moves when inserting
+- getAvailablePositions()         # Generate Beginning/End/Precision options
+
+✅ File & Preview:
+- validateImportFile()            # File validation
+- calculateMergePreview()         # Structure preview
+
+✅ Enhanced Type Guards:
+- isReplaceMode()                 # Added missing replace mode guard
+- requiresPositionSelection()     # Added position requirement guard
+
 ===== CURRENT FOCUS =====
 
 Getting the basic integration working with:
 1. ContextualImportDialog (✅ working)
-2. Utility functions (✅ fixed)
-3. Integration with CompactAutoSaveTools (⏳ next step)
+2. Utility functions (✅ updated & clean)
+3. Complete barrel exports (✅ updated)
+4. Integration with CompactAutoSaveTools (⏳ next step)
 
 Once we confirm the basic dialog opens and works, we'll add the missing components.
 */
