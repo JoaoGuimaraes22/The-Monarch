@@ -1,11 +1,10 @@
 // src/app/api/novels/[id]/contextual-import/route.ts
-// API route for contextual document imports
+// ✅ FIXED: Proper FormData handling for contextual document imports
 
 import { NextRequest } from "next/server";
 import {
   withFileUpload,
   withRateLimit,
-  withValidation,
   composeMiddleware,
   createSuccessResponse,
   handleServiceError,
@@ -13,7 +12,7 @@ import {
 } from "@/lib/api";
 import { z } from "zod";
 import { EnhancedDocxParser, ParsedStructure } from "@/lib/doc-parse";
-import { novelService, NovelWithStructure, Act, Chapter } from "@/lib/novels";
+import { novelService, NovelWithStructure } from "@/lib/novels";
 
 // ===== VALIDATION SCHEMAS =====
 
@@ -23,11 +22,6 @@ const TargetSchema = z.object({
   targetChapterId: z.string().optional(),
   position: z.enum(["beginning", "end", "specific"]),
   specificPosition: z.number().min(1).optional(),
-});
-
-const ContextualImportSchema = z.object({
-  target: TargetSchema,
-  autoFix: z.boolean().optional().default(false),
 });
 
 // ===== TYPESCRIPT INTERFACES =====
@@ -75,14 +69,37 @@ export const POST = composeMiddleware(
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ],
     required: true,
-  }),
-  withValidation(ContextualImportSchema)
-)(async function (req: NextRequest, context, validatedData) {
+  })
+  // ✅ REMOVED: withValidation - we'll manually parse FormData
+)(async function (req: NextRequest, context) {
   try {
     const params = await context.params;
     const novelId = params.id as string;
-    const { target, autoFix } = validatedData as ContextualImportRequest;
     const file = context.file!; // Required by middleware
+
+    // ✅ FIXED: Manually parse FormData instead of using validation middleware
+    const formData = context.formData;
+    if (!formData) {
+      throw new Error("No form data provided");
+    }
+
+    // Parse target from FormData
+    const targetString = formData.get("target") as string;
+    if (!targetString) {
+      throw new Error("Target configuration is required");
+    }
+
+    let target: ImportTarget;
+    try {
+      const parsedTarget = JSON.parse(targetString);
+      target = TargetSchema.parse(parsedTarget);
+    } catch (err) {
+      throw new Error("Invalid target configuration");
+    }
+
+    // Parse autoFix from FormData
+    const autoFixString = formData.get("autoFix") as string;
+    const autoFix = autoFixString ? JSON.parse(autoFixString) : false;
 
     console.log(`🎯 Contextual import request for novel ${novelId}:`, {
       mode: target.mode,
