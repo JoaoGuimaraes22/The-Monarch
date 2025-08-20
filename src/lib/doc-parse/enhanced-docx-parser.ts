@@ -294,6 +294,7 @@ export class EnhancedDocxParser {
       content: sceneHtml,
       order: context.sceneOrder++,
       wordCount,
+      title: `Scene ${context.sceneOrder++}`,
     });
   }
 
