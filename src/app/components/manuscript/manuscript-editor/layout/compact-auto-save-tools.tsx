@@ -2,7 +2,15 @@
 // ✨ NEW: Compact 2-line auto-save tools design
 
 import React, { useState } from "react";
-import { Save, Power, PowerOff, Clock, Eye, EyeOff } from "lucide-react";
+import {
+  Save,
+  Power,
+  PowerOff,
+  Clock,
+  Eye,
+  EyeOff,
+  Upload,
+} from "lucide-react";
 import { DeleteAllManuscriptButton } from "./delete-all-button";
 
 interface CompactAutoSaveToolsProps {
@@ -14,6 +22,7 @@ interface CompactAutoSaveToolsProps {
   lastSaved: Date | null;
   novelId: string;
   onRefresh: () => void;
+  onOpenContextualImport?: () => void; // ADD THIS LINE
 }
 
 export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
@@ -25,6 +34,7 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
   lastSaved,
   novelId,
   onRefresh,
+  onOpenContextualImport,
 }) => {
   const [isManualSaving, setIsManualSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -58,6 +68,13 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
 
   return (
     <div className="space-y-2">
+      <button
+        onClick={onOpenContextualImport}
+        className="flex items-center space-x-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+      >
+        <Upload className="w-3 h-3" />
+        <span>Import</span>
+      </button>
       {/* Line 1: Auto-Save Toggle + Save Now Button */}
       <div className="flex items-center justify-between space-x-2">
         {/* Auto-Save Toggle */}

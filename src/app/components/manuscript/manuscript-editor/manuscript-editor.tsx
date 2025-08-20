@@ -10,8 +10,12 @@ import {
   ViewMode,
   ViewInfo,
   ContentDisplayMode,
+  contentAggregationService,
 } from "@/app/components/manuscript/manuscript-editor";
-import { contentAggregationService } from "@/app/components/manuscript/manuscript-editor/services/content-aggregation-service";
+
+import { ContextualImportDialog } from "@/app/components/manuscript/contextual-import";
+import type { ImportContext } from "@/app/components/manuscript/contextual-import";
+
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 
 interface ManuscriptEditorProps {
@@ -84,6 +88,29 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     useState(false);
   const [isMetadataSidebarCollapsed, setIsMetadataSidebarCollapsed] =
     useState(false);
+
+  const [contextualImportOpen, setContextualImportOpen] = useState(false);
+
+  // 3. CREATE A SIMPLE MOCK CONTEXT (we'll make this real in the next step):
+  const mockImportContext: ImportContext = {
+    novelId: novel.id,
+    novelTitle: novel.title,
+    availableActs: novel.acts.map((act) => ({
+      id: act.id,
+      title: act.title,
+      order: act.order,
+      chapters: act.chapters.map((chapter) => ({
+        id: chapter.id,
+        title: chapter.title,
+        order: chapter.order,
+        scenes: chapter.scenes.map((scene) => ({
+          id: scene.id,
+          title: scene.title || `Scene ${scene.order}`,
+          order: scene.order,
+        })),
+      })),
+    })),
+  };
 
   // Generate aggregated content based on current view mode and selection
   const aggregatedContent = useMemo(() => {
@@ -183,95 +210,111 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   }`;
 
   return (
-    <div className="flex h-full bg-gray-900">
-      {/* Left Sidebar - Structure */}
-      <ManuscriptStructureSidebar
-        novel={novel}
-        // ✅ FIXED: Use the correct prop names that match the interface
-        selectedScene={selectedScene}
-        selectedChapterId={selectedChapter?.id}
-        selectedActId={selectedAct?.id}
-        onSceneSelect={onSceneSelect}
-        onChapterSelect={onChapterSelect}
-        onActSelect={onActSelect}
-        onAddScene={onAddScene}
-        onAddChapter={onAddChapter}
-        onAddAct={onAddAct}
-        onDeleteScene={onDeleteScene}
-        onDeleteChapter={onDeleteChapter}
-        onDeleteAct={onDeleteAct}
-        onUpdateActName={onUpdateActName}
-        onUpdateChapterName={onUpdateChapterName}
-        onUpdateSceneName={onUpdateSceneName}
-        onRefresh={onRefresh}
-        // ✨ NEW: Auto-save props passed to sidebar
-        autoSaveEnabled={autoSaveEnabled}
-        setAutoSaveEnabled={setAutoSaveEnabled}
-        handleManualSave={handleManualSave}
-        pendingChanges={pendingChanges}
-        isSavingContent={isSavingContent}
-        lastSaved={lastSaved}
-        isCollapsed={isStructureSidebarCollapsed}
-        onToggleCollapse={() =>
-          setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
-        }
-        left={structureSidebarLeft}
-        width={structureSidebarWidth}
-      />
-
-      {/* Main Content Area */}
-      <div
-        className="flex-1 flex flex-col"
-        style={{
-          marginLeft: structureSidebarWidth,
-          marginRight: metadataSidebarWidth,
-        }}
-      >
-        {/* Header */}
-        <ManuscriptHeader
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
-          contentDisplayMode={contentDisplayMode}
-          onContentDisplayModeChange={onContentDisplayModeChange}
-          title={viewInfo.title}
-          subtitle={formattedSubtitle}
-          hasSelectedScene={!!selectedScene}
-          isReadOnly={viewMode !== "scene"}
-        />
-
-        {/* Content Area */}
-        <ManuscriptContentArea
-          aggregatedContent={aggregatedContent}
-          viewMode={viewMode}
-          contentDisplayMode={contentDisplayMode}
-          onContentChange={handleSceneContentChange}
-          onSceneClick={onSceneSelect}
-          onSceneRename={onUpdateSceneName}
-          onChapterRename={onUpdateChapterName}
-          onActRename={onUpdateActName}
+    <>
+      <div className="flex h-full bg-gray-900">
+        {/* Left Sidebar - Structure */}
+        <ManuscriptStructureSidebar
+          novel={novel}
+          // ✅ FIXED: Use the correct prop names that match the interface
+          selectedScene={selectedScene}
+          selectedChapterId={selectedChapter?.id}
+          selectedActId={selectedAct?.id}
+          onSceneSelect={onSceneSelect}
+          onChapterSelect={onChapterSelect}
+          onActSelect={onActSelect}
           onAddScene={onAddScene}
           onAddChapter={onAddChapter}
-          novel={novel}
-          onChapterClick={onChapterSelect}
-          // ✨ NEW: Pass the individual scene change handler
-          onIndividualSceneChange={handleIndividualSceneChange}
-          marginLeft="0"
-          marginRight="0"
+          onAddAct={onAddAct}
+          onDeleteScene={onDeleteScene}
+          onDeleteChapter={onDeleteChapter}
+          onDeleteAct={onDeleteAct}
+          onUpdateActName={onUpdateActName}
+          onUpdateChapterName={onUpdateChapterName}
+          onUpdateSceneName={onUpdateSceneName}
+          onRefresh={onRefresh}
+          // ✨ NEW: Auto-save props passed to sidebar
+          autoSaveEnabled={autoSaveEnabled}
+          setAutoSaveEnabled={setAutoSaveEnabled}
+          handleManualSave={handleManualSave}
+          pendingChanges={pendingChanges}
+          isSavingContent={isSavingContent}
+          lastSaved={lastSaved}
+          isCollapsed={isStructureSidebarCollapsed}
+          onToggleCollapse={() =>
+            setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
+          }
+          left={structureSidebarLeft}
+          width={structureSidebarWidth}
+          onOpenContextualImport={() => setContextualImportOpen(true)}
+        />
+
+        {/* Main Content Area */}
+        <div
+          className="flex-1 flex flex-col"
+          style={{
+            marginLeft: structureSidebarWidth,
+            marginRight: metadataSidebarWidth,
+          }}
+        >
+          {/* Header */}
+          <ManuscriptHeader
+            viewMode={viewMode}
+            onViewModeChange={onViewModeChange}
+            contentDisplayMode={contentDisplayMode}
+            onContentDisplayModeChange={onContentDisplayModeChange}
+            title={viewInfo.title}
+            subtitle={formattedSubtitle}
+            hasSelectedScene={!!selectedScene}
+            isReadOnly={viewMode !== "scene"}
+          />
+
+          {/* Content Area */}
+          <ManuscriptContentArea
+            aggregatedContent={aggregatedContent}
+            viewMode={viewMode}
+            contentDisplayMode={contentDisplayMode}
+            onContentChange={handleSceneContentChange}
+            onSceneClick={onSceneSelect}
+            onSceneRename={onUpdateSceneName}
+            onChapterRename={onUpdateChapterName}
+            onActRename={onUpdateActName}
+            onAddScene={onAddScene}
+            onAddChapter={onAddChapter}
+            novel={novel}
+            onChapterClick={onChapterSelect}
+            // ✨ NEW: Pass the individual scene change handler
+            onIndividualSceneChange={handleIndividualSceneChange}
+            marginLeft="0"
+            marginRight="0"
+          />
+        </div>
+
+        {/* Right Sidebar - Metadata */}
+        <ManuscriptMetadataSidebar
+          selectedScene={selectedScene}
+          viewMode={viewMode}
+          viewInfo={viewInfo}
+          isCollapsed={isMetadataSidebarCollapsed}
+          onToggleCollapse={() =>
+            setIsMetadataSidebarCollapsed(!isMetadataSidebarCollapsed)
+          }
+          right={metadataSidebarRight}
+          width={metadataSidebarWidth}
         />
       </div>
 
-      {/* Right Sidebar - Metadata */}
-      <ManuscriptMetadataSidebar
-        selectedScene={selectedScene}
-        viewMode={viewMode}
-        viewInfo={viewInfo}
-        isCollapsed={isMetadataSidebarCollapsed}
-        onToggleCollapse={() =>
-          setIsMetadataSidebarCollapsed(!isMetadataSidebarCollapsed)
-        }
-        right={metadataSidebarRight}
-        width={metadataSidebarWidth}
+      {/* ✨ CONTEXTUAL IMPORT DIALOG */}
+      <ContextualImportDialog
+        isOpen={contextualImportOpen}
+        onClose={() => setContextualImportOpen(false)}
+        context={mockImportContext}
+        onImportSuccess={() => {
+          setContextualImportOpen(false);
+          onRefresh(); // This should refresh your manuscript data
+          // Optional: show success message
+          alert("Import completed! (This is just a test for now)");
+        }}
       />
-    </div>
+    </>
   );
 };

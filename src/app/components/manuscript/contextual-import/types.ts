@@ -6,24 +6,7 @@ import { ParsedStructure, StructureIssue } from "@/lib/doc-parse";
 // ===== CORE IMPORT CONTEXT =====
 export interface ImportContext {
   novelId: string;
-  currentAct?: {
-    id: string;
-    title: string;
-    order: number;
-  };
-  currentChapter?: {
-    id: string;
-    title: string;
-    order: number;
-    actId: string;
-  };
-  currentScene?: {
-    id: string;
-    title: string;
-    order: number;
-    chapterId: string;
-  };
-  viewMode: "scene" | "chapter" | "act" | "novel";
+  novelTitle: string;
   availableActs: Array<{
     id: string;
     title: string;
@@ -32,6 +15,11 @@ export interface ImportContext {
       id: string;
       title: string;
       order: number;
+      scenes: Array<{
+        id: string;
+        title: string;
+        order: number;
+      }>;
     }>;
   }>;
 }
@@ -40,14 +28,16 @@ export interface ImportContext {
 export interface ImportTarget {
   mode:
     | "new-act"
-    | "add-to-act"
     | "new-chapter"
-    | "add-to-chapter"
-    | "replace-scene"
-    | "insert-scene";
-  targetId?: string; // ID of target act/chapter/scene
-  position: "before" | "after" | "append" | "replace";
-  insertAfterItemId?: string; // Specific item to insert after
+    | "new-scene"
+    | "replace-act"
+    | "replace-chapter"
+    | "replace-scene";
+  targetActId?: string;
+  targetChapterId?: string;
+  targetSceneId?: string;
+  position: "beginning" | "end" | "specific" | "replace";
+  specificPosition?: number;
 }
 
 // ===== IMPORT OPTIONS =====
@@ -104,7 +94,10 @@ export interface ContextualImportResult {
 // ===== DIALOG STATES =====
 export type ImportStep =
   | "mode-selection"
-  | "target-selection"
+  | "act-selection"
+  | "chapter-selection"
+  | "scene-selection"
+  | "position-selection"
   | "file-upload"
   | "preview"
   | "importing";
@@ -216,7 +209,7 @@ export interface EnhancedAutoSaveToolsProps {
   onRefresh: () => void;
 
   // New contextual import props
-  onOpenContextualImport: () => void;
+  onOpenContextualImport?: () => void;
   currentContext?: {
     actTitle?: string;
     chapterTitle?: string;
@@ -248,34 +241,37 @@ export interface ContextualImportResponse {
 // ===== UTILITY TYPES =====
 export type ImportMode = ImportTarget["mode"];
 export type ImportPosition = ImportTarget["position"];
-export type ViewMode = ImportContext["viewMode"];
+export type ViewMode = "scene" | "chapter" | "act" | "novel";
 
 // Type guards
 export const isNewContentMode = (mode: ImportMode): boolean => {
-  return mode === "new-act" || mode === "new-chapter";
+  return mode === "new-act" || mode === "new-chapter" || mode === "new-scene";
 };
 
-export const isContextualMode = (mode: ImportMode): boolean => {
+export const isReplaceMode = (mode: ImportMode): boolean => {
   return (
-    mode === "add-to-act" ||
-    mode === "add-to-chapter" ||
-    mode === "replace-scene" ||
-    mode === "insert-scene"
+    mode === "replace-act" ||
+    mode === "replace-chapter" ||
+    mode === "replace-scene"
   );
 };
 
 export const requiresTargetSelection = (mode: ImportMode): boolean => {
-  return isContextualMode(mode);
+  return mode !== "new-act"; // Only new-act doesn't need target selection
+};
+
+export const requiresPositionSelection = (mode: ImportMode): boolean => {
+  return isNewContentMode(mode); // Only new content modes need position selection
 };
 
 export const isSceneMode = (mode: ImportMode): boolean => {
-  return mode === "replace-scene" || mode === "insert-scene";
+  return mode === "replace-scene" || mode === "new-scene";
 };
 
 export const isActMode = (mode: ImportMode): boolean => {
-  return mode === "new-act" || mode === "add-to-act";
+  return mode === "new-act" || mode === "replace-act";
 };
 
 export const isChapterMode = (mode: ImportMode): boolean => {
-  return mode === "new-chapter" || mode === "add-to-chapter";
+  return mode === "new-chapter" || mode === "replace-chapter";
 };

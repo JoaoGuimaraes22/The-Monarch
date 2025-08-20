@@ -39,6 +39,8 @@ interface ManuscriptStructureSidebarProps {
   pendingChanges: boolean;
   isSavingContent: boolean;
   lastSaved: Date | null;
+  // ✨ NEW: Contextual import prop
+  onOpenContextualImport?: () => void;
 }
 
 export const ManuscriptStructureSidebar: React.FC<
@@ -72,6 +74,8 @@ export const ManuscriptStructureSidebar: React.FC<
   pendingChanges,
   isSavingContent,
   lastSaved,
+  // ✨ NEW: Contextual import prop
+  onOpenContextualImport,
 }) => {
   // Smart chapter expansion state management
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
@@ -172,6 +176,7 @@ export const ManuscriptStructureSidebar: React.FC<
               lastSaved={lastSaved}
               novelId={novel.id}
               onRefresh={onRefresh}
+              onOpenContextualImport={onOpenContextualImport}
             />
           </div>
         </div>
