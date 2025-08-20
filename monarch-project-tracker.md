@@ -7,6 +7,10 @@
 **User**: Aspiring fantasy writer building a complex narrative management system  
 **Philosophy**: Build what's genuinely useful, component-first architecture, dark theme matching Claude interface
 
+## Imporant notes
+
+- **Do not use "any" types**
+
 ## 🎨 Design System
 
 **Theme**: Clean black/white/red aesthetic
