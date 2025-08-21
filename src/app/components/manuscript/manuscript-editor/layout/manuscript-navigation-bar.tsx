@@ -1,196 +1,172 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-navigation-bar.tsx
-// Navigation component that adapts to view mode (Scene/Chapter/Act)
+// Clean navigation bar component with clear primary/secondary separation
 
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import {
   NavigationContext,
-  NavigationLevel,
-} from "@/hooks/manuscript/useManuscriptNavigation";
-import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/view-mode-selector";
+  PrimaryNavigation,
+  SecondaryNavigation,
+} from "@/hooks/manuscript/navigation/types";
 
 interface ManuscriptNavigationBarProps {
-  viewMode: ViewMode;
   navigationContext: NavigationContext;
-  onPreviousNavigation: () => void;
-  onNextNavigation: () => void;
-  onNavigationSelect: (itemId: string, level?: "primary" | "secondary") => void;
 }
 
-export const ManuscriptNavigationBar: React.FC<
-  ManuscriptNavigationBarProps
-> = ({
-  viewMode,
-  navigationContext,
-  onPreviousNavigation,
-  onNextNavigation,
-  onNavigationSelect,
+interface NavigationLevelProps {
+  navigation: PrimaryNavigation | SecondaryNavigation;
+  level: "primary" | "secondary";
+  isSecondary?: boolean;
+}
+
+// Single navigation level component
+const NavigationLevel: React.FC<NavigationLevelProps> = ({
+  navigation,
+  level,
+  isSecondary = false,
 }) => {
-  const [isPrimaryDropdownOpen, setIsPrimaryDropdownOpen] = useState(false);
-  const [isSecondaryDropdownOpen, setIsSecondaryDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ✅ FIX: Add refs to track dropdown containers
-  const primaryDropdownRef = useRef<HTMLDivElement>(null);
-  const secondaryDropdownRef = useRef<HTMLDivElement>(null);
+  const handleItemClick = (itemId: string) => {
+    console.log(`${level} item clicked:`, itemId);
 
-  // ✅ FIX: Improved handleItemClick with proper event handling
-  const handleItemClick = (
-    itemId: string,
-    levelType: "primary" | "secondary"
-  ) => {
-    console.log("Item clicked:", itemId);
-    onNavigationSelect(itemId, levelType);
-
-    // Close the appropriate dropdown
-    if (levelType === "primary") {
-      setIsPrimaryDropdownOpen(false);
+    if (level === "primary") {
+      (navigation as PrimaryNavigation).onSelect(itemId);
     } else {
-      setIsSecondaryDropdownOpen(false);
+      (navigation as SecondaryNavigation).onScrollTo(itemId);
     }
+
+    setIsDropdownOpen(false);
   };
 
-  // Render a single navigation level
-  const renderNavigationLevel = (
-    level: NavigationLevel,
-    levelType: "primary" | "secondary",
-    isSecondary = false
-  ) => {
-    const isDropdownOpen = isSecondary
-      ? isSecondaryDropdownOpen
-      : isPrimaryDropdownOpen;
-    const setDropdownOpen = isSecondary
-      ? setIsSecondaryDropdownOpen
-      : setIsPrimaryDropdownOpen;
-
-    // ✅ FIX: Get the correct ref for this dropdown
-    const dropdownRef = isSecondary ? secondaryDropdownRef : primaryDropdownRef;
-
-    return (
-      <div
-        className={`flex items-center space-x-2 ${
-          isSecondary ? "text-sm" : ""
-        }`}
-      >
-        {/* Previous Button */}
-        <button
-          onClick={onPreviousNavigation}
-          disabled={!level.hasPrevious}
-          className={`p-1 rounded transition-colors ${
-            level.hasPrevious
-              ? "text-gray-300 hover:text-white hover:bg-gray-700"
-              : "text-gray-600 cursor-not-allowed"
-          }`}
-          title={`Previous ${level.type}`}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
-        {/* Title with Dropdown */}
-        <div className="relative min-w-96" ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen(!isDropdownOpen)}
-            className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors hover:bg-gray-700 min-w-full ${
-              isSecondary ? "text-gray-300" : "text-white"
-            }`}
-          >
-            <span className="font-medium truncate">{level.title}</span>
-            <ChevronDown
-              className={`w-3 h-3 transition-transform flex-shrink-0 ml-auto ${
-                isDropdownOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {/* Dropdown Menu */}
-          {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 min-w-80 max-h-64 overflow-y-auto">
-              {level.items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleItemClick(item.id, levelType)}
-                  className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-gray-700 ${
-                    item.isCurrent
-                      ? "bg-blue-900/30 text-blue-300"
-                      : "text-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="truncate">{item.title}</span>
-                    {item.isCurrent && (
-                      <span className="text-xs text-blue-400">current</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Next Button */}
-        <button
-          onClick={onNextNavigation}
-          disabled={!level.hasNext}
-          className={`p-1 rounded transition-colors ${
-            level.hasNext
-              ? "text-gray-300 hover:text-white hover:bg-gray-700"
-              : "text-gray-600 cursor-not-allowed"
-          }`}
-          title={`Next ${level.type}`}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        {/* Position Indicator */}
-        {level.items.length > 0 && (
-          <span className="text-xs text-gray-500 ml-2">
-            ({level.currentIndex + 1} of {level.items.length})
-          </span>
-        )}
-      </div>
-    );
-  };
-
-  // ✅ FIX: Properly check if click is outside dropdown containers
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-
-      // Check if click is outside primary dropdown
       if (
-        isPrimaryDropdownOpen &&
-        primaryDropdownRef.current &&
-        !primaryDropdownRef.current.contains(target)
+        isDropdownOpen &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
       ) {
-        setIsPrimaryDropdownOpen(false);
-      }
-
-      // Check if click is outside secondary dropdown
-      if (
-        isSecondaryDropdownOpen &&
-        secondaryDropdownRef.current &&
-        !secondaryDropdownRef.current.contains(target)
-      ) {
-        setIsSecondaryDropdownOpen(false);
+        setIsDropdownOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isPrimaryDropdownOpen, isSecondaryDropdownOpen]);
+  }, [isDropdownOpen]);
 
+  return (
+    <div
+      className={`flex items-center space-x-2 ${isSecondary ? "text-sm" : ""}`}
+    >
+      {/* Previous Button */}
+      <button
+        onClick={navigation.onPrevious}
+        disabled={!navigation.hasPrevious}
+        className={`p-1 rounded transition-colors ${
+          navigation.hasPrevious
+            ? "text-gray-300 hover:text-white hover:bg-gray-700"
+            : "text-gray-600 cursor-not-allowed"
+        }`}
+        title={`Previous ${navigation.type}`}
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+
+      {/* Title with Dropdown */}
+      <div className="relative min-w-96" ref={dropdownRef}>
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors hover:bg-gray-700 min-w-full ${
+            isSecondary ? "text-gray-300" : "text-white"
+          }`}
+        >
+          <span className="font-medium truncate">
+            {navigation.current?.title || `Select ${navigation.type}`}
+          </span>
+          <ChevronDown
+            className={`w-3 h-3 transition-transform flex-shrink-0 ml-auto ${
+              isDropdownOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 min-w-80 max-h-64 overflow-y-auto">
+            {navigation.items.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-gray-700 ${
+                  item.isCurrent
+                    ? "bg-blue-900/30 text-blue-300"
+                    : "text-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="truncate">{item.title}</span>
+                  {item.isCurrent && (
+                    <span className="text-xs text-blue-400">current</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Next Button */}
+      <button
+        onClick={navigation.onNext}
+        disabled={!navigation.hasNext}
+        className={`p-1 rounded transition-colors ${
+          navigation.hasNext
+            ? "text-gray-300 hover:text-white hover:bg-gray-700"
+            : "text-gray-600 cursor-not-allowed"
+        }`}
+        title={`Next ${navigation.type}`}
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+
+      {/* Position Indicator */}
+      {navigation.items.length > 0 && navigation.current && (
+        <span className="text-xs text-gray-500 ml-2">
+          (
+          {navigation.items.findIndex(
+            (item) => item.id === navigation.current?.id
+          ) + 1}{" "}
+          of {navigation.items.length})
+        </span>
+      )}
+    </div>
+  );
+};
+
+// Main navigation bar component
+export const ManuscriptNavigationBar: React.FC<
+  ManuscriptNavigationBarProps
+> = ({ navigationContext }) => {
   return (
     <div className="space-y-2">
       {/* Primary Navigation Level */}
-      {renderNavigationLevel(navigationContext.primary, "primary")}
+      <NavigationLevel
+        navigation={navigationContext.navigation.primary}
+        level="primary"
+        isSecondary={false}
+      />
 
-      {/* Secondary Navigation Level (for Act view) */}
-      {navigationContext.secondary && (
+      {/* Secondary Navigation Level (for Chapter and Act views) */}
+      {"secondary" in navigationContext.navigation && (
         <div className="pl-4 border-l-2 border-gray-700">
-          {renderNavigationLevel(
-            navigationContext.secondary,
-            "secondary",
-            true
-          )}
+          <NavigationLevel
+            navigation={navigationContext.navigation.secondary}
+            level="secondary"
+            isSecondary={true}
+          />
         </div>
       )}
     </div>
@@ -198,25 +174,27 @@ export const ManuscriptNavigationBar: React.FC<
 };
 
 /*
-===== FIXES APPLIED =====
+===== CLEAN NAVIGATION BAR =====
 
-✅ DROPDOWN CLICK FIX:
-- Added refs to track dropdown containers
-- Improved handleClickOutside to check if click is actually outside
-- Created dedicated handleItemClick function
-- Properly handle event propagation
+✅ SIMPLE ARCHITECTURE:
+- Single NavigationLevel component handles both primary and secondary
+- Clear distinction between onSelect (primary) and onScrollTo (secondary)
+- Clean props interface with proper typing
 
-✅ EVENT HANDLING:
-- Separated item click logic from dropdown close logic
-- Added console.log for debugging
-- Ensured proper event flow
+✅ PROPER EVENT HANDLING:
+- Dedicated handleItemClick with level-aware logic
+- Proper dropdown management with refs
+- Clean outside click detection
 
-✅ IMPROVED ARCHITECTURE:
-- Better separation of concerns
-- More predictable dropdown behavior
-- Cleaner event management
+✅ ADAPTIVE RENDERING:
+- Scene view: Only primary level
+- Chapter view: Primary (chapters) + Secondary (scenes)
+- Act view: Primary (acts) + Secondary (chapters)
 
-The key issue was that the original handleClickOutside was closing 
-dropdowns on ANY mousedown event, even clicks inside the dropdown.
-Now it properly checks if the click is outside the dropdown container.
+✅ CONSISTENT UI:
+- Same visual design for both levels
+- Clear visual hierarchy with indentation
+- Proper disabled states and position indicators
+
+This is much cleaner and easier to maintain!
 */

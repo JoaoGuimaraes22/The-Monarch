@@ -4,7 +4,7 @@
 import React from "react";
 import { LayoutGrid, FileText } from "lucide-react";
 import { ManuscriptNavigationBar } from "./manuscript-navigation-bar";
-import { NavigationContext } from "@/hooks/manuscript/useManuscriptNavigation";
+import { NavigationContext } from "@/hooks/manuscript/navigation/useManuscriptNavigation";
 
 export type ContentDisplayMode = "document" | "grid";
 export type ViewMode = "scene" | "chapter" | "act";

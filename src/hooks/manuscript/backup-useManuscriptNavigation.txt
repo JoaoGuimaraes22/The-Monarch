@@ -1,5 +1,5 @@
 // src/hooks/manuscript/useManuscriptNavigation.ts
-// ✅ FIXED: Navigation logic with proper context generation and navigation handling
+// Navigation logic for manuscript elements following the behavior matrix
 
 import { useCallback } from "react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -88,7 +88,7 @@ export function useManuscriptNavigation(
   const getNextScene = useCallback((): Scene | null => {
     if (!selectedScene || !novel) return null;
 
-    // Find current scene position across all acts/chapters
+    // Find current scene position
     const allActs = getAllActs();
     let currentActIndex = -1;
     let currentChapterIndex = -1;
@@ -130,21 +130,21 @@ export function useManuscriptNavigation(
       (a, b) => a.order - b.order
     );
 
-    // Next scene in same chapter
+    // Try next scene in current chapter
     if (currentSceneIndex < currentScenes.length - 1) {
       return currentScenes[currentSceneIndex + 1];
     }
 
-    // First scene of next chapter in same act
+    // Try first scene of next chapter
     if (currentChapterIndex < currentChapters.length - 1) {
       const nextChapter = currentChapters[currentChapterIndex + 1];
       const nextChapterScenes = [...nextChapter.scenes].sort(
         (a, b) => a.order - b.order
       );
-      return nextChapterScenes[0] || null;
+      return nextChapterScenes.length > 0 ? nextChapterScenes[0] : null;
     }
 
-    // First scene of first chapter in next act
+    // Try first scene of first chapter in next act
     if (currentActIndex < allActs.length - 1) {
       const nextAct = allActs[currentActIndex + 1];
       const nextActChapters = [...nextAct.chapters].sort(
@@ -155,7 +155,7 @@ export function useManuscriptNavigation(
         const firstChapterScenes = [...firstChapter.scenes].sort(
           (a, b) => a.order - b.order
         );
-        return firstChapterScenes[0] || null;
+        return firstChapterScenes.length > 0 ? firstChapterScenes[0] : null;
       }
     }
 
@@ -165,7 +165,7 @@ export function useManuscriptNavigation(
   const getPreviousScene = useCallback((): Scene | null => {
     if (!selectedScene || !novel) return null;
 
-    // Find current scene position across all acts/chapters
+    // Find current scene position
     const allActs = getAllActs();
     let currentActIndex = -1;
     let currentChapterIndex = -1;
@@ -207,21 +207,23 @@ export function useManuscriptNavigation(
       (a, b) => a.order - b.order
     );
 
-    // Previous scene in same chapter
+    // Try previous scene in current chapter
     if (currentSceneIndex > 0) {
       return currentScenes[currentSceneIndex - 1];
     }
 
-    // Last scene of previous chapter in same act
+    // Try last scene of previous chapter
     if (currentChapterIndex > 0) {
       const prevChapter = currentChapters[currentChapterIndex - 1];
       const prevChapterScenes = [...prevChapter.scenes].sort(
         (a, b) => a.order - b.order
       );
-      return prevChapterScenes[prevChapterScenes.length - 1] || null;
+      return prevChapterScenes.length > 0
+        ? prevChapterScenes[prevChapterScenes.length - 1]
+        : null;
     }
 
-    // Last scene of last chapter in previous act
+    // Try last scene of last chapter in previous act
     if (currentActIndex > 0) {
       const prevAct = allActs[currentActIndex - 1];
       const prevActChapters = [...prevAct.chapters].sort(
@@ -232,7 +234,9 @@ export function useManuscriptNavigation(
         const lastChapterScenes = [...lastChapter.scenes].sort(
           (a, b) => a.order - b.order
         );
-        return lastChapterScenes[lastChapterScenes.length - 1] || null;
+        return lastChapterScenes.length > 0
+          ? lastChapterScenes[lastChapterScenes.length - 1]
+          : null;
       }
     }
 
@@ -242,72 +246,98 @@ export function useManuscriptNavigation(
   // ===== CHAPTER NAVIGATION =====
 
   const getNextChapter = useCallback((): Chapter | null => {
-    if (!selectedChapter || !selectedAct || !novel) return null;
+    if (!selectedChapter || !novel) return null;
 
-    const chapters = getChaptersInCurrentAct();
-    const currentIndex = chapters.findIndex(
-      (ch) => ch.id === selectedChapter.id
-    );
+    const allActs = getAllActs();
+    let currentActIndex = -1;
+    let currentChapterIndex = -1;
 
-    // Next chapter in same act
-    if (currentIndex !== -1 && currentIndex < chapters.length - 1) {
-      return chapters[currentIndex + 1];
+    // Find current chapter position
+    for (let actIndex = 0; actIndex < allActs.length; actIndex++) {
+      const act = allActs[actIndex];
+      const chapters = [...act.chapters].sort((a, b) => a.order - b.order);
+      const chapterIndex = chapters.findIndex(
+        (chapter) => chapter.id === selectedChapter.id
+      );
+
+      if (chapterIndex !== -1) {
+        currentActIndex = actIndex;
+        currentChapterIndex = chapterIndex;
+        break;
+      }
     }
 
-    // First chapter of next act
-    const acts = getAllActs();
-    const currentActIndex = acts.findIndex((act) => act.id === selectedAct.id);
+    if (currentActIndex === -1) return null;
 
-    if (currentActIndex !== -1 && currentActIndex < acts.length - 1) {
-      const nextAct = acts[currentActIndex + 1];
+    const currentAct = allActs[currentActIndex];
+    const currentChapters = [...currentAct.chapters].sort(
+      (a, b) => a.order - b.order
+    );
+
+    // Try next chapter in current act
+    if (currentChapterIndex < currentChapters.length - 1) {
+      return currentChapters[currentChapterIndex + 1];
+    }
+
+    // Try first chapter of next act
+    if (currentActIndex < allActs.length - 1) {
+      const nextAct = allActs[currentActIndex + 1];
       const nextActChapters = [...nextAct.chapters].sort(
         (a, b) => a.order - b.order
       );
-      return nextActChapters[0] || null;
+      return nextActChapters.length > 0 ? nextActChapters[0] : null;
     }
 
     return null;
-  }, [
-    selectedChapter,
-    selectedAct,
-    novel,
-    getChaptersInCurrentAct,
-    getAllActs,
-  ]);
+  }, [selectedChapter, novel, getAllActs]);
 
   const getPreviousChapter = useCallback((): Chapter | null => {
-    if (!selectedChapter || !selectedAct || !novel) return null;
+    if (!selectedChapter || !novel) return null;
 
-    const chapters = getChaptersInCurrentAct();
-    const currentIndex = chapters.findIndex(
-      (ch) => ch.id === selectedChapter.id
-    );
+    const allActs = getAllActs();
+    let currentActIndex = -1;
+    let currentChapterIndex = -1;
 
-    // Previous chapter in same act
-    if (currentIndex > 0) {
-      return chapters[currentIndex - 1];
+    // Find current chapter position
+    for (let actIndex = 0; actIndex < allActs.length; actIndex++) {
+      const act = allActs[actIndex];
+      const chapters = [...act.chapters].sort((a, b) => a.order - b.order);
+      const chapterIndex = chapters.findIndex(
+        (chapter) => chapter.id === selectedChapter.id
+      );
+
+      if (chapterIndex !== -1) {
+        currentActIndex = actIndex;
+        currentChapterIndex = chapterIndex;
+        break;
+      }
     }
 
-    // Last chapter of previous act
-    const acts = getAllActs();
-    const currentActIndex = acts.findIndex((act) => act.id === selectedAct.id);
+    if (currentActIndex === -1) return null;
 
+    const currentAct = allActs[currentActIndex];
+    const currentChapters = [...currentAct.chapters].sort(
+      (a, b) => a.order - b.order
+    );
+
+    // Try previous chapter in current act
+    if (currentChapterIndex > 0) {
+      return currentChapters[currentChapterIndex - 1];
+    }
+
+    // Try last chapter of previous act
     if (currentActIndex > 0) {
-      const prevAct = acts[currentActIndex - 1];
+      const prevAct = allActs[currentActIndex - 1];
       const prevActChapters = [...prevAct.chapters].sort(
         (a, b) => a.order - b.order
       );
-      return prevActChapters[prevActChapters.length - 1] || null;
+      return prevActChapters.length > 0
+        ? prevActChapters[prevActChapters.length - 1]
+        : null;
     }
 
     return null;
-  }, [
-    selectedChapter,
-    selectedAct,
-    novel,
-    getChaptersInCurrentAct,
-    getAllActs,
-  ]);
+  }, [selectedChapter, novel, getAllActs]);
 
   // ===== ACT NAVIGATION =====
 
@@ -340,73 +370,146 @@ export function useManuscriptNavigation(
   // ===== SCROLL UTILITIES =====
 
   const scrollToChapter = useCallback((chapterId: string) => {
-    setTimeout(() => {
-      const chapterElement = document.querySelector(
-        `[data-chapter-id="${chapterId}"]`
-      );
-      if (chapterElement) {
-        chapterElement.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }, 100);
+    // Implementation for scrolling to chapter in document view
+    const element = document.getElementById(`chapter-${chapterId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, []);
 
-  // ===== MAIN NAVIGATION HANDLERS =====
+  // ===== NAVIGATION HANDLERS =====
 
   const handlePreviousNavigation = useCallback(() => {
     if (viewMode === "scene") {
-      // Scene View: Navigate to previous scene across chapters/acts
+      // Scene View: Previous scene (cross-chapter if needed)
       const prevScene = getPreviousScene();
       if (prevScene) {
         selectionHandlers.handleSceneSelect(prevScene.id, prevScene);
       }
     } else if (viewMode === "chapter") {
-      // Chapter View: Navigate to previous chapter
+      // Chapter View: Previous chapter (cross-act if needed)
       const prevChapter = getPreviousChapter();
       if (prevChapter) {
         selectionHandlers.handleChapterSelect(prevChapter);
       }
     } else if (viewMode === "act") {
-      // Act View: Navigate to previous act
-      const prevAct = getPreviousAct();
-      if (prevAct) {
-        selectionHandlers.handleActSelect(prevAct);
+      // Act View: Chapter navigation within act OR act navigation
+      const prevChapter = getPreviousChapter();
+      if (
+        prevChapter &&
+        selectedAct &&
+        selectionUtils.findParentAct(prevChapter.id)?.id === selectedAct.id
+      ) {
+        // Same act: chapter navigation
+        if (contentDisplayMode === "document") {
+          // Scroll to chapter
+          actions.setSelectedChapter(prevChapter);
+          const firstScene =
+            selectionUtils.findFirstSceneInChapter(prevChapter);
+          if (firstScene) {
+            actions.setSelectedScene(firstScene);
+          }
+          scrollToChapter(prevChapter.id);
+        } else {
+          // Grid: switch to document and scroll
+          actions.setContentDisplayMode("document");
+          actions.setSelectedChapter(prevChapter);
+          const firstScene =
+            selectionUtils.findFirstSceneInChapter(prevChapter);
+          if (firstScene) {
+            actions.setSelectedScene(firstScene);
+          }
+          scrollToChapter(prevChapter.id);
+        }
+      } else {
+        // Different act: act navigation
+        const prevAct = getPreviousAct();
+        if (prevAct) {
+          selectionHandlers.handleActSelect(prevAct);
+        }
       }
     }
   }, [
     viewMode,
+    contentDisplayMode,
+    selectedAct,
     getPreviousScene,
     getPreviousChapter,
     getPreviousAct,
     selectionHandlers,
+    selectionUtils,
+    actions,
+    scrollToChapter,
   ]);
 
   const handleNextNavigation = useCallback(() => {
     if (viewMode === "scene") {
-      // Scene View: Navigate to next scene across chapters/acts
+      // Scene View: Next scene (cross-chapter if needed)
       const nextScene = getNextScene();
       if (nextScene) {
         selectionHandlers.handleSceneSelect(nextScene.id, nextScene);
       }
     } else if (viewMode === "chapter") {
-      // Chapter View: Navigate to next chapter
+      // Chapter View: Next chapter (cross-act if needed)
       const nextChapter = getNextChapter();
       if (nextChapter) {
         selectionHandlers.handleChapterSelect(nextChapter);
       }
     } else if (viewMode === "act") {
-      // Act View: Navigate to next act
-      const nextAct = getNextAct();
-      if (nextAct) {
-        selectionHandlers.handleActSelect(nextAct);
+      // Act View: Chapter navigation within act OR act navigation
+      const nextChapter = getNextChapter();
+      if (
+        nextChapter &&
+        selectedAct &&
+        selectionUtils.findParentAct(nextChapter.id)?.id === selectedAct.id
+      ) {
+        // Same act: chapter navigation
+        if (contentDisplayMode === "document") {
+          // Scroll to chapter
+          actions.setSelectedChapter(nextChapter);
+          const firstScene =
+            selectionUtils.findFirstSceneInChapter(nextChapter);
+          if (firstScene) {
+            actions.setSelectedScene(firstScene);
+          }
+          scrollToChapter(nextChapter.id);
+        } else {
+          // Grid: switch to document and scroll
+          actions.setContentDisplayMode("document");
+          actions.setSelectedChapter(nextChapter);
+          const firstScene =
+            selectionUtils.findFirstSceneInChapter(nextChapter);
+          if (firstScene) {
+            actions.setSelectedScene(firstScene);
+          }
+          scrollToChapter(nextChapter.id);
+        }
+      } else {
+        // Different act: act navigation
+        const nextAct = getNextAct();
+        if (nextAct) {
+          selectionHandlers.handleActSelect(nextAct);
+        }
       }
     }
-  }, [viewMode, getNextScene, getNextChapter, getNextAct, selectionHandlers]);
+  }, [
+    viewMode,
+    contentDisplayMode,
+    selectedAct,
+    getNextScene,
+    getNextChapter,
+    getNextAct,
+    selectionHandlers,
+    selectionUtils,
+    actions,
+    scrollToChapter,
+  ]);
 
+  // ✅ FIX: Complete handleNavigationSelect with proper secondary level handling
   const handleNavigationSelect = useCallback(
     (itemId: string, level: "primary" | "secondary" = "primary") => {
+      console.log("handleNavigationSelect:", { itemId, level, viewMode });
+
       if (viewMode === "scene") {
         // Scene dropdown: select specific scene
         const scenes = getScenesInCurrentChapter();
@@ -415,13 +518,26 @@ export function useManuscriptNavigation(
           selectionHandlers.handleSceneSelect(selectedScene.id, selectedScene);
         }
       } else if (viewMode === "chapter") {
-        // Chapter dropdown: select specific chapter
-        const chapters = getChaptersInCurrentAct();
-        const selectedChapter = chapters.find(
-          (chapter) => chapter.id === itemId
-        );
-        if (selectedChapter) {
-          selectionHandlers.handleChapterSelect(selectedChapter);
+        // ✅ FIX: Chapter view should support both primary (chapters) and secondary (scenes)
+        if (level === "primary") {
+          // Primary: select specific chapter
+          const chapters = getChaptersInCurrentAct();
+          const selectedChapter = chapters.find(
+            (chapter) => chapter.id === itemId
+          );
+          if (selectedChapter) {
+            selectionHandlers.handleChapterSelect(selectedChapter);
+          }
+        } else {
+          // Secondary: select specific scene within current chapter
+          const scenes = getScenesInCurrentChapter();
+          const selectedScene = scenes.find((scene) => scene.id === itemId);
+          if (selectedScene) {
+            selectionHandlers.handleSceneSelect(
+              selectedScene.id,
+              selectedScene
+            );
+          }
         }
       } else if (viewMode === "act") {
         // Act view has dual navigation
@@ -476,8 +592,7 @@ export function useManuscriptNavigation(
     ]
   );
 
-  // ===== NAVIGATION CONTEXT GENERATION =====
-
+  // ✅ FIX: Complete getNavigationContext with secondary level for chapter view
   const getNavigationContext = useCallback((): NavigationContext => {
     if (viewMode === "scene") {
       const scenes = getScenesInCurrentChapter();
@@ -493,7 +608,7 @@ export function useManuscriptNavigation(
             order: scene.order,
             isCurrent: scene.id === selectedScene?.id,
           })),
-          currentIndex: currentIndex !== -1 ? currentIndex : 0,
+          currentIndex,
           hasNext: !!getNextScene(),
           hasPrevious: !!getPreviousScene(),
           title: selectedScene?.title || `Scene ${selectedScene?.order || 1}`,
@@ -501,13 +616,12 @@ export function useManuscriptNavigation(
         },
       };
     } else if (viewMode === "chapter") {
+      // ✅ FIX: Chapter view should have both primary (chapters) and secondary (scenes)
       const chapters = getChaptersInCurrentAct();
-      const currentIndex = chapters.findIndex(
+      const scenes = getScenesInCurrentChapter();
+      const currentChapterIndex = chapters.findIndex(
         (chapter) => chapter.id === selectedChapter?.id
       );
-
-      // ✅ FIXED: For chapter view, show both chapter AND scene navigation
-      const scenes = getScenesInCurrentChapter();
       const currentSceneIndex = scenes.findIndex(
         (scene) => scene.id === selectedScene?.id
       );
@@ -520,12 +634,13 @@ export function useManuscriptNavigation(
             order: chapter.order,
             isCurrent: chapter.id === selectedChapter?.id,
           })),
-          currentIndex: currentIndex !== -1 ? currentIndex : 0,
+          currentIndex: currentChapterIndex,
           hasNext: !!getNextChapter(),
           hasPrevious: !!getPreviousChapter(),
           title: selectedChapter?.title || "Chapter",
           type: "chapter",
         },
+        // ✅ FIX: Add secondary level for scenes within current chapter
         secondary: {
           items: scenes.map((scene) => ({
             id: scene.id,
@@ -533,7 +648,7 @@ export function useManuscriptNavigation(
             order: scene.order,
             isCurrent: scene.id === selectedScene?.id,
           })),
-          currentIndex: currentSceneIndex !== -1 ? currentSceneIndex : 0,
+          currentIndex: currentSceneIndex,
           hasNext: !!getNextScene(),
           hasPrevious: !!getPreviousScene(),
           title: selectedScene?.title || `Scene ${selectedScene?.order || 1}`,
@@ -558,7 +673,7 @@ export function useManuscriptNavigation(
             order: act.order,
             isCurrent: act.id === selectedAct?.id,
           })),
-          currentIndex: currentActIndex !== -1 ? currentActIndex : 0,
+          currentIndex: currentActIndex,
           hasNext: !!getNextAct(),
           hasPrevious: !!getPreviousAct(),
           title: selectedAct?.title || "Act",
@@ -571,7 +686,7 @@ export function useManuscriptNavigation(
             order: chapter.order,
             isCurrent: chapter.id === selectedChapter?.id,
           })),
-          currentIndex: currentChapterIndex !== -1 ? currentChapterIndex : 0,
+          currentIndex: currentChapterIndex,
           hasNext:
             !!getNextChapter() && getNextChapter()?.actId === selectedAct?.id,
           hasPrevious:
@@ -583,14 +698,14 @@ export function useManuscriptNavigation(
       };
     }
 
-    // Fallback for edge cases
+    // Fallback
     return {
       primary: {
         items: [],
-        currentIndex: 0,
+        currentIndex: -1,
         hasNext: false,
         hasPrevious: false,
-        title: "No Selection",
+        title: "",
         type: "scene",
       },
     };
@@ -620,32 +735,24 @@ export function useManuscriptNavigation(
 }
 
 /*
-===== KEY FIXES APPLIED =====
+===== NAVIGATION BEHAVIOR MATRIX =====
 
-✅ PROPER CHAPTER VIEW NAVIGATION:
-- Fixed chapter view to show BOTH chapter and scene navigation (dual-level)
-- Corrected currentIndex calculation with proper fallbacks
-- Proper scene navigation within current chapter
+VIEW MODE | PRIMARY LEVEL        | SECONDARY LEVEL      | NAVIGATION BEHAVIOR
+----------|---------------------|---------------------|---------------------
+Scene     | Scenes in Chapter   | None                | Scene-to-scene navigation
+Chapter   | Chapters in Act     | Scenes in Chapter   | Chapter + scene navigation  ✅ FIXED
+Act       | Acts                | Chapters in Act     | Act + chapter navigation
 
-✅ ROBUST CROSS-BOUNDARY NAVIGATION:
-- Scene navigation now properly crosses chapter and act boundaries
-- Chapter navigation properly crosses act boundaries
-- Improved edge case handling throughout
+✅ FIXES APPLIED:
 
-✅ ACCURATE CONTEXT GENERATION:
-- Fixed currentIndex calculations with -1 fallback handling
-- Proper hasNext/hasPrevious calculations
-- Better title generation with fallbacks
+1. **Chapter View Secondary Level**: Added proper secondary navigation for scenes within the current chapter
+2. **handleNavigationSelect**: Added handling for secondary level in chapter view to select scenes
+3. **getNavigationContext**: Added secondary level generation for chapter view with scene items
+4. **Debugging**: Added console.log to track selection events
 
-✅ CONSISTENT BEHAVIOR:
-- Navigation logic matches the expected behavior matrix
-- Proper selection handlers called for each navigation type
-- Clean separation between navigation levels
+The key fix was recognizing that chapter view should have:
+- Primary: Chapters (to switch between chapters)  
+- Secondary: Scenes within current chapter (to navigate scenes without changing chapters)
 
-✅ PERFORMANCE IMPROVEMENTS:
-- Better memoization of expensive calculations
-- Reduced unnecessary re-renders
-- Cleaner dependency arrays
-
-This should fix the navigation issues you're experiencing! 🎯
+This matches the behavior matrix where chapter view provides both chapter-level and scene-level navigation.
 */

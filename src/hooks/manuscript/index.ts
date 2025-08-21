@@ -10,7 +10,7 @@ export { useContextualImport } from "./useContextualImport";
 
 // ===== MODULAR HOOKS (Available for advanced use cases) =====
 export { useManuscriptSelection } from "./useManuscriptSelection";
-export { useManuscriptNavigation } from "./useManuscriptNavigation";
+export { useManuscriptNavigation } from "./navigation/useManuscriptNavigation";
 export { useManuscriptUpdates } from "./useManuscriptUpdates";
 export { useManuscriptUtils } from "./useManuscriptUtils";
 
@@ -38,13 +38,18 @@ export type {
   ManuscriptSelectionReturn,
 } from "./useManuscriptSelection";
 
+// ===== NEW NAVIGATION TYPES =====
 export type {
-  NavigationConfig,
-  NavigationContext,
-  NavigationLevel,
   NavigationItem,
+  PrimaryNavigation,
+  SecondaryNavigation,
+  SceneViewNavigation,
+  ChapterViewNavigation,
+  ActViewNavigation,
+  NavigationContext,
+  NavigationConfig,
   NavigationHandlers,
-} from "./useManuscriptNavigation";
+} from "./navigation/types";
 
 export type { UpdateConfig, UpdateHandlers } from "./useManuscriptUpdates";
 
@@ -56,25 +61,14 @@ export type { UtilsConfig, UtilityHelpers } from "./useManuscriptUtils";
 ✅ SEPARATION OF CONCERNS:
 - useManuscriptLogic: Main orchestrator
 - useManuscriptSelection: Selection logic
-- useManuscriptNavigation: Navigation behavior
+- useManuscriptNavigation: Clean navigation with primary/secondary separation
 - useManuscriptUpdates: API update handlers
 - useManuscriptUtils: Utility functions
 
-✅ MAINTAINABILITY:
-- Each hook has single responsibility
-- Easy to find and modify specific functionality
-- Better testing isolation
-- Clear dependencies
-
-✅ REUSABILITY:
-- Components can use sub-hooks directly if needed
-- Navigation logic available for other features
-- Selection utilities can be shared
-
-✅ EXTENSIBILITY:
-- Easy to add keyboard shortcuts to navigation
-- Simple to add navigation history/bookmarks
-- Clear place for new navigation features
+✅ NEW NAVIGATION ARCHITECTURE:
+- Clear separation between selection (primary) and scrolling (secondary)
+- View-specific navigation configurations
+- Clean handler distinction (onSelect vs onScrollTo)
 
 ===== USAGE PATTERNS =====
 
@@ -85,6 +79,11 @@ const manuscript = useManuscriptLogic(novelId);
 const navigation = useManuscriptNavigation(config);
 const selection = useManuscriptSelection(config);
 
+// New navigation usage
+const { getNavigationContext, selectChapter, scrollToScene } = useManuscriptNavigation(config);
+const navContext = getNavigationContext();
+
 // Testing usage (unit tests)
 import { useManuscriptNavigation } from '@/hooks/manuscript';
+import type { NavigationContext } from '@/hooks/manuscript';
 */
