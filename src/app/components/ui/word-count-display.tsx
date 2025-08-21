@@ -60,8 +60,8 @@ export const WordCountDisplay: React.FC<WordCountDisplayProps> = ({
       <span
         className={`inline-flex items-center space-x-1 text-xs text-gray-500 ${className}`}
       >
-        {showIcon && <FileText className="w-3 h-3" />}
-        <span>{formattedCount}</span>
+        {showIcon && <FileText className="w-2.5 h-2.5" />}
+        <span className="text-xs">{formattedCount}</span>
       </span>
     );
   }
@@ -70,16 +70,16 @@ export const WordCountDisplay: React.FC<WordCountDisplayProps> = ({
     return (
       <div className={`flex flex-col space-y-1 ${className}`}>
         <div className="flex items-center space-x-2">
-          {showIcon && <FileText className="w-4 h-4 text-gray-400" />}
-          <span className="text-sm font-medium text-gray-300">
+          {showIcon && <FileText className="w-3 h-3 text-gray-400" />}
+          <span className="text-xs font-medium text-gray-300">
             {label && `${label}: `}
             {formattedCount}
           </span>
         </div>
         {showReadingTime && (
           <div className="flex items-center space-x-2 text-xs text-gray-500">
-            <Clock className="w-3 h-3" />
-            <span>{readingTime}</span>
+            <Clock className="w-2.5 h-2.5" />
+            <span className="text-xs">{readingTime}</span>
           </div>
         )}
       </div>
@@ -88,12 +88,12 @@ export const WordCountDisplay: React.FC<WordCountDisplayProps> = ({
 
   if (variant === "card") {
     return (
-      <div className={`bg-gray-800 rounded-lg p-3 ${className}`}>
+      <div className={`bg-gray-800 rounded-lg p-2 ${className}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <FileText className="w-5 h-5 text-blue-400" />
+            <FileText className="w-3 h-3 text-blue-400" />
             <div>
-              <div className="text-sm font-medium text-white">
+              <div className="text-xs font-medium text-white">
                 {formattedCount}
               </div>
               {label && <div className="text-xs text-gray-400">{label}</div>}
@@ -112,18 +112,18 @@ export const WordCountDisplay: React.FC<WordCountDisplayProps> = ({
   // Default variant
   return (
     <span
-      className={`inline-flex items-center space-x-1 text-sm text-gray-400 ${className}`}
+      className={`inline-flex items-center space-x-1 text-xs text-gray-400 ${className}`}
     >
-      {showIcon && <FileText className="w-4 h-4" />}
-      <span>
+      {showIcon && <FileText className="w-3 h-3" />}
+      <span className="text-xs">
         {label && `${label}: `}
         {formattedCount}
       </span>
       {showReadingTime && (
         <>
           <span>•</span>
-          <Clock className="w-3 h-3" />
-          <span>{readingTime}</span>
+          <Clock className="w-2.5 h-2.5" />
+          <span className="text-xs">{readingTime}</span>
         </>
       )}
     </span>

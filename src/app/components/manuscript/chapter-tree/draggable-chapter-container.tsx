@@ -195,7 +195,7 @@ export const DraggableChapterContainer: React.FC<
           onClick={handleChapterHeaderClick}
         >
           {/* Line 1: Full width for title with controls */}
-          <div className="flex items-center space-x-2 mb-2">
+          <div className="flex items-center space-x-2 mb-1">
             {/* Drag Handle */}
             <div
               {...dragAttributes}
@@ -212,7 +212,7 @@ export const DraggableChapterContainer: React.FC<
               onClick={(e) => e.stopPropagation()}
               title="Drag to reorder chapter"
             >
-              <GripVertical className="w-3 h-3 text-yellow-400" />
+              <GripVertical className="w-2.5 h-2.5 text-yellow-400" />
             </div>
 
             {/* Expand/Collapse Toggle */}
@@ -224,14 +224,14 @@ export const DraggableChapterContainer: React.FC<
               className="p-1 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
             >
               {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown className="w-3 h-3 text-gray-400" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-gray-400" />
+                <ChevronRight className="w-3 h-3 text-gray-400" />
               )}
             </button>
 
             {/* Chapter Icon */}
-            <Book className="w-4 h-4 flex-shrink-0 text-yellow-400" />
+            <Book className="w-3 h-3 flex-shrink-0 text-yellow-400" />
 
             {/* ✨ UPDATED: Dynamic Chapter Number */}
             <span className="text-xs font-medium text-gray-400 flex-shrink-0">
@@ -244,7 +244,7 @@ export const DraggableChapterContainer: React.FC<
                 value={chapter.title}
                 onSave={handleUpdateChapterName}
                 placeholder="Chapter name"
-                className="text-sm font-medium"
+                className="text-xs font-medium"
                 maxLength={100}
                 showButtons={false} // Hide inline edit buttons
               />
@@ -262,15 +262,17 @@ export const DraggableChapterContainer: React.FC<
                     handleAddScene();
                   }}
                   disabled={isAddingScene}
-                  className={`flex items-center space-x-1 px-2 py-1 text-xs rounded transition-all duration-200 border ${
+                  className={`flex items-center space-x-1 px-1.5 py-0.5 text-xs rounded transition-all duration-200 border ${
                     isHovered || isAddingScene
                       ? "bg-green-700 hover:bg-green-600 text-green-100 border-green-700"
                       : "bg-transparent text-green-400 border-green-400 border-dashed hover:bg-green-700 hover:text-green-100 hover:border-green-700 hover:border-solid"
                   }`}
                   title="Add scene to this chapter"
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>{isAddingScene ? "Adding..." : "Scene"}</span>
+                  <Plus className="w-2.5 h-2.5" />
+                  <span className="text-xs">
+                    {isAddingScene ? "Adding..." : "Scene"}
+                  </span>
                 </button>
               )}
 
@@ -282,15 +284,17 @@ export const DraggableChapterContainer: React.FC<
                     handleAddChapter();
                   }}
                   disabled={isAddingChapter}
-                  className={`flex items-center space-x-1 px-2 py-1 text-xs rounded transition-all duration-200 border ${
+                  className={`flex items-center space-x-1 px-1.5 py-0.5 text-xs rounded transition-all duration-200 border ${
                     isHovered || isAddingChapter
                       ? "bg-yellow-700 hover:bg-yellow-600 text-yellow-100 border-yellow-700"
                       : "bg-transparent text-yellow-400 border-yellow-400 border-dashed hover:bg-yellow-700 hover:text-yellow-100 hover:border-yellow-700 hover:border-solid"
                   }`}
                   title="Add chapter after this one"
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>{isAddingChapter ? "Adding..." : "Chapter"}</span>
+                  <Plus className="w-2.5 h-2.5" />
+                  <span className="text-xs">
+                    {isAddingChapter ? "Adding..." : "Chapter"}
+                  </span>
                 </button>
               )}
             </div>
@@ -307,7 +311,7 @@ export const DraggableChapterContainer: React.FC<
                 }`}
                 title="Delete this chapter"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-2.5 h-2.5" />
               </button>
             )}
           </div>
@@ -315,7 +319,7 @@ export const DraggableChapterContainer: React.FC<
           {/* Line 3: Stats */}
           {viewDensity === "detailed" && (
             <div className="flex items-center space-x-3 text-xs text-gray-500">
-              <span>
+              <span className="text-xs">
                 {totalScenes} scene{totalScenes !== 1 ? "s" : ""}
               </span>
               <span className="text-gray-600">•</span>
@@ -323,6 +327,9 @@ export const DraggableChapterContainer: React.FC<
             </div>
           )}
         </div>
+
+        {/* Thin separator line */}
+        <div className="border-b border-gray-600 mx-2"></div>
 
         {/* Scenes List */}
         {isExpanded && (
@@ -351,7 +358,7 @@ export const DraggableChapterContainer: React.FC<
 
             {/* Add Scene at End Button - Show when empty or always available */}
             {chapter.scenes.length === 0 && (
-              <div className="ml-2 py-2">
+              <div className="ml-2 py-1">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -359,10 +366,10 @@ export const DraggableChapterContainer: React.FC<
                       onAddScene(chapter.id); // Add at end of chapter
                     }
                   }}
-                  className="flex items-center space-x-2 text-sm text-green-400 hover:text-green-300 transition-colors"
+                  className="flex items-center space-x-1 text-xs text-green-400 hover:text-green-300 transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Add first scene</span>
+                  <Plus className="w-3 h-3" />
+                  <span className="text-xs">Add first scene</span>
                 </button>
               </div>
             )}

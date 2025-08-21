@@ -26,7 +26,7 @@ body {
 }
 
 .manuscript-page {
-  --font-scale: 0.88;
+  --font-scale: 0.9;
   font-size: calc(1rem * var(--font-scale));
 }
 

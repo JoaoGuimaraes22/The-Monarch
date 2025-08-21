@@ -100,7 +100,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
-        group relative py-2 px-3 rounded-md transition-all duration-200
+        group relative py-1.5 px-2 rounded-md transition-all duration-200
         ${
           isDragging
             ? "opacity-50 bg-gray-700/50 shadow-lg z-50 ring-2 ring-blue-500"
@@ -117,7 +117,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     >
       {/* ✨ IMPROVED: 3-line layout for better title space */}
       {/* Line 1: Full width for title with drag handle and status */}
-      <div className="flex items-center space-x-2 mb-2">
+      <div className="flex items-center space-x-2 mb-1">
         {/* Drag Handle */}
         <div
           {...attributes}
@@ -129,12 +129,12 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
                 ? "opacity-100"
                 : "opacity-0 group-hover:opacity-100"
             }
-            p-1 hover:bg-gray-600 rounded
+            p-0.5 hover:bg-gray-600 rounded
           `}
           onClick={(e) => e.stopPropagation()}
           title="Drag to reorder scene"
         >
-          <GripVertical className="w-3 h-3 text-gray-400" />
+          <GripVertical className="w-2.5 h-2.5 text-gray-400" />
         </div>
 
         {/* Scene Status Icon */}
@@ -157,7 +157,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
             value={scene.title || `Scene ${scene.order}`}
             onSave={handleUpdateSceneName}
             placeholder="Scene name"
-            className="text-sm font-medium"
+            className="text-xs font-medium"
             maxLength={50}
             showButtons={false} // Hide inline edit buttons
           />
@@ -179,8 +179,10 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
               }`}
               title="Add scene after this one"
             >
-              <Plus className="w-3 h-3" />
-              <span>{isAddingScene ? "Adding..." : "Scene"}</span>
+              <Plus className="w-2.5 h-2.5" />
+              <span className="text-xs">
+                {isAddingScene ? "Adding..." : "Scene"}
+              </span>
             </button>
           )}
         </div>
@@ -189,12 +191,12 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         <div className="flex items-center space-x-1">
           <button
             onClick={handleDeleteScene}
-            className={`p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-all duration-200 ${
+            className={`p-0.5 rounded text-red-400 hover:bg-red-400 hover:text-white transition-all duration-200 ${
               isHovered ? "opacity-100" : "opacity-0"
             }`}
             title="Delete this scene"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-2.5 h-2.5" />
           </button>
         </div>
       </div>
@@ -211,7 +213,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
           {scene.povCharacter && (
             <>
               <span className="text-gray-500">•</span>
-              <span className="text-gray-500 truncate">
+              <span className="text-gray-500 truncate text-xs">
                 POV: {scene.povCharacter}
               </span>
             </>
@@ -220,7 +222,9 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
           {scene.sceneType && (
             <>
               <span className="text-gray-500">•</span>
-              <span className="text-gray-500 truncate">{scene.sceneType}</span>
+              <span className="text-gray-500 truncate text-xs">
+                {scene.sceneType}
+              </span>
             </>
           )}
         </div>
