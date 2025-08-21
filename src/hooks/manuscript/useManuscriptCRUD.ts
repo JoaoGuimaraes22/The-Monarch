@@ -32,9 +32,10 @@ export interface CRUDActions {
   handleDeleteAct: (actId: string) => Promise<void>;
 }
 
+// ✅ FIXED: Remove automatic view mode switching to preserve current view
+
 export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
   // ===== ADD OPERATIONS (Updated for new API format) =====
-
   const handleAddScene = useCallback(
     async (chapterId: string, afterSceneId?: string) => {
       if (!config.novelId) return;
@@ -101,9 +102,14 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
               };
             });
 
-            // ✅ AUTO-SELECT NEW SCENE
+            // ✅ FIXED: Only update scene selection, don't change view mode
+            // This allows new scenes to appear in document view without switching to scene view
             config.onSelectionUpdate.setSelectedScene(newScene);
-            config.onSelectionUpdate.setViewMode("scene");
+            // ❌ REMOVED: config.onSelectionUpdate.setViewMode("scene");
+
+            console.log(
+              "✅ Scene added successfully, preserving current view mode"
+            );
           } else {
             throw new Error(result.error || "Failed to create scene");
           }
@@ -183,9 +189,14 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
               };
             });
 
-            // ✅ AUTO-SELECT NEW CHAPTER
+            // ✅ FIXED: Only update chapter selection, don't change view mode
+            // This allows new chapters to appear in document view without switching to chapter view
             config.onSelectionUpdate.setSelectedChapter(newChapter);
-            config.onSelectionUpdate.setViewMode("chapter");
+            // ❌ REMOVED: config.onSelectionUpdate.setViewMode("chapter");
+
+            console.log(
+              "✅ Chapter added successfully, preserving current view mode"
+            );
           } else {
             throw new Error(result.error || "Failed to create chapter");
           }
@@ -256,9 +267,14 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
               return { ...prevNovel, acts };
             });
 
-            // ✅ AUTO-SELECT NEW ACT
+            // ✅ FIXED: Only update act selection, don't change view mode
+            // This allows new acts to appear in document view without switching to act view
             config.onSelectionUpdate.setSelectedAct(newAct);
-            config.onSelectionUpdate.setViewMode("act");
+            // ❌ REMOVED: config.onSelectionUpdate.setViewMode("act");
+
+            console.log(
+              "✅ Act added successfully, preserving current view mode"
+            );
           } else {
             throw new Error(result.error || "Failed to create act");
           }
@@ -274,7 +290,6 @@ export function useManuscriptCRUD(config: CRUDConfig): CRUDActions {
     },
     [config]
   );
-
   // ===== DELETE OPERATIONS (Updated for new API format) =====
 
   const handleDeleteScene = useCallback(

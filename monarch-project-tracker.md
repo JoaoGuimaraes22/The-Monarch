@@ -362,7 +362,7 @@ src/
 }
 ```
 
-**Next: Complete the system with Replace modes.** 🎉
+**Next: Start the characters page.** 🎉
 
 ---
 
