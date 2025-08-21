@@ -423,7 +423,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
     );
   }
 
-  // ✅ Chapter view with breadcrumbs - NO focus button
+  // ✅ Chapter view with scene IDs on scene headers for perfect scrolling
   if (viewMode === "chapter") {
     const section = aggregatedContent.sections[0];
     const scenes = section.scenes;
@@ -438,50 +438,155 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         className="flex-1 transition-all duration-300 overflow-y-auto"
         style={{ marginLeft, marginRight }}
       >
-        <div className="p-4 space-y-4">
-          {/* ✅ Breadcrumb navigation for chapter view */}
-          {actInfo && (
-            <div className="text-xs text-gray-500 mb-3 border-b border-gray-700 pb-2">
-              ACT{actInfo.order} - {actInfo.title}
+        <div className="p-4 space-y-6">
+          {/* Chapter Header with Breadcrumb */}
+          <div className="chapter-document-header border-b border-gray-600 pb-4">
+            {/* Breadcrumb navigation */}
+            {actInfo && (
+              <div className="text-sm text-gray-400 mb-2">
+                ACT{actInfo.order} - {actInfo.title} • Chapter{" "}
+                {chapterInfo?.order}
+              </div>
+            )}
+
+            {/* Chapter Title */}
+            <div className="mb-3">
+              {chapterInfo && onChapterRename ? (
+                <EditableText
+                  value={chapterInfo.title}
+                  onSave={(newTitle) =>
+                    onChapterRename(chapterInfo.id, newTitle)
+                  }
+                  placeholder="Chapter title"
+                  className="text-2xl font-bold text-white"
+                  maxLength={200}
+                />
+              ) : (
+                <h1 className="text-2xl font-bold text-white">
+                  {chapterInfo?.title || section.title}
+                </h1>
+              )}
             </div>
-          )}
 
-          {chapterInfo && (
-            <ChapterHeader
-              chapter={chapterInfo}
-              onChapterRename={onChapterRename}
-              // ✅ CRITICAL: NO focus button in chapter view - we're already there!
-              onChapterClick={undefined}
-            />
-          )}
+            {/* Chapter Statistics */}
+            <div className="flex items-center space-x-6 text-sm text-gray-400">
+              <span>
+                {scenes.length} scene{scenes.length !== 1 ? "s" : ""}
+              </span>
+              <span>{section.wordCount.toLocaleString()} words</span>
+              <span>~{Math.ceil(section.wordCount / 250)} minutes to read</span>
+            </div>
+          </div>
 
-          {scenes.map((scene, index) => (
-            <SceneEditor
-              key={scene.id}
-              scene={scene}
-              onSceneClick={onSceneClick}
-              onContentChange={handleIndividualSceneChange}
-              onAddScene={onAddScene}
-              onSceneRename={onSceneRename}
-              chapterInfo={chapterInfo}
-              showChapterContext={false}
-              isLastInChapter={index === scenes.length - 1}
-            />
-          ))}
+          {/* Scenes with IDs on scene headers */}
+          <div className="space-y-8">
+            {scenes.map((scene, index) => (
+              <div key={scene.id} className="space-y-4">
+                {/* ✅ Custom Scene Editor with scroll ID on header */}
+                <div className="space-y-3">
+                  {/* Scene Header with Scroll ID */}
+                  <div
+                    id={`scene-${scene.id}`}
+                    className="flex items-center justify-between border-b border-gray-600 pb-1.5"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-medium text-gray-400">
+                          SC{scene.order}
+                        </span>
+                        {onSceneRename ? (
+                          <EditableText
+                            value={scene.title || `Scene ${scene.order}`}
+                            onSave={(newTitle) =>
+                              onSceneRename(scene.id, newTitle)
+                            }
+                            placeholder="Scene title"
+                            className="text-base font-medium text-white"
+                            maxLength={200}
+                          />
+                        ) : (
+                          <h3 className="text-base font-medium text-white">
+                            {scene.title || `Scene ${scene.order}`}
+                          </h3>
+                        )}
+                      </div>
+                      {chapterInfo && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {scene.wordCount} words • {scene.status}
+                        </p>
+                      )}
+                    </div>
 
-          {onAddChapter && chapterInfo && actId && (
-            <AddChapterButton
-              actId={actId}
-              afterChapterId={chapterInfo.id}
-              onAddChapter={onAddChapter}
-            />
-          )}
+                    <button
+                      onClick={() => onSceneClick(scene.id, scene)}
+                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Focus
+                    </button>
+                  </div>
+
+                  {/* Scene Content */}
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <SceneTextEditor
+                      content={scene.content}
+                      onContentChange={(content) =>
+                        handleIndividualSceneChange(scene.id, content)
+                      }
+                      placeholder="Start writing your scene..."
+                      readOnly={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Add Scene Button (between scenes) */}
+                {onAddScene && chapterInfo && index < scenes.length - 1 && (
+                  <div className="flex justify-center py-3">
+                    <button
+                      onClick={() => onAddScene(chapterInfo.id, scene.id)}
+                      className="flex items-center space-x-2 px-4 py-2 border border-dashed border-blue-600 rounded-lg bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Scene After This</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Add Scene Button at the end */}
+            {onAddScene && chapterInfo && scenes.length > 0 && (
+              <div className="flex justify-center py-6">
+                <button
+                  onClick={() =>
+                    onAddScene(chapterInfo.id, scenes[scenes.length - 1].id)
+                  }
+                  className="flex items-center space-x-3 px-6 py-3 border border-dashed border-blue-600 rounded-lg bg-blue-900/20 text-blue-300 hover:border-blue-400 hover:text-blue-200 hover:bg-blue-900/30 transition-all duration-200 font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Add Scene at End</span>
+                </button>
+              </div>
+            )}
+
+            {/* Add Chapter Button */}
+            {onAddChapter && chapterInfo && actId && (
+              <div className="flex justify-center py-4 border-t border-gray-700">
+                <button
+                  onClick={() => onAddChapter(actId, chapterInfo.id)}
+                  className="flex items-center space-x-3 px-6 py-3 border border-dashed border-yellow-600 rounded-lg bg-yellow-900/20 text-yellow-300 hover:border-yellow-400 hover:text-yellow-200 hover:bg-yellow-900/30 transition-all duration-200 font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Add Chapter After This</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  // ✅ Act view with focus buttons on chapters
+  // ✅ Act view with chapter IDs on chapter headers for perfect scrolling
   if (viewMode === "act") {
     const firstSection = aggregatedContent.sections[0];
     const actInfo = findActFromSection(novel, firstSection);
@@ -515,17 +620,61 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
             const sortedScenes = [...chapter.scenes].sort(
               (a, b) => a.order - b.order
             );
+            const totalWords = chapter.scenes.reduce(
+              (sum, scene) => sum + scene.wordCount,
+              0
+            );
 
             return (
               <React.Fragment key={chapter.id}>
-                <ChapterHeader
-                  chapter={chapter}
-                  onChapterRename={onChapterRename}
-                  // ✅ CRITICAL: Focus button ONLY in act view
-                  onChapterClick={onChapterClick}
-                  showWordCount={true}
-                />
+                {/* ✅ Custom Chapter Header with scroll ID */}
+                <div
+                  id={`chapter-${chapter.id}`}
+                  className="my-4 p-3 border border-yellow-600/40 rounded bg-gray-800/30"
+                >
+                  <div className="flex items-center space-x-3">
+                    {/* Compact chapter order number */}
+                    <span className="text-sm font-medium text-gray-400 flex-shrink-0">
+                      CH{chapter.order}
+                    </span>
 
+                    <div className="flex-1">
+                      {onChapterRename ? (
+                        <EditableText
+                          value={chapter.title}
+                          onSave={(newTitle) =>
+                            onChapterRename(chapter.id, newTitle)
+                          }
+                          placeholder="Chapter title"
+                          className="text-lg font-bold text-gray-200"
+                          maxLength={200}
+                        />
+                      ) : (
+                        <h2 className="text-lg font-bold text-gray-200">
+                          {chapter.title}
+                        </h2>
+                      )}
+
+                      <p className="text-gray-400 mt-1 text-sm">
+                        {chapter.scenes.length} scene
+                        {chapter.scenes.length !== 1 ? "s" : ""} •{" "}
+                        {totalWords.toLocaleString()} words
+                      </p>
+                    </div>
+
+                    {/* ✅ Focus button only shows when onChapterClick is provided */}
+                    {onChapterClick && (
+                      <button
+                        onClick={() => onChapterClick(chapter)}
+                        className="px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+                      >
+                        Focus
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Chapter scenes */}
                 <div className="space-y-3 ml-3">
                   {sortedScenes.map((scene) => (
                     <SceneEditor
@@ -541,6 +690,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
                   ))}
                 </div>
 
+                {/* Add Chapter Button between chapters */}
                 {onAddChapter && chapterIndex < sortedChapters.length - 1 && (
                   <AddChapterButton
                     actId={actInfo.id}
@@ -552,6 +702,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
             );
           })}
 
+          {/* Add Chapter Button at the end */}
           {onAddChapter && sortedChapters.length > 0 && (
             <AddChapterButton
               actId={actInfo.id}

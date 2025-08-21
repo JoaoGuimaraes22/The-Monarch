@@ -73,8 +73,7 @@ export const useScrollHandlers = (
       actions.setSelectedScene(scene);
       console.log("✅ Updated selectedScene");
 
-      // 3. Scroll to the scene element
-      // Try multiple possible element IDs that might exist in the DOM
+      // 3. Scroll to the scene element with offset for better visibility
       const possibleSelectors = [
         `scene-${sceneId}`,
         `scene-content-${sceneId}`,
@@ -87,11 +86,18 @@ export const useScrollHandlers = (
         const element = document.getElementById(selectorId);
         if (element) {
           console.log("✅ Found element with ID:", selectorId);
-          element.scrollIntoView({
+
+          // ✅ IMPROVED: Scroll with more offset to keep scene title fully visible
+          const elementTop =
+            element.getBoundingClientRect().top + window.pageYOffset;
+          const offset = 120; // Increased from 80px to 120px for better visibility
+          const targetPosition = elementTop - offset;
+
+          window.scrollTo({
+            top: targetPosition,
             behavior: "smooth",
-            block: "start",
-            inline: "nearest",
           });
+
           elementFound = true;
           break;
         }
@@ -108,11 +114,18 @@ export const useScrollHandlers = (
           const element = document.querySelector(selector);
           if (element) {
             console.log("✅ Found element with selector:", selector);
-            element.scrollIntoView({
+
+            // ✅ IMPROVED: Scroll with more offset for data attribute selectors too
+            const elementTop =
+              element.getBoundingClientRect().top + window.pageYOffset;
+            const offset = 120; // Increased from 80px to 120px for better visibility
+            const targetPosition = elementTop - offset;
+
+            window.scrollTo({
+              top: targetPosition,
               behavior: "smooth",
-              block: "start",
-              inline: "nearest",
             });
+
             elementFound = true;
             break;
           }
@@ -159,7 +172,7 @@ export const useScrollHandlers = (
         console.log("✅ Updated selectedChapter (no scenes in chapter)");
       }
 
-      // 4. Scroll to the chapter element
+      // 4. Scroll to the chapter element with offset
       const possibleSelectors = [
         `chapter-${chapterId}`,
         `chapter-content-${chapterId}`,
@@ -172,11 +185,18 @@ export const useScrollHandlers = (
         const element = document.getElementById(selectorId);
         if (element) {
           console.log("✅ Found element with ID:", selectorId);
-          element.scrollIntoView({
+
+          // ✅ IMPROVED: Scroll with more offset to keep chapter title fully visible
+          const elementTop =
+            element.getBoundingClientRect().top + window.pageYOffset;
+          const offset = 120; // Increased from 80px to 120px for better visibility
+          const targetPosition = elementTop - offset;
+
+          window.scrollTo({
+            top: targetPosition,
             behavior: "smooth",
-            block: "start",
-            inline: "nearest",
           });
+
           elementFound = true;
           break;
         }
@@ -193,11 +213,18 @@ export const useScrollHandlers = (
           const element = document.querySelector(selector);
           if (element) {
             console.log("✅ Found element with selector:", selector);
-            element.scrollIntoView({
+
+            // ✅ IMPROVED: Scroll with more offset for data attribute selectors too
+            const elementTop =
+              element.getBoundingClientRect().top + window.pageYOffset;
+            const offset = 120; // Increased from 80px to 120px for better visibility
+            const targetPosition = elementTop - offset;
+
+            window.scrollTo({
+              top: targetPosition,
               behavior: "smooth",
-              block: "start",
-              inline: "nearest",
             });
+
             elementFound = true;
             break;
           }
