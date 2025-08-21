@@ -49,6 +49,8 @@ export type {
   NavigationContext,
   NavigationConfig,
   NavigationHandlers,
+  NavigationButtonState, // ✅ ADD THIS
+  NavigationButtonInfo, // ✅ ADD THIS
 } from "./navigation/types";
 
 export type { UpdateConfig, UpdateHandlers } from "./useManuscriptUpdates";

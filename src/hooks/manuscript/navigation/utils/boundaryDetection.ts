@@ -73,31 +73,25 @@ export const getNextSceneWithInfo = (
     selectedChapter.id
   );
 
-  if (currentChapterIndex === -1) {
-    return {
-      scene: null,
-      info: { state: "disabled", tooltip: "Chapter not found" },
-    };
-  }
-
-  // Check next chapter in current act
   if (currentChapterIndex < chapters.length - 1) {
+    // There's a next chapter in current act
     const nextChapter = chapters[currentChapterIndex + 1];
     const nextChapterScenes = getScenesInChapter(nextChapter);
 
     if (nextChapterScenes.length > 0) {
+      const firstSceneInNextChapter = nextChapterScenes[0];
       return {
-        scene: nextChapterScenes[0],
+        scene: firstSceneInNextChapter,
         info: {
           state: "cross-boundary",
-          tooltip: `Next Scene (${nextChapter.title})`,
+          tooltip: `First scene in ${nextChapter.title}`,
           destinationContainer: nextChapter.title,
         },
       };
     }
   }
 
-  // Check next act
+  // At end of act - look for next act
   const acts = getAllActsInNovel(novel);
   const currentActIndex = findActIndexInNovel(acts, selectedAct.id);
 
@@ -106,26 +100,27 @@ export const getNextSceneWithInfo = (
     const nextActChapters = getChaptersInAct(nextAct);
 
     if (nextActChapters.length > 0) {
-      const firstChapter = nextActChapters[0];
-      const firstScenes = getScenesInChapter(firstChapter);
+      const firstChapterInNextAct = nextActChapters[0];
+      const firstChapterScenes = getScenesInChapter(firstChapterInNextAct);
 
-      if (firstScenes.length > 0) {
+      if (firstChapterScenes.length > 0) {
+        const firstSceneInNextAct = firstChapterScenes[0];
         return {
-          scene: firstScenes[0],
+          scene: firstSceneInNextAct,
           info: {
             state: "cross-boundary",
-            tooltip: `Next Scene (${nextAct.title} - ${firstChapter.title})`,
-            destinationContainer: `${nextAct.title} - ${firstChapter.title}`,
+            tooltip: `First scene in ${nextAct.title} - ${firstChapterInNextAct.title}`,
+            destinationContainer: `${nextAct.title} - ${firstChapterInNextAct.title}`,
           },
         };
       }
     }
   }
 
-  // Truly at the end
+  // No next scene available
   return {
     scene: null,
-    info: { state: "disabled", tooltip: "No more scenes" },
+    info: { state: "disabled", tooltip: "Last scene in novel" },
   };
 };
 
@@ -161,19 +156,19 @@ export const getPreviousSceneWithInfo = (
 
   // Check if there's a previous scene in current chapter
   if (currentIndex > 0) {
-    const prevScene = scenes[currentIndex - 1];
+    const previousScene = scenes[currentIndex - 1];
     return {
-      scene: prevScene,
+      scene: previousScene,
       info: {
         state: "normal",
         tooltip: `Previous Scene: ${
-          prevScene.title || `Scene ${prevScene.order}`
+          previousScene.title || `Scene ${previousScene.order}`
         }`,
       },
     };
   }
 
-  // At beginning of chapter - look for previous chapter
+  // At start of chapter - look for previous chapter
   if (!selectedAct) {
     return {
       scene: null,
@@ -187,59 +182,57 @@ export const getPreviousSceneWithInfo = (
     selectedChapter.id
   );
 
-  if (currentChapterIndex === -1) {
-    return {
-      scene: null,
-      info: { state: "disabled", tooltip: "Chapter not found" },
-    };
-  }
-
-  // Check previous chapter in current act
   if (currentChapterIndex > 0) {
-    const prevChapter = chapters[currentChapterIndex - 1];
-    const prevChapterScenes = getScenesInChapter(prevChapter);
+    // There's a previous chapter in current act
+    const previousChapter = chapters[currentChapterIndex - 1];
+    const previousChapterScenes = getScenesInChapter(previousChapter);
 
-    if (prevChapterScenes.length > 0) {
+    if (previousChapterScenes.length > 0) {
+      const lastSceneInPreviousChapter =
+        previousChapterScenes[previousChapterScenes.length - 1];
       return {
-        scene: prevChapterScenes[prevChapterScenes.length - 1],
+        scene: lastSceneInPreviousChapter,
         info: {
           state: "cross-boundary",
-          tooltip: `Previous Scene (${prevChapter.title})`,
-          destinationContainer: prevChapter.title,
+          tooltip: `Last scene in ${previousChapter.title}`,
+          destinationContainer: previousChapter.title,
         },
       };
     }
   }
 
-  // Check previous act
+  // At start of act - look for previous act
   const acts = getAllActsInNovel(novel);
   const currentActIndex = findActIndexInNovel(acts, selectedAct.id);
 
   if (currentActIndex > 0) {
-    const prevAct = acts[currentActIndex - 1];
-    const prevActChapters = getChaptersInAct(prevAct);
+    const previousAct = acts[currentActIndex - 1];
+    const previousActChapters = getChaptersInAct(previousAct);
 
-    if (prevActChapters.length > 0) {
-      const lastChapter = prevActChapters[prevActChapters.length - 1];
-      const lastScenes = getScenesInChapter(lastChapter);
+    if (previousActChapters.length > 0) {
+      const lastChapterInPreviousAct =
+        previousActChapters[previousActChapters.length - 1];
+      const lastChapterScenes = getScenesInChapter(lastChapterInPreviousAct);
 
-      if (lastScenes.length > 0) {
+      if (lastChapterScenes.length > 0) {
+        const lastSceneInPreviousAct =
+          lastChapterScenes[lastChapterScenes.length - 1];
         return {
-          scene: lastScenes[lastScenes.length - 1],
+          scene: lastSceneInPreviousAct,
           info: {
             state: "cross-boundary",
-            tooltip: `Previous Scene (${prevAct.title} - ${lastChapter.title})`,
-            destinationContainer: `${prevAct.title} - ${lastChapter.title}`,
+            tooltip: `Last scene in ${previousAct.title} - ${lastChapterInPreviousAct.title}`,
+            destinationContainer: `${previousAct.title} - ${lastChapterInPreviousAct.title}`,
           },
         };
       }
     }
   }
 
-  // Truly at the beginning
+  // No previous scene available
   return {
     scene: null,
-    info: { state: "disabled", tooltip: "No more scenes" },
+    info: { state: "disabled", tooltip: "First scene in novel" },
   };
 };
 
@@ -295,21 +288,22 @@ export const getNextChapterWithInfo = (
     const nextActChapters = getChaptersInAct(nextAct);
 
     if (nextActChapters.length > 0) {
+      const firstChapterInNextAct = nextActChapters[0];
       return {
-        chapter: nextActChapters[0],
+        chapter: firstChapterInNextAct,
         info: {
           state: "cross-boundary",
-          tooltip: `Next Chapter (${nextAct.title})`,
+          tooltip: `First chapter in ${nextAct.title}`,
           destinationContainer: nextAct.title,
         },
       };
     }
   }
 
-  // Truly at the end
+  // No next chapter available
   return {
     chapter: null,
-    info: { state: "disabled", tooltip: "No more chapters" },
+    info: { state: "disabled", tooltip: "Last chapter in novel" },
   };
 };
 
@@ -344,39 +338,41 @@ export const getPreviousChapterWithInfo = (
 
   // Check if there's a previous chapter in current act
   if (currentIndex > 0) {
-    const prevChapter = chapters[currentIndex - 1];
+    const previousChapter = chapters[currentIndex - 1];
     return {
-      chapter: prevChapter,
+      chapter: previousChapter,
       info: {
         state: "normal",
-        tooltip: `Previous Chapter: ${prevChapter.title}`,
+        tooltip: `Previous Chapter: ${previousChapter.title}`,
       },
     };
   }
 
-  // At beginning of act - look for previous act
+  // At start of act - look for previous act
   const acts = getAllActsInNovel(novel);
   const currentActIndex = findActIndexInNovel(acts, selectedAct.id);
 
   if (currentActIndex > 0) {
-    const prevAct = acts[currentActIndex - 1];
-    const prevActChapters = getChaptersInAct(prevAct);
+    const previousAct = acts[currentActIndex - 1];
+    const previousActChapters = getChaptersInAct(previousAct);
 
-    if (prevActChapters.length > 0) {
+    if (previousActChapters.length > 0) {
+      const lastChapterInPreviousAct =
+        previousActChapters[previousActChapters.length - 1];
       return {
-        chapter: prevActChapters[prevActChapters.length - 1],
+        chapter: lastChapterInPreviousAct,
         info: {
           state: "cross-boundary",
-          tooltip: `Previous Chapter (${prevAct.title})`,
-          destinationContainer: prevAct.title,
+          tooltip: `Last chapter in ${previousAct.title}`,
+          destinationContainer: previousAct.title,
         },
       };
     }
   }
 
-  // Truly at the beginning
+  // No previous chapter available
   return {
     chapter: null,
-    info: { state: "disabled", tooltip: "No more chapters" },
+    info: { state: "disabled", tooltip: "First chapter in novel" },
   };
 };

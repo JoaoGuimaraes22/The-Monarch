@@ -1,5 +1,5 @@
 // src/hooks/manuscript/useManuscriptLogic.ts
-// ✅ UPDATED: Integrating new clean navigation system
+// ✅ UPDATED: Integrating new clean navigation system with enhanced methods
 
 import { useCallback, useEffect } from "react";
 import { useManuscriptState } from "./useManuscriptState";
@@ -12,7 +12,7 @@ import { useManuscriptUtils } from "./useManuscriptUtils";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/view-mode-selector";
 import { ContentDisplayMode } from "@/app/components/manuscript/manuscript-editor/content-views/types";
-import { NavigationContext } from "./navigation/types";
+import { NavigationContext, NavigationButtonInfo } from "./navigation/types";
 
 export interface ManuscriptLogicReturn {
   // State from useManuscriptState
@@ -51,6 +51,24 @@ export interface ManuscriptLogicReturn {
   // Secondary scroll handlers (just scroll within view)
   scrollToScene: (sceneId: string) => void;
   scrollToChapter: (chapterId: string) => void;
+
+  // ✅ ENHANCED NAVIGATION METHODS WITH BOUNDARY INFO
+  getNextSceneWithInfo: () => {
+    scene: Scene | null;
+    info: NavigationButtonInfo;
+  };
+  getPreviousSceneWithInfo: () => {
+    scene: Scene | null;
+    info: NavigationButtonInfo;
+  };
+  getNextChapterWithInfo: () => {
+    chapter: Chapter | null;
+    info: NavigationButtonInfo;
+  };
+  getPreviousChapterWithInfo: () => {
+    chapter: Chapter | null;
+    info: NavigationButtonInfo;
+  };
 
   // CRUD Handlers (enhanced + from useManuscriptCRUD)
   handleAddScene: (chapterId: string, afterSceneId?: string) => Promise<void>;
@@ -240,6 +258,12 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     scrollToScene: navigation.scrollToScene,
     scrollToChapter: navigation.scrollToChapter,
 
+    // ✅ ENHANCED NAVIGATION METHODS WITH BOUNDARY INFO
+    getNextSceneWithInfo: navigation.getNextSceneWithInfo,
+    getPreviousSceneWithInfo: navigation.getPreviousSceneWithInfo,
+    getNextChapterWithInfo: navigation.getNextChapterWithInfo,
+    getPreviousChapterWithInfo: navigation.getPreviousChapterWithInfo,
+
     // CRUD Handlers (enhanced + from useManuscriptCRUD)
     handleAddScene,
     handleAddChapter,
@@ -268,27 +292,34 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 }
 
 /*
-===== INTEGRATION UPDATES =====
+===== COMPLETE INTEGRATION =====
 
 ✅ NEW NAVIGATION SYSTEM:
 - Replaced old navigation with clean primary/secondary separation
 - Updated import path to "./navigation/useManuscriptNavigation"
 - Added all new navigation handlers to return interface
 
+✅ ENHANCED NAVIGATION METHODS:
+- getNextSceneWithInfo() - Returns scene + navigation button info
+- getPreviousSceneWithInfo() - Returns scene + navigation button info
+- getNextChapterWithInfo() - Returns chapter + navigation button info
+- getPreviousChapterWithInfo() - Returns chapter + navigation button info
+
 ✅ CLEAR HANDLER SEPARATION:
 - Primary handlers (selectScene/Chapter/Act) = Change view focus
 - Secondary handlers (scrollToScene/Chapter) = Just scroll within view
-- getNavigationContext provides view-specific navigation configs
+- Enhanced methods provide boundary detection and UI state info
 
 ✅ BACKWARD COMPATIBILITY:
 - Kept existing selection handlers for components that still use them
 - Enhanced CRUD handlers still work as before
 - All other functionality preserved
 
-✅ READY FOR TESTING:
-- Navigation context provides clean data structure for UI
-- Handlers are properly separated by function
+✅ READY FOR PRODUCTION:
+- Complete API surface exposed
 - Type safety maintained throughout
+- Navigation context provides clean data structure for UI
+- Enhanced methods enable smart navigation button states
 
-This integration maintains all existing functionality while adding the new clean navigation system!
+This integration is now COMPLETE and ready for use! 🚀
 */
