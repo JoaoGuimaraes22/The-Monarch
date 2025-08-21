@@ -1,5 +1,5 @@
 // src/hooks/manuscript/navigation/useManuscriptNavigation.ts
-// Clean navigation implementation with clear separation of concerns
+// Enhanced navigation with cross-boundary support
 
 import { useCallback } from "react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -25,6 +25,19 @@ export interface NavigationConfig {
   actions: ManuscriptStateActions;
   selectionHandlers: SelectionHandlers;
   selectionUtils: SelectionUtils;
+}
+
+// ✅ NEW: Enhanced navigation button state
+export type NavigationButtonState =
+  | "normal" // Standard navigation within current container
+  | "cross-boundary" // Will navigate to different container
+  | "disabled"; // No navigation possible
+
+// ✅ NEW: Enhanced navigation info
+export interface NavigationButtonInfo {
+  state: NavigationButtonState;
+  tooltip: string;
+  destinationContainer?: string; // e.g., "Chapter 3" or "Act 2"
 }
 
 export function useManuscriptNavigation(
@@ -58,6 +71,408 @@ export function useManuscriptNavigation(
     if (!novel) return [];
     return [...novel.acts].sort((a, b) => a.order - b.order);
   }, [novel]);
+
+  // ===== ENHANCED SCENE NAVIGATION =====
+
+  const getNextSceneWithInfo = useCallback((): {
+    scene: Scene | null;
+    info: NavigationButtonInfo;
+  } => {
+    if (!selectedScene || !novel) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "No scene selected" },
+      };
+    }
+
+    const scenes = getScenesInCurrentChapter();
+    const currentIndex = scenes.findIndex((s) => s.id === selectedScene.id);
+
+    if (currentIndex === -1) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "Scene not found" },
+      };
+    }
+
+    // Check if there's a next scene in current chapter
+    if (currentIndex < scenes.length - 1) {
+      return {
+        scene: scenes[currentIndex + 1],
+        info: {
+          state: "normal",
+          tooltip: `Next Scene: ${
+            scenes[currentIndex + 1].title ||
+            `Scene ${scenes[currentIndex + 1].order}`
+          }`,
+        },
+      };
+    }
+
+    // At end of chapter - look for next chapter
+    if (!selectedChapter) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "No chapter selected" },
+      };
+    }
+
+    const chapters = getChaptersInCurrentAct();
+    const currentChapterIndex = chapters.findIndex(
+      (c) => c.id === selectedChapter.id
+    );
+
+    if (currentChapterIndex === -1) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "Chapter not found" },
+      };
+    }
+
+    // Check next chapter in current act
+    if (currentChapterIndex < chapters.length - 1) {
+      const nextChapter = chapters[currentChapterIndex + 1];
+      const nextChapterScenes = [...nextChapter.scenes].sort(
+        (a, b) => a.order - b.order
+      );
+
+      if (nextChapterScenes.length > 0) {
+        return {
+          scene: nextChapterScenes[0],
+          info: {
+            state: "cross-boundary",
+            tooltip: `Next Scene (${nextChapter.title})`,
+            destinationContainer: nextChapter.title,
+          },
+        };
+      }
+    }
+
+    // Check next act
+    if (!selectedAct) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "No act selected" },
+      };
+    }
+
+    const acts = getAllActs();
+    const currentActIndex = acts.findIndex((a) => a.id === selectedAct.id);
+
+    if (currentActIndex < acts.length - 1) {
+      const nextAct = acts[currentActIndex + 1];
+      const nextActChapters = [...nextAct.chapters].sort(
+        (a, b) => a.order - b.order
+      );
+
+      if (nextActChapters.length > 0) {
+        const firstChapter = nextActChapters[0];
+        const firstScenes = [...firstChapter.scenes].sort(
+          (a, b) => a.order - b.order
+        );
+
+        if (firstScenes.length > 0) {
+          return {
+            scene: firstScenes[0],
+            info: {
+              state: "cross-boundary",
+              tooltip: `Next Scene (${nextAct.title} - ${firstChapter.title})`,
+              destinationContainer: `${nextAct.title} - ${firstChapter.title}`,
+            },
+          };
+        }
+      }
+    }
+
+    // Truly at the end
+    return {
+      scene: null,
+      info: { state: "disabled", tooltip: "No more scenes" },
+    };
+  }, [
+    selectedScene,
+    selectedChapter,
+    selectedAct,
+    novel,
+    getScenesInCurrentChapter,
+    getChaptersInCurrentAct,
+    getAllActs,
+  ]);
+
+  const getPreviousSceneWithInfo = useCallback((): {
+    scene: Scene | null;
+    info: NavigationButtonInfo;
+  } => {
+    if (!selectedScene || !novel) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "No scene selected" },
+      };
+    }
+
+    const scenes = getScenesInCurrentChapter();
+    const currentIndex = scenes.findIndex((s) => s.id === selectedScene.id);
+
+    if (currentIndex === -1) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "Scene not found" },
+      };
+    }
+
+    // Check if there's a previous scene in current chapter
+    if (currentIndex > 0) {
+      return {
+        scene: scenes[currentIndex - 1],
+        info: {
+          state: "normal",
+          tooltip: `Previous Scene: ${
+            scenes[currentIndex - 1].title ||
+            `Scene ${scenes[currentIndex - 1].order}`
+          }`,
+        },
+      };
+    }
+
+    // At beginning of chapter - look for previous chapter
+    if (!selectedChapter) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "No chapter selected" },
+      };
+    }
+
+    const chapters = getChaptersInCurrentAct();
+    const currentChapterIndex = chapters.findIndex(
+      (c) => c.id === selectedChapter.id
+    );
+
+    if (currentChapterIndex === -1) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "Chapter not found" },
+      };
+    }
+
+    // Check previous chapter in current act
+    if (currentChapterIndex > 0) {
+      const prevChapter = chapters[currentChapterIndex - 1];
+      const prevChapterScenes = [...prevChapter.scenes].sort(
+        (a, b) => a.order - b.order
+      );
+
+      if (prevChapterScenes.length > 0) {
+        return {
+          scene: prevChapterScenes[prevChapterScenes.length - 1],
+          info: {
+            state: "cross-boundary",
+            tooltip: `Previous Scene (${prevChapter.title})`,
+            destinationContainer: prevChapter.title,
+          },
+        };
+      }
+    }
+
+    // Check previous act
+    if (!selectedAct) {
+      return {
+        scene: null,
+        info: { state: "disabled", tooltip: "No act selected" },
+      };
+    }
+
+    const acts = getAllActs();
+    const currentActIndex = acts.findIndex((a) => a.id === selectedAct.id);
+
+    if (currentActIndex > 0) {
+      const prevAct = acts[currentActIndex - 1];
+      const prevActChapters = [...prevAct.chapters].sort(
+        (a, b) => a.order - b.order
+      );
+
+      if (prevActChapters.length > 0) {
+        const lastChapter = prevActChapters[prevActChapters.length - 1];
+        const lastScenes = [...lastChapter.scenes].sort(
+          (a, b) => a.order - b.order
+        );
+
+        if (lastScenes.length > 0) {
+          return {
+            scene: lastScenes[lastScenes.length - 1],
+            info: {
+              state: "cross-boundary",
+              tooltip: `Previous Scene (${prevAct.title} - ${lastChapter.title})`,
+              destinationContainer: `${prevAct.title} - ${lastChapter.title}`,
+            },
+          };
+        }
+      }
+    }
+
+    // Truly at the beginning
+    return {
+      scene: null,
+      info: { state: "disabled", tooltip: "No more scenes" },
+    };
+  }, [
+    selectedScene,
+    selectedChapter,
+    selectedAct,
+    novel,
+    getScenesInCurrentChapter,
+    getChaptersInCurrentAct,
+    getAllActs,
+  ]);
+
+  // ===== ENHANCED CHAPTER NAVIGATION =====
+
+  const getNextChapterWithInfo = useCallback((): {
+    chapter: Chapter | null;
+    info: NavigationButtonInfo;
+  } => {
+    if (!selectedChapter || !novel) {
+      return {
+        chapter: null,
+        info: { state: "disabled", tooltip: "No chapter selected" },
+      };
+    }
+
+    const chapters = getChaptersInCurrentAct();
+    const currentIndex = chapters.findIndex((c) => c.id === selectedChapter.id);
+
+    if (currentIndex === -1) {
+      return {
+        chapter: null,
+        info: { state: "disabled", tooltip: "Chapter not found" },
+      };
+    }
+
+    // Check if there's a next chapter in current act
+    if (currentIndex < chapters.length - 1) {
+      return {
+        chapter: chapters[currentIndex + 1],
+        info: {
+          state: "normal",
+          tooltip: `Next Chapter: ${chapters[currentIndex + 1].title}`,
+        },
+      };
+    }
+
+    // At end of act - look for next act
+    if (!selectedAct) {
+      return {
+        chapter: null,
+        info: { state: "disabled", tooltip: "No act selected" },
+      };
+    }
+
+    const acts = getAllActs();
+    const currentActIndex = acts.findIndex((a) => a.id === selectedAct.id);
+
+    if (currentActIndex < acts.length - 1) {
+      const nextAct = acts[currentActIndex + 1];
+      const nextActChapters = [...nextAct.chapters].sort(
+        (a, b) => a.order - b.order
+      );
+
+      if (nextActChapters.length > 0) {
+        return {
+          chapter: nextActChapters[0],
+          info: {
+            state: "cross-boundary",
+            tooltip: `Next Chapter (${nextAct.title})`,
+            destinationContainer: nextAct.title,
+          },
+        };
+      }
+    }
+
+    // Truly at the end
+    return {
+      chapter: null,
+      info: { state: "disabled", tooltip: "No more chapters" },
+    };
+  }, [
+    selectedChapter,
+    selectedAct,
+    novel,
+    getChaptersInCurrentAct,
+    getAllActs,
+  ]);
+
+  const getPreviousChapterWithInfo = useCallback((): {
+    chapter: Chapter | null;
+    info: NavigationButtonInfo;
+  } => {
+    if (!selectedChapter || !novel) {
+      return {
+        chapter: null,
+        info: { state: "disabled", tooltip: "No chapter selected" },
+      };
+    }
+
+    const chapters = getChaptersInCurrentAct();
+    const currentIndex = chapters.findIndex((c) => c.id === selectedChapter.id);
+
+    if (currentIndex === -1) {
+      return {
+        chapter: null,
+        info: { state: "disabled", tooltip: "Chapter not found" },
+      };
+    }
+
+    // Check if there's a previous chapter in current act
+    if (currentIndex > 0) {
+      return {
+        chapter: chapters[currentIndex - 1],
+        info: {
+          state: "normal",
+          tooltip: `Previous Chapter: ${chapters[currentIndex - 1].title}`,
+        },
+      };
+    }
+
+    // At beginning of act - look for previous act
+    if (!selectedAct) {
+      return {
+        chapter: null,
+        info: { state: "disabled", tooltip: "No act selected" },
+      };
+    }
+
+    const acts = getAllActs();
+    const currentActIndex = acts.findIndex((a) => a.id === selectedAct.id);
+
+    if (currentActIndex > 0) {
+      const prevAct = acts[currentActIndex - 1];
+      const prevActChapters = [...prevAct.chapters].sort(
+        (a, b) => a.order - b.order
+      );
+
+      if (prevActChapters.length > 0) {
+        return {
+          chapter: prevActChapters[prevActChapters.length - 1],
+          info: {
+            state: "cross-boundary",
+            tooltip: `Previous Chapter (${prevAct.title})`,
+            destinationContainer: prevAct.title,
+          },
+        };
+      }
+    }
+
+    // Truly at the beginning
+    return {
+      chapter: null,
+      info: { state: "disabled", tooltip: "No more chapters" },
+    };
+  }, [
+    selectedChapter,
+    selectedAct,
+    novel,
+    getChaptersInCurrentAct,
+    getAllActs,
+  ]);
 
   // ===== NAVIGATION ITEM BUILDERS =====
 
@@ -97,7 +512,7 @@ export function useManuscriptNavigation(
     [selectedAct?.id]
   );
 
-  // ===== NAVIGATION LOGIC =====
+  // ===== BASIC NAVIGATION LOGIC =====
 
   const getNextInList = useCallback(
     <T extends { id: string }>(
@@ -125,7 +540,7 @@ export function useManuscriptNavigation(
     []
   );
 
-  // ===== PRIMARY SELECTION HANDLERS (Change view focus) =====
+  // ===== PRIMARY SELECTION HANDLERS =====
 
   const selectScene = useCallback(
     (sceneId: string) => {
@@ -160,26 +575,23 @@ export function useManuscriptNavigation(
     [getAllActs, selectionHandlers]
   );
 
-  // ===== SECONDARY SCROLL HANDLERS (Just scroll within view) =====
+  // ===== SECONDARY SCROLL HANDLERS =====
 
   const scrollToScene = useCallback(
     (sceneId: string) => {
-      // Just update selected scene for highlighting, don't change view
       const scenes = getScenesInCurrentChapter();
       const scene = scenes.find((s) => s.id === sceneId);
       if (scene) {
         actions.setSelectedScene(scene);
-        // Ensure document mode for scrolling
         if (contentDisplayMode !== "document") {
           actions.setContentDisplayMode("document");
         }
-        // Scroll to scene
         setTimeout(() => {
           const element = document.getElementById(`scene-${sceneId}`);
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "start" });
           }
-        }, 100); // Small delay to ensure DOM is ready after mode change
+        }, 100);
       }
     },
     [getScenesInCurrentChapter, actions, contentDisplayMode]
@@ -187,21 +599,17 @@ export function useManuscriptNavigation(
 
   const scrollToChapter = useCallback(
     (chapterId: string) => {
-      // Just update selected chapter for highlighting, don't change view
       const chapters = getChaptersInCurrentAct();
       const chapter = chapters.find((c) => c.id === chapterId);
       if (chapter) {
         actions.setSelectedChapter(chapter);
-        // Also update scene to first scene in chapter
         const firstScene = selectionUtils.findFirstSceneInChapter(chapter);
         if (firstScene) {
           actions.setSelectedScene(firstScene);
         }
-        // Ensure document mode for scrolling
         if (contentDisplayMode !== "document") {
           actions.setContentDisplayMode("document");
         }
-        // Scroll to chapter
         setTimeout(() => {
           const element = document.getElementById(`chapter-${chapterId}`);
           if (element) {
@@ -399,7 +807,6 @@ export function useManuscriptNavigation(
         };
 
       default:
-        // Fallback to scene view
         return {
           viewMode: "scene",
           navigation: {
@@ -417,7 +824,6 @@ export function useManuscriptNavigation(
   ]);
 
   // ===== RETURN INTERFACE =====
-
   return {
     getNavigationContext,
     selectScene,
@@ -425,29 +831,32 @@ export function useManuscriptNavigation(
     selectAct,
     scrollToScene,
     scrollToChapter,
+
+    // ✅ NEW: Enhanced navigation methods
+    getNextSceneWithInfo,
+    getPreviousSceneWithInfo,
+    getNextChapterWithInfo,
+    getPreviousChapterWithInfo,
   };
 }
 
 /*
-===== CLEAN NAVIGATION ARCHITECTURE =====
+===== STEP 1 COMPLETE =====
 
-✅ CLEAR SEPARATION OF CONCERNS:
-- Primary navigation = Changes view focus/selection
-- Secondary navigation = Scrolls within current view
+✅ NEW NAVIGATION LOGIC:
+- getNextSceneWithInfo() - Returns scene + navigation button info
+- getPreviousSceneWithInfo() - Returns scene + navigation button info  
+- getNextChapterWithInfo() - Returns chapter + navigation button info
+- getPreviousChapterWithInfo() - Returns chapter + navigation button info
 
-✅ VIEW-SPECIFIC NAVIGATION:
-- Scene View: Only primary (scene selection)
-- Chapter View: Primary (chapter selection) + Secondary (scene scrolling)
-- Act View: Primary (act selection) + Secondary (chapter scrolling)
+✅ NAVIGATION BUTTON STATES:
+- "normal" - Standard navigation within container
+- "cross-boundary" - Will cross to different container (different color)
+- "disabled" - No navigation possible
 
-✅ CLEAN HANDLERS:
-- selectScene/Chapter/Act = Changes selection and switches view
-- scrollToScene/Chapter = Just scrolls within current view
+✅ ENHANCED TOOLTIPS:
+- Shows destination container for cross-boundary navigation
+- Clear messaging for all states
 
-✅ CONSISTENT PATTERNS:
-- All navigation builders follow same pattern
-- Clear distinction between selection and scrolling
-- Proper state management separation
-
-This architecture is much cleaner and easier to understand!
+Next step: Update the NavigationBar component to use this enhanced info!
 */

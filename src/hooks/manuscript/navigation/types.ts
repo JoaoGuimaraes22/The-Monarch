@@ -77,4 +77,35 @@ export interface NavigationHandlers {
   // Secondary scroll handlers (just scroll within view)
   scrollToScene: (sceneId: string) => void;
   scrollToChapter: (chapterId: string) => void;
+
+  // ✅ NEW: Enhanced navigation with boundary info
+  getNextSceneWithInfo: () => {
+    scene: Scene | null;
+    info: NavigationButtonInfo;
+  };
+  getPreviousSceneWithInfo: () => {
+    scene: Scene | null;
+    info: NavigationButtonInfo;
+  };
+  getNextChapterWithInfo: () => {
+    chapter: Chapter | null;
+    info: NavigationButtonInfo;
+  };
+  getPreviousChapterWithInfo: () => {
+    chapter: Chapter | null;
+    info: NavigationButtonInfo;
+  };
+}
+
+// ✅ NEW: Enhanced navigation button state
+export type NavigationButtonState =
+  | "normal" // Standard navigation within current container
+  | "cross-boundary" // Will navigate to different container
+  | "disabled"; // No navigation possible
+
+// ✅ NEW: Enhanced navigation info
+export interface NavigationButtonInfo {
+  state: NavigationButtonState;
+  tooltip: string;
+  destinationContainer?: string; // e.g., "Chapter 3" or "Act 2"
 }
