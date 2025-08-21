@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/scene-text-editor.tsx
-// ✨ FIXED: Single toolbox button that changes appearance when toggled
+// ✨ ENHANCED: Added help popup to existing toolbox structure
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -12,6 +12,8 @@ import {
   Plus,
   Minus,
   Minus as HorizontalRule,
+  HelpCircle,
+  X,
 } from "lucide-react";
 
 interface SceneTextEditorProps {
@@ -36,6 +38,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
   const [isMounted, setIsMounted] = useState(false);
   const [fontSize, setFontSize] = useState(16);
   const [isToolboxOpen, setIsToolboxOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false); // ✨ NEW: Help popup state
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Font size adjustment functions
@@ -46,6 +49,13 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
   const decreaseFontSize = () => {
     setFontSize((prev) => Math.max(prev - 2, 12)); // Min 12px
   };
+
+  // ✨ NEW: Close help when toolbox closes
+  useEffect(() => {
+    if (!isToolboxOpen) {
+      setIsHelpOpen(false);
+    }
+  }, [isToolboxOpen]);
 
   // Handle clicks on Add Scene/Chapter buttons
   const handleAddButtonClick = useCallback(
@@ -169,7 +179,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           }
         }
 
-        // ✨ NEW: Handle delete line shortcut (Ctrl+Shift+K)
+        // ✨ Handle delete line shortcut (Ctrl+Shift+K)
         if (event.key === "K" && event.ctrlKey && event.shiftKey) {
           event.preventDefault();
 
@@ -238,7 +248,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           }
         }
 
-        // ✨ NEW: Handle horizontal line shortcut (Ctrl+Shift+-)
+        // ✨ Handle horizontal line shortcut (Ctrl+Shift+-)
         if (event.key === "_" && event.ctrlKey && event.shiftKey) {
           event.preventDefault();
           editor?.commands.setHorizontalRule();
@@ -329,9 +339,113 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
         <EditorContent editor={editor} />
       </div>
 
-      {/* ✨ FIXED: Floating Toolbox - Bottom Right - Single Container */}
+      {/* ✨ ENHANCED: Floating Toolbox with Help Popup */}
       {!readOnly && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+          {/* ✨ NEW: Help Popup - Appears above toolbox */}
+          {isHelpOpen && (
+            <div className="mb-3 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-4 animate-in slide-in-from-bottom-2 duration-200 w-64">
+              <div className="space-y-3">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-gray-600 pb-2">
+                  <h3 className="text-sm font-medium text-white">
+                    Keyboard Shortcuts
+                  </h3>
+                  <button
+                    onClick={() => setIsHelpOpen(false)}
+                    className="text-gray-400 hover:text-white p-1"
+                    title="Close help"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Shortcuts List */}
+                <div className="space-y-2 text-xs">
+                  {/* Formatting Shortcuts */}
+                  <div>
+                    <div className="text-gray-300 font-medium mb-1">
+                      Formatting
+                    </div>
+                    <div className="space-y-1 text-gray-400">
+                      <div className="flex justify-between">
+                        <span>Bold</span>
+                        <code className="bg-gray-700 px-1 rounded">Ctrl+B</code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Italic</span>
+                        <code className="bg-gray-700 px-1 rounded">Ctrl+I</code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Strikethrough</span>
+                        <code className="bg-gray-700 px-1 rounded">
+                          Ctrl+Shift+S
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Line Operations */}
+                  <div>
+                    <div className="text-gray-300 font-medium mb-1">
+                      Line Operations
+                    </div>
+                    <div className="space-y-1 text-gray-400">
+                      <div className="flex justify-between">
+                        <span>Delete Line</span>
+                        <code className="bg-gray-700 px-1 rounded">
+                          Ctrl+Shift+K
+                        </code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Line Break</span>
+                        <code className="bg-gray-700 px-1 rounded">
+                          Shift+Enter
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text Shortcuts */}
+                  <div>
+                    <div className="text-gray-300 font-medium mb-1">
+                      Text Shortcuts
+                    </div>
+                    <div className="space-y-1 text-gray-400">
+                      <div className="flex justify-between">
+                        <span>Em Dash (—)</span>
+                        <code className="bg-gray-700 px-1 rounded">--</code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Horizontal Rule</span>
+                        <code className="bg-gray-700 px-1 rounded">
+                          Ctrl+Shift+-
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Font Size */}
+                  <div>
+                    <div className="text-gray-300 font-medium mb-1">
+                      Font Size
+                    </div>
+                    <div className="space-y-1 text-gray-400">
+                      <div className="flex justify-between">
+                        <span>Increase</span>
+                        <code className="bg-gray-700 px-1 rounded">Ctrl++</code>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Decrease</span>
+                        <code className="bg-gray-700 px-1 rounded">Ctrl+-</code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Expanded Toolbox */}
           {isToolboxOpen && (
             <div className="mb-3 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-3 animate-in slide-in-from-bottom-2 duration-200">
@@ -367,7 +481,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
                         ? "bg-blue-600 text-white"
                         : "text-gray-300 hover:bg-gray-600 hover:text-white"
                     }`}
-                    title="Strikethrough"
+                    title="Strikethrough (Ctrl+Shift+S)"
                   >
                     <Underline className="w-4 h-4" />
                   </button>
@@ -388,7 +502,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
                     <button
                       onClick={decreaseFontSize}
                       className="p-1 rounded transition-colors text-gray-300 hover:bg-gray-600 hover:text-white"
-                      title="Decrease Font Size"
+                      title="Decrease Font Size (Ctrl+-)"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -398,29 +512,34 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
                     <button
                       onClick={increaseFontSize}
                       className="p-1 rounded transition-colors text-gray-300 hover:bg-gray-600 hover:text-white"
-                      title="Increase Font Size"
+                      title="Increase Font Size (Ctrl++)"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
 
-                {/* Stats and Info */}
-                <div className="border-t border-gray-600 pt-2 space-y-1">
-                  <div className="text-xs text-gray-400 text-center">
-                    {wordCount.toLocaleString()} words
+                {/* ✨ ENHANCED: Stats and Help Button */}
+                <div className="border-t border-gray-600 pt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-400">
+                      {wordCount.toLocaleString()} words
+                    </div>
+                    {/* ✨ NEW: Help Button */}
+                    <button
+                      onClick={() => setIsHelpOpen(!isHelpOpen)}
+                      className={`p-1 rounded transition-colors ${
+                        isHelpOpen
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-300 hover:bg-gray-600 hover:text-white"
+                      }`}
+                      title="Show keyboard shortcuts"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div className="text-xs text-gray-500 text-center">
-                    Type <code className="bg-gray-600 px-1 rounded">--</code>{" "}
-                    for em dash (—)
-                  </div>
-                  <div className="text-xs text-gray-500 text-center">
-                    Press{" "}
-                    <code className="bg-gray-600 px-1 rounded">
-                      Ctrl+Shift+-
-                    </code>{" "}
-                    for horizontal line
-                  </div>
+
+                  {/* Status */}
                   {isSaving && (
                     <div className="text-xs text-blue-400 text-center">
                       Saving...
@@ -431,7 +550,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
             </div>
           )}
 
-          {/* ✨ FIXED: Single Toggle Button - Guaranteed single instance */}
+          {/* Toggle Button */}
           <button
             key="toolbox-toggle" // React key to ensure single instance
             onClick={() => setIsToolboxOpen(!isToolboxOpen)}
@@ -439,10 +558,11 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
               w-12 h-12 rounded-full shadow-xl ring-2 
               transition-all duration-300 ease-in-out
               flex items-center justify-center
+              hover:scale-110 hover:shadow-2xl
               ${
                 isToolboxOpen
-                  ? "bg-blue-700 text-white ring-blue-500/30 transform rotate-45"
-                  : "bg-gray-700 text-gray-200 ring-gray-500/50 transform rotate-0"
+                  ? "bg-blue-700 text-white ring-blue-500/30 transform rotate-45 hover:bg-blue-600"
+                  : "bg-gray-700 text-gray-200 ring-gray-500/50 transform rotate-0 hover:bg-gray-600 hover:text-white hover:ring-gray-400/60"
               }
             `}
             style={{
