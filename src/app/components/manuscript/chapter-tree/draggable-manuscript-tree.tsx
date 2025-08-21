@@ -45,7 +45,6 @@ const ActContainer: React.FC<ActContainerProps> = ({
   onActSelect,
   onAddChapter,
   onDeleteAct,
-
   onUpdateActName,
   viewDensity = "detailed",
   children,
@@ -114,13 +113,20 @@ const ActContainer: React.FC<ActContainerProps> = ({
         }
       `}
     >
-      {/* Act Header */}
-      <div className="flex items-center justify-between p-3">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
+      {/* ✨ IMPROVED: Three-line layout for better title space */}
+      <div className="p-3">
+        {/* Line 1: Full width for title with expand/collapse and icon */}
+        <div
+          className="flex items-center space-x-2 mb-2"
+          onClick={handleActClick}
+        >
           {/* Expand/Collapse Button */}
           <button
-            onClick={onToggle}
-            className="p-1 text-gray-400 hover:text-white transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            className="p-1 text-gray-400 hover:text-white transition-colors flex-shrink-0"
             title={isExpanded ? "Collapse act" : "Expand act"}
           >
             {isExpanded ? (
@@ -132,95 +138,76 @@ const ActContainer: React.FC<ActContainerProps> = ({
 
           {/* Act Icon */}
           <Crown
-            className={`w-5 h-5 ${
+            className={`w-5 h-5 flex-shrink-0 ${
               isSelected ? "text-red-400" : "text-purple-400"
             }`}
           />
 
-          {/* Act Title */}
-          <div className="flex-1 min-w-0" onClick={handleActClick}>
+          {/* ✨ IMPROVED: Full width for title */}
+          <div className="flex-1 min-w-0">
             <EditableText
               value={act.title}
               onSave={handleUpdateActName}
-              className="font-medium text-white"
+              className="font-medium text-white text-base"
               placeholder="Act title..."
+              showButtons={false} // Hide inline edit buttons
             />
           </div>
-
-          {/* Act Stats */}
-          {viewDensity === "detailed" && (
-            <div className="flex items-center space-x-3 text-xs text-gray-400">
-              <span>{totalChapters} chapters</span>
-              <span className="text-gray-600">•</span>
-              <span>{totalScenes} scenes</span>
-              <span className="text-gray-600">•</span>
-              <WordCountDisplay count={totalWords} variant="compact" />
-            </div>
-          )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Line 2: Action buttons - only show on hover */}
         <div
-          className={`
-            flex items-center space-x-1 transition-opacity duration-200
-            ${
-              isHovered || isSelected
-                ? "opacity-100"
-                : "opacity-0 group-hover:opacity-100"
-            }
-          `}
+          className={`flex items-center justify-between mb-2 transition-opacity ${
+            isHovered ? "opacity-100" : "opacity-0"
+          }`}
         >
-          {/* Add Chapter Button */}
-          {onAddChapter && (
-            <button
-              onClick={handleAddChapter}
-              disabled={isAddingChapter}
-              className={`p-1 rounded text-blue-400 hover:bg-blue-400 hover:text-white transition-colors ${
-                isAddingChapter ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              title="Add Chapter"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center space-x-1">
+            {/* Add Chapter Button */}
+            {onAddChapter && (
+              <button
+                onClick={handleAddChapter}
+                disabled={isAddingChapter}
+                className={`px-1.5 py-0.5 rounded text-xs transition-colors ${
+                  isAddingChapter
+                    ? "bg-gray-600 text-gray-400"
+                    : "bg-yellow-600 hover:bg-yellow-500 text-yellow-100"
+                }`}
+                title="Add chapter to this act"
+              >
+                <Plus className="w-3 h-3 inline mr-0.5" />
+                Chapter
+              </button>
+            )}
+          </div>
 
-          {/* Delete Act Button */}
-          {onDeleteAct && (
-            <button
-              onClick={handleDeleteAct}
-              className="p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-colors"
-              title="Delete Act"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center space-x-1">
+            {/* Delete Act Button */}
+            {onDeleteAct && (
+              <button
+                onClick={handleDeleteAct}
+                className="p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-colors"
+                title="Delete this act"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Line 3: Stats (only in detailed view) */}
+        {viewDensity === "detailed" && (
+          <div className="flex items-center space-x-4 text-xs text-gray-400">
+            <span>{totalChapters} chapters</span>
+            <span className="text-gray-600">•</span>
+            <span>{totalScenes} scenes</span>
+            <span className="text-gray-600">•</span>
+            <WordCountDisplay count={totalWords} variant="compact" />
+          </div>
+        )}
       </div>
 
-      {/* Chapters (only shown when expanded) */}
-      {isExpanded && <div className="border-t border-gray-600">{children}</div>}
-
-      {/* Add Chapter at End Button (when expanded and hovered) */}
-      {isExpanded && (totalChapters === 0 || (isHovered && onAddChapter)) && (
-        <div className="border-t border-gray-600 p-3">
-          <button
-            onClick={handleAddChapter}
-            disabled={isAddingChapter}
-            className={`flex items-center space-x-2 text-sm text-blue-400 hover:text-blue-300 transition-colors ${
-              isAddingChapter ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>
-              {isAddingChapter
-                ? "Adding chapter..."
-                : totalChapters === 0
-                ? "Add first chapter"
-                : "Add chapter"}
-            </span>
-          </button>
-        </div>
-      )}
+      {/* Children (chapters) */}
+      {isExpanded && children}
     </div>
   );
 };

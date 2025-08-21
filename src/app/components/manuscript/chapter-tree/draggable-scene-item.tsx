@@ -1,10 +1,10 @@
 // src/app/components/manuscript/chapter-tree/draggable-scene-item.tsx
-// ✨ UPDATED: Replaced Edit3 button with + button for adding scenes
+// ✨ UPDATED: Replaced Edit3 button with + button for adding scenes + improved 3-line layout
 
 import React, { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FileText, GripVertical, Trash2, Plus } from "lucide-react"; // ✨ UPDATED: Removed Edit3, added Plus
+import { FileText, GripVertical, Trash2, Plus } from "lucide-react";
 import { Scene } from "@/lib/novels";
 import {
   StatusIndicator,
@@ -21,7 +21,7 @@ interface DraggableSceneItemProps {
   onSelect: (sceneId: string, scene: Scene) => void;
   onDelete: (sceneId: string, title: string) => void;
   onUpdateSceneName?: (sceneId: string, newTitle: string) => Promise<void>;
-  onAddScene?: (chapterId: string, afterSceneId?: string) => void; // ✨ NEW: Add scene handler
+  onAddScene?: (chapterId: string, afterSceneId?: string) => void;
 }
 
 export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
@@ -33,9 +33,10 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   onSelect,
   onDelete,
   onUpdateSceneName,
-  onAddScene, // ✨ NEW: Add scene handler
+  onAddScene,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isAddingScene, setIsAddingScene] = useState(false);
 
   const {
     attributes,
@@ -69,7 +70,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
   };
 
   // Handle delete with confirmation
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDeleteScene = (e: React.MouseEvent) => {
     e.stopPropagation();
     const sceneTitle = scene.title || `Scene ${scene.order}`;
     if (window.confirm(`Delete "${sceneTitle}"?`)) {
@@ -77,11 +78,18 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
     }
   };
 
-  // ✨ NEW: Handle add scene after this scene
-  const handleAddScene = (e: React.MouseEvent) => {
+  // Handle add scene after this scene
+  const handleAddScene = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onAddScene) {
-      onAddScene(chapterId, scene.id); // Add scene after this scene
+    if (!onAddScene) return;
+
+    setIsAddingScene(true);
+    try {
+      await onAddScene(chapterId, scene.id); // Add scene after this scene
+    } catch (error) {
+      console.error("Failed to add scene:", error);
+    } finally {
+      setIsAddingScene(false);
     }
   };
 
@@ -92,7 +100,7 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`
-        group relative flex items-center space-x-2 py-2 px-3 rounded-md transition-all duration-200
+        group relative py-2 px-3 rounded-md transition-all duration-200
         ${
           isDragging
             ? "opacity-50 bg-gray-700/50 shadow-lg z-50 ring-2 ring-blue-500"
@@ -107,114 +115,118 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
       `}
       onClick={() => onSelect(scene.id, scene)}
     >
-      {/* Drag Handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className={`
-          drag-handle transition-opacity cursor-grab active:cursor-grabbing
-          ${
-            isDragging || isSelected || isHovered
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100"
-          }
-          p-1 hover:bg-gray-600 rounded
-        `}
-        onClick={(e) => e.stopPropagation()}
-        title="Drag to reorder scene"
-      >
-        <GripVertical className="w-3 h-3 text-gray-400" />
-      </div>
-
-      {/* Scene Status Icon */}
-      <StatusIndicator
-        status={scene.status}
-        variant="compact"
-        showIcon
-        showText={false}
-        className="flex-shrink-0"
-      />
-
-      {/* Scene Content with Inline Editing */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-medium text-gray-400">
-            SC{scene.order}
-          </span>
-
-          {/* Editable Scene Title */}
-          <div className="flex-1 min-w-0">
-            <EditableText
-              value={scene.title || `Scene ${scene.order}`}
-              onSave={handleUpdateSceneName}
-              placeholder="Scene name"
-              className="text-sm font-medium"
-              maxLength={50}
-            />
-          </div>
+      {/* ✨ IMPROVED: 3-line layout for better title space */}
+      {/* Line 1: Full width for title with drag handle and status */}
+      <div className="flex items-center space-x-2 mb-2">
+        {/* Drag Handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className={`
+            drag-handle transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0
+            ${
+              isDragging || isSelected || isHovered
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
+            }
+            p-1 hover:bg-gray-600 rounded
+          `}
+          onClick={(e) => e.stopPropagation()}
+          title="Drag to reorder scene"
+        >
+          <GripVertical className="w-3 h-3 text-gray-400" />
         </div>
 
-        {/* Scene metadata - Only show in detailed view */}
-        {viewDensity === "detailed" && (
-          <div className="flex items-center space-x-2 text-xs mt-1">
-            <WordCountDisplay
-              count={scene.wordCount}
-              variant="compact"
-              className="text-gray-500"
-            />
+        {/* Scene Status Icon */}
+        <StatusIndicator
+          status={scene.status}
+          variant="compact"
+          showIcon
+          showText={false}
+          className="flex-shrink-0"
+        />
 
-            {scene.povCharacter && (
-              <>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-500 truncate">
-                  POV: {scene.povCharacter}
-                </span>
-              </>
-            )}
+        {/* Scene Number */}
+        <span className="text-xs font-medium text-gray-400 flex-shrink-0">
+          SC{scene.order}
+        </span>
 
-            {scene.sceneType && (
-              <>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-500 truncate">
-                  {scene.sceneType}
-                </span>
-              </>
-            )}
-          </div>
-        )}
+        {/* ✨ IMPROVED: Full width for title */}
+        <div className="flex-1 min-w-0">
+          <EditableText
+            value={scene.title || `Scene ${scene.order}`}
+            onSave={handleUpdateSceneName}
+            placeholder="Scene name"
+            className="text-sm font-medium"
+            maxLength={50}
+            showButtons={false} // Hide inline edit buttons
+          />
+        </div>
       </div>
 
-      {/* ✨ UPDATED: Action Buttons - Replaced Edit3 with Add Scene */}
+      {/* Line 2: Action buttons - only show on hover */}
       <div
-        className={`
-        flex items-center space-x-1 transition-opacity
-        ${
-          isHovered || isSelected
-            ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100"
-        }
-      `}
+        className={`flex items-center justify-between mb-1 transition-opacity ${
+          isHovered ? "opacity-100" : "opacity-0"
+        }`}
       >
-        {/* ✨ NEW: Add Scene Button (replaces Edit3 button) */}
-        {onAddScene && (
-          <button
-            onClick={handleAddScene}
-            className="p-1 hover:bg-green-600 rounded text-gray-400 hover:text-green-300 transition-colors"
-            title="Add scene after this"
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-        )}
+        <div className="flex items-center space-x-1">
+          {/* Add Scene Button */}
+          {onAddScene && (
+            <button
+              onClick={handleAddScene}
+              disabled={isAddingScene}
+              className={`px-1.5 py-0.5 rounded text-xs transition-colors ${
+                isAddingScene
+                  ? "bg-gray-600 text-gray-400"
+                  : "bg-blue-600 hover:bg-blue-500 text-blue-100"
+              }`}
+              title="Add scene after this one"
+            >
+              <Plus className="w-3 h-3 inline mr-0.5" />
+              Scene
+            </button>
+          )}
+        </div>
 
-        {/* Delete button */}
-        <button
-          onClick={handleDelete}
-          className="p-1 hover:bg-red-600 rounded text-gray-400 hover:text-red-300 transition-colors"
-          title="Delete scene"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+        <div className="flex items-center space-x-1">
+          {/* Delete Scene Button */}
+          <button
+            onClick={handleDeleteScene}
+            className="p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-colors"
+            title="Delete this scene"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
       </div>
+
+      {/* Line 3: Scene metadata (only in detailed view) */}
+      {viewDensity === "detailed" && (
+        <div className="flex items-center space-x-2 text-xs text-gray-400">
+          <WordCountDisplay
+            count={scene.wordCount}
+            variant="compact"
+            className="text-gray-500"
+          />
+
+          {scene.povCharacter && (
+            <>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-500 truncate">
+                POV: {scene.povCharacter}
+              </span>
+            </>
+          )}
+
+          {scene.sceneType && (
+            <>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-500 truncate">{scene.sceneType}</span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

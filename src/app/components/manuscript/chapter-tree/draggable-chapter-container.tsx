@@ -1,5 +1,5 @@
 // src/app/components/manuscript/chapter-tree/draggable-chapter-container.tsx
-// ✨ UPDATED: Fixed props to match new positioned adding system
+// ✨ UPDATED: Fixed props to match new positioned adding system + improved 3-line layout
 
 import React, { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
@@ -65,6 +65,7 @@ export const DraggableChapterContainer: React.FC<
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingChapter, setIsAddingChapter] = useState(false);
+  const [isAddingScene, setIsAddingScene] = useState(false);
 
   const {
     attributes: dragAttributes,
@@ -97,6 +98,21 @@ export const DraggableChapterContainer: React.FC<
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  };
+
+  // Handle add scene
+  const handleAddScene = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onAddScene) return;
+
+    setIsAddingScene(true);
+    try {
+      await onAddScene(chapter.id); // Add at end of chapter
+    } catch (error) {
+      console.error("Failed to add scene:", error);
+    } finally {
+      setIsAddingScene(false);
+    }
   };
 
   // ✨ UPDATED: Handle add chapter (changed from add scene)
@@ -163,10 +179,10 @@ export const DraggableChapterContainer: React.FC<
         ${isOver ? "bg-blue-900/20 border border-blue-500 rounded" : ""}
       `}
     >
-      {/* Chapter Header */}
+      {/* ✨ IMPROVED: Chapter Header with 3-line layout */}
       <div
         className={`
-          group flex items-center space-x-2 py-2 px-3 rounded-md cursor-pointer transition-all
+          group py-2 px-3 rounded-md cursor-pointer transition-all
           ${
             isSelected
               ? "bg-red-900/30 border-l-2 border-red-500 text-white"
@@ -177,115 +193,130 @@ export const DraggableChapterContainer: React.FC<
         `}
         onClick={handleChapterHeaderClick}
       >
-        {/* Drag Handle */}
-        <div
-          {...dragAttributes}
-          {...dragListeners}
-          className={`
-            drag-handle transition-opacity cursor-grab active:cursor-grabbing
-            ${
-              isDragging || isSelected || isHovered
-                ? "opacity-100"
-                : "opacity-0 group-hover:opacity-100"
-            }
-            p-1 hover:bg-gray-600 rounded
-          `}
-          onClick={(e) => e.stopPropagation()}
-          title="Drag to reorder chapter"
-        >
-          <GripVertical className="w-3 h-3 text-yellow-400" />
-        </div>
-
-        {/* Expand/Collapse Toggle */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          className="p-1 hover:bg-gray-600 rounded transition-colors"
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          )}
-        </button>
-
-        {/* Chapter Icon */}
-        <Book className="w-4 h-4 flex-shrink-0 text-yellow-400" />
-
-        {/* Chapter Content with Inline Editing */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-medium text-gray-400">
-              CH{chapter.order}
-            </span>
-
-            {/* Editable Chapter Title */}
-            <div className="flex-1 min-w-0">
-              <EditableText
-                value={chapter.title}
-                onSave={handleUpdateChapterName}
-                placeholder="Chapter name"
-                className="text-sm font-medium"
-                maxLength={100}
-              />
-            </div>
+        {/* Line 1: Full width for title with controls */}
+        <div className="flex items-center space-x-2 mb-2">
+          {/* Drag Handle */}
+          <div
+            {...dragAttributes}
+            {...dragListeners}
+            className={`
+              drag-handle transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0
+              ${
+                isDragging || isSelected || isHovered
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+              }
+              p-1 hover:bg-gray-600 rounded
+            `}
+            onClick={(e) => e.stopPropagation()}
+            title="Drag to reorder chapter"
+          >
+            <GripVertical className="w-3 h-3 text-yellow-400" />
           </div>
 
-          {/* Chapter metadata - Only show in detailed view */}
-          {viewDensity === "detailed" && (
-            <div className="flex items-center space-x-2 text-xs mt-1">
-              <span className="text-gray-500">
-                {chapter.scenes.length} scene
-                {chapter.scenes.length !== 1 ? "s" : ""}
-              </span>
-              <span className="text-gray-500">•</span>
-              <WordCountDisplay
-                count={totalWords}
-                variant="compact"
-                className="text-gray-500"
-              />
-            </div>
-          )}
+          {/* Expand/Collapse Toggle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            className="p-1 hover:bg-gray-600 rounded transition-colors flex-shrink-0"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {/* Chapter Icon */}
+          <Book className="w-4 h-4 flex-shrink-0 text-yellow-400" />
+
+          {/* Chapter Number */}
+          <span className="text-xs font-medium text-gray-400 flex-shrink-0">
+            CH{chapter.order}
+          </span>
+
+          {/* ✨ IMPROVED: Full width for title */}
+          <div className="flex-1 min-w-0">
+            <EditableText
+              value={chapter.title}
+              onSave={handleUpdateChapterName}
+              placeholder="Chapter name"
+              className="text-sm font-medium"
+              maxLength={100}
+              showButtons={false} // Hide inline edit buttons
+            />
+          </div>
         </div>
 
-        {/* ✨ UPDATED: Action Buttons - + now adds chapter */}
+        {/* Line 2: Action buttons - only show on hover */}
         <div
-          className={`
-          chapter-actions flex items-center space-x-1 transition-opacity
-          ${
-            isHovered || isSelected
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100"
-          }
-        `}
+          className={`flex items-center justify-between mb-1 transition-opacity ${
+            isHovered ? "opacity-100" : "opacity-0"
+          }`}
         >
-          {/* ✨ UPDATED: Add Chapter Button (was Add Scene) */}
-          {onAddChapter && (
-            <button
-              onClick={handleAddChapter}
-              disabled={isAddingChapter}
-              className={`p-1 rounded text-blue-400 hover:bg-blue-400 hover:text-white transition-colors ${
-                isAddingChapter ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              title="Add Chapter After This"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center space-x-1">
+            {/* Add Scene Button */}
+            {onAddScene && (
+              <button
+                onClick={handleAddScene}
+                disabled={isAddingScene}
+                className={`px-1.5 py-0.5 rounded text-xs transition-colors ${
+                  isAddingScene
+                    ? "bg-gray-600 text-gray-400"
+                    : "bg-blue-600 hover:bg-blue-500 text-blue-100"
+                }`}
+                title="Add scene to this chapter"
+              >
+                <Plus className="w-3 h-3 inline mr-0.5" />
+                Scene
+              </button>
+            )}
 
-          {/* Delete Chapter Button */}
-          {onDeleteChapter && (
-            <button
-              onClick={handleDeleteChapter}
-              className="p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-colors"
-              title="Delete Chapter"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+            {/* Add Chapter Button */}
+            {onAddChapter && (
+              <button
+                onClick={handleAddChapter}
+                disabled={isAddingChapter}
+                className={`px-1.5 py-0.5 rounded text-xs transition-colors ${
+                  isAddingChapter
+                    ? "bg-gray-600 text-gray-400"
+                    : "bg-yellow-600 hover:bg-yellow-500 text-yellow-100"
+                }`}
+                title="Add chapter after this one"
+              >
+                <Plus className="w-3 h-3 inline mr-0.5" />
+                Chapter
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-1">
+            {/* Delete Chapter Button */}
+            {onDeleteChapter && (
+              <button
+                onClick={handleDeleteChapter}
+                className="p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-colors"
+                title="Delete this chapter"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Line 3: Chapter metadata (only in detailed view) */}
+        {viewDensity === "detailed" && (
+          <div className="flex items-center space-x-2 text-xs text-gray-400">
+            <span>
+              {chapter.scenes.length} scene
+              {chapter.scenes.length !== 1 ? "s" : ""}
+            </span>
+            <span className="text-gray-600">•</span>
+            <WordCountDisplay count={totalWords} variant="compact" />
+          </div>
+        )}
       </div>
 
       {/* Scenes List */}
@@ -307,14 +338,14 @@ export const DraggableChapterContainer: React.FC<
                   onSelect={onSceneSelect}
                   onDelete={onSceneDelete}
                   onUpdateSceneName={onUpdateSceneName}
-                  onAddScene={onAddScene} // ✨ Pass add scene handler to scenes
+                  onAddScene={onAddScene}
                   viewDensity={viewDensity}
                 />
               ))}
           </SortableContext>
 
-          {/* ✨ KEPT: Add Scene at End Button - Show when empty or always available */}
-          {(chapter.scenes.length === 0 || (isHovered && onAddScene)) && (
+          {/* Add Scene at End Button - Show when empty or always available */}
+          {chapter.scenes.length === 0 && (
             <div className="ml-2 py-2">
               <button
                 onClick={(e) => {
@@ -326,11 +357,7 @@ export const DraggableChapterContainer: React.FC<
                 className="flex items-center space-x-2 text-sm text-green-400 hover:text-green-300 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>
-                  {chapter.scenes.length === 0
-                    ? "Add first scene"
-                    : "Add scene"}
-                </span>
+                <span>Add first scene</span>
               </button>
             </div>
           )}
