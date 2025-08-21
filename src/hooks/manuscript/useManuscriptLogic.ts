@@ -434,12 +434,13 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
   );
 
   // ===== INITIALIZATION =====
+  const { loadNovelStructure } = utils;
   useEffect(() => {
     if (novelId) {
       console.log("🚀 Initial load for novelId:", novelId);
-      utils.loadNovelStructure(novelId);
+      loadNovelStructure(novelId);
     }
-  }, [novelId, utils]);
+  }, [novelId, loadNovelStructure]); // ✅ Clean and explicit
 
   // ===== COMPUTED VALUES =====
   const hasStructure = utils.hasStructure(state.novel);

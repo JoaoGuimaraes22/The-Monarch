@@ -1,7 +1,7 @@
 // src/hooks/manuscript/useManuscriptUtils.ts
-// Utility functions and helpers for manuscript operations
+// ✅ FIXED: Proper memoization to prevent infinite re-renders
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useMemo } from "react";
 import { NovelWithStructure } from "@/lib/novels";
 import { ContentDisplayMode } from "@/app/components/manuscript/manuscript-editor/content-views/types";
 import { ManuscriptStateActions } from "./useManuscriptState";
@@ -57,7 +57,7 @@ export function useManuscriptUtils(config: UtilsConfig): UtilityHelpers {
     }
   };
 
-  // ===== UTILITY FUNCTIONS =====
+  // ===== MEMOIZED UTILITY FUNCTIONS =====
 
   // Check if we're in document view mode
   const isInDocumentView = useCallback(() => {
@@ -69,13 +69,13 @@ export function useManuscriptUtils(config: UtilsConfig): UtilityHelpers {
     if (loadNovelStructureRef.current) {
       await loadNovelStructureRef.current(id);
     }
-  }, []);
+  }, []); // ✅ No dependencies - function is stable
 
   // Refresh handler
   const handleRefresh = useCallback(() => {
     console.log("🔄 EXPLICIT REFRESH: User action triggered refresh");
     loadNovelStructure(novelId);
-  }, [loadNovelStructure, novelId]);
+  }, [loadNovelStructure, novelId]); // ✅ Stable dependencies
 
   // Check if novel has structure
   const hasStructure = useCallback(
@@ -83,13 +83,17 @@ export function useManuscriptUtils(config: UtilsConfig): UtilityHelpers {
       return !!(novel && novel.acts && novel.acts.length > 0);
     },
     []
-  );
+  ); // ✅ No dependencies - pure function
 
-  // ===== RETURN INTERFACE =====
-  return {
-    isInDocumentView,
-    loadNovelStructure,
-    handleRefresh,
-    hasStructure,
-  };
+  // ===== MEMOIZED RETURN OBJECT =====
+  return useMemo(
+    () => ({
+      isInDocumentView,
+      loadNovelStructure,
+      handleRefresh,
+      hasStructure,
+    }),
+    [isInDocumentView, loadNovelStructure, handleRefresh, hasStructure]
+  );
+  // ✅ Only recreate when functions actually change
 }
