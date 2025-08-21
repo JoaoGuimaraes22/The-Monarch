@@ -277,126 +277,130 @@ export const ManuscriptStructureSidebar: React.FC<
   );
 
   return (
-    <CollapsibleSidebar
-      isCollapsed={isCollapsed}
-      onToggleCollapse={onToggleCollapse}
-      left={left}
-      width={width}
-      title="Structure"
-      collapsedContent={collapsedContent}
-      position="left"
-    >
-      {/* Enhanced container structure for scrolling */}
-      <div className="h-full flex flex-col">
-        {/* ✨ SIMPLIFIED HEADER: Just view density toggle and tools */}
-        <div className="flex-shrink-0 border-b border-gray-700 bg-gray-800">
-          <div className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-white">TOOLS</h3>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setIsToolsCollapsed(!isToolsCollapsed)}
-                  className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
-                  title={isToolsCollapsed ? "Expand tools" : "Collapse tools"}
-                >
-                  {isToolsCollapsed ? "Expand" : "Collapse"}
-                </button>
-                <button
-                  onClick={() =>
-                    setViewDensity(
+    <div className="manuscript-structure-sidebar">
+      <CollapsibleSidebar
+        isCollapsed={isCollapsed}
+        onToggleCollapse={onToggleCollapse}
+        left={left}
+        width={width}
+        title="Structure"
+        collapsedContent={collapsedContent}
+        position="left"
+      >
+        {/* Enhanced container structure for scrolling */}
+        <div className="h-full flex flex-col">
+          {/* ✨ SIMPLIFIED HEADER: Just view density toggle and tools */}
+          <div className="flex-shrink-0 border-b border-gray-700 bg-gray-800">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-white">TOOLS</h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setIsToolsCollapsed(!isToolsCollapsed)}
+                    className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+                    title={isToolsCollapsed ? "Expand tools" : "Collapse tools"}
+                  >
+                    {isToolsCollapsed ? "Expand" : "Collapse"}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setViewDensity(
+                        viewDensity === "clean" ? "detailed" : "clean"
+                      )
+                    }
+                    className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+                    title={`Switch to ${
                       viewDensity === "clean" ? "detailed" : "clean"
-                    )
-                  }
-                  className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
-                  title={`Switch to ${
-                    viewDensity === "clean" ? "detailed" : "clean"
-                  } view`}
-                >
-                  {viewDensity === "clean" ? "Detailed" : "Clean"}
-                </button>
+                    } view`}
+                  >
+                    {viewDensity === "clean" ? "Detailed" : "Clean"}
+                  </button>
+                </div>
               </div>
+
+              {/* ✨ COLLAPSIBLE: CompactAutoSaveTools section */}
+              {!isToolsCollapsed && (
+                <CompactAutoSaveTools
+                  // Auto-save props
+                  autoSaveEnabled={autoSaveEnabled}
+                  setAutoSaveEnabled={setAutoSaveEnabled}
+                  handleManualSave={handleManualSave}
+                  pendingChanges={pendingChanges}
+                  isSavingContent={isSavingContent}
+                  lastSaved={lastSaved}
+                  novelId={novel.id}
+                  onRefresh={onRefresh}
+                  onOpenContextualImport={onOpenContextualImport}
+                  // Structure control props
+                  novel={novel}
+                  selectedScene={selectedScene}
+                  selectedChapterId={selectedChapterId}
+                  selectedActId={selectedActId}
+                  expandedActs={expandedActs}
+                  expandedChapters={expandedChapters}
+                  onExpandAllActs={expandAllActs}
+                  onCollapseAllActs={collapseAllActs}
+                  onExpandAllChapters={expandAllChapters}
+                  onCollapseAllChapters={collapseAllChapters}
+                  getCurrentlySelectedAct={getCurrentlySelectedAct}
+                  // ✨ NEW: Pass chapter numbering props
+                  continuousChapterNumbering={continuousChapterNumbering}
+                  setContinuousChapterNumbering={setContinuousChapterNumbering}
+                />
+              )}
             </div>
 
-            {/* ✨ COLLAPSIBLE: CompactAutoSaveTools section */}
-            {!isToolsCollapsed && (
-              <CompactAutoSaveTools
-                // Auto-save props
-                autoSaveEnabled={autoSaveEnabled}
-                setAutoSaveEnabled={setAutoSaveEnabled}
-                handleManualSave={handleManualSave}
-                pendingChanges={pendingChanges}
-                isSavingContent={isSavingContent}
-                lastSaved={lastSaved}
-                novelId={novel.id}
-                onRefresh={onRefresh}
-                onOpenContextualImport={onOpenContextualImport}
-                // Structure control props
+            {/* Add Act button - only show when tools not collapsed */}
+            {onAddAct && !isToolsCollapsed && (
+              <div className="px-3 pb-3">
+                <button
+                  onClick={() => onAddAct()}
+                  className="w-full px-2 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-500 rounded transition-colors flex items-center justify-center space-x-1"
+                >
+                  <span>Add Act</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Main scrollable tree area */}
+          <div className="flex-1 overflow-y-auto manuscript-sidebar-scroll smooth-scroll scroll-pt-safe">
+            <div className="p-2">
+              <DraggableManuscriptTree
                 novel={novel}
-                selectedScene={selectedScene}
+                selectedSceneId={selectedScene?.id}
                 selectedChapterId={selectedChapterId}
                 selectedActId={selectedActId}
                 expandedActs={expandedActs}
                 expandedChapters={expandedChapters}
-                onExpandAllActs={expandAllActs}
-                onCollapseAllActs={collapseAllActs}
-                onExpandAllChapters={expandAllChapters}
-                onCollapseAllChapters={collapseAllChapters}
-                getCurrentlySelectedAct={getCurrentlySelectedAct}
-                // ✨ NEW: Pass chapter numbering props
-                continuousChapterNumbering={continuousChapterNumbering}
-                setContinuousChapterNumbering={setContinuousChapterNumbering}
-              />
-            )}
-          </div>
-
-          {/* Add Act button - only show when tools not collapsed */}
-          {onAddAct && !isToolsCollapsed && (
-            <div className="px-3 pb-3">
-              <button
-                onClick={() => onAddAct()}
-                className="w-full px-2 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-500 rounded transition-colors flex items-center justify-center space-x-1"
-              >
-                <span>Add Act</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Main scrollable tree area */}
-        <div className="flex-1 overflow-y-auto manuscript-sidebar-scroll smooth-scroll scroll-pt-safe">
-          <div className="p-2">
-            <DraggableManuscriptTree
-              novel={novel}
-              selectedSceneId={selectedScene?.id}
-              selectedChapterId={selectedChapterId}
-              selectedActId={selectedActId}
-              expandedActs={expandedActs}
-              expandedChapters={expandedChapters}
-              onActToggle={handleActToggle}
-              onChapterToggle={handleChapterToggle}
-              onSceneSelect={onSceneSelect}
-              onChapterSelect={onChapterSelect || (() => {})}
-              onActSelect={onActSelect || (() => {})}
-              onSceneDelete={(sceneId: string, title: string) => {
-                if (window.confirm(`Delete "${title}"?`)) {
-                  onDeleteScene(sceneId);
+                onActToggle={handleActToggle}
+                onChapterToggle={handleChapterToggle}
+                onSceneSelect={onSceneSelect}
+                onChapterSelect={onChapterSelect || (() => {})}
+                onActSelect={onActSelect || (() => {})}
+                onSceneDelete={(sceneId: string, title: string) => {
+                  if (window.confirm(`Delete "${title}"?`)) {
+                    onDeleteScene(sceneId);
+                  }
+                }}
+                onChapterDelete={onDeleteChapter}
+                onActDelete={onDeleteAct}
+                onAddScene={onAddScene}
+                onAddChapter={onAddChapter}
+                onUpdateActName={onUpdateActName || (() => Promise.resolve())}
+                onUpdateChapterName={
+                  onUpdateChapterName || (() => Promise.resolve())
                 }
-              }}
-              onChapterDelete={onDeleteChapter}
-              onActDelete={onDeleteAct}
-              onAddScene={onAddScene}
-              onAddChapter={onAddChapter}
-              onUpdateActName={onUpdateActName || (() => Promise.resolve())}
-              onUpdateChapterName={
-                onUpdateChapterName || (() => Promise.resolve())
-              }
-              onUpdateSceneName={onUpdateSceneName || (() => Promise.resolve())}
-              onRefresh={onRefresh}
-              viewDensity={viewDensity}
-            />
+                onUpdateSceneName={
+                  onUpdateSceneName || (() => Promise.resolve())
+                }
+                onRefresh={onRefresh}
+                viewDensity={viewDensity}
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </CollapsibleSidebar>
+      </CollapsibleSidebar>
+    </div>
   );
 };

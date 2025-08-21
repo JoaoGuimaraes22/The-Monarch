@@ -3,7 +3,7 @@
 
 import React from "react";
 import { FileText, Plus } from "lucide-react";
-import { SceneTextEditor } from "@/app/components/manuscript/manuscript-editor/scene-text-editor";
+import { SceneTextEditor } from "@/app/components/manuscript/manuscript-editor/scene-text-editor/scene-text-editor";
 import { SceneGrid } from "./grid-view/";
 import {
   AggregatedContent,

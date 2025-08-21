@@ -93,44 +93,46 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
 
   // ✨ UPDATED: Main manuscript editor with navigation component
   return (
-    <ManuscriptEditor
-      novel={manuscript.novel!}
-      selectedScene={manuscript.selectedScene}
-      selectedChapter={manuscript.selectedChapter}
-      selectedAct={manuscript.selectedAct}
-      viewMode={manuscript.viewMode}
-      contentDisplayMode={manuscript.contentDisplayMode}
-      onViewModeChange={manuscript.handleViewModeChange}
-      onContentDisplayModeChange={manuscript.handleContentDisplayModeChange}
-      onSceneSelect={manuscript.handleSceneSelect}
-      onChapterSelect={manuscript.handleChapterSelect}
-      onActSelect={manuscript.handleActSelect}
-      onRefresh={manuscript.handleRefresh}
-      onAddScene={manuscript.handleAddScene}
-      onAddChapter={manuscript.handleAddChapter}
-      onAddAct={manuscript.handleAddAct}
-      onDeleteScene={manuscript.handleDeleteScene}
-      onDeleteChapter={manuscript.handleDeleteChapter}
-      onDeleteAct={manuscript.handleDeleteAct}
-      onUpdateActName={manuscript.handleUpdateActName}
-      onUpdateChapterName={manuscript.handleUpdateChapterName}
-      onUpdateSceneName={manuscript.handleUpdateSceneName}
-      // ✨ UPDATED: Complete auto-save functionality
-      onSceneContentChange={manuscript.handleSceneContentChange}
-      isSavingContent={manuscript.isSavingContent}
-      lastSaved={manuscript.lastSaved}
-      autoSaveEnabled={manuscript.autoSaveEnabled}
-      setAutoSaveEnabled={manuscript.setAutoSaveEnabled}
-      handleManualSave={manuscript.handleManualSave}
-      pendingChanges={manuscript.pendingChanges}
-      isMainSidebarCollapsed={isMainSidebarCollapsed}
-      // ✅ FIXED: Pass navigation as a component instead of individual props
-      navigationComponent={
-        <ManuscriptNavigationBar
-          navigationContext={manuscript.getNavigationContext()}
-        />
-      }
-    />
+    <div className="manuscript-page">
+      <ManuscriptEditor
+        novel={manuscript.novel!}
+        selectedScene={manuscript.selectedScene}
+        selectedChapter={manuscript.selectedChapter}
+        selectedAct={manuscript.selectedAct}
+        viewMode={manuscript.viewMode}
+        contentDisplayMode={manuscript.contentDisplayMode}
+        onViewModeChange={manuscript.handleViewModeChange}
+        onContentDisplayModeChange={manuscript.handleContentDisplayModeChange}
+        onSceneSelect={manuscript.handleSceneSelect}
+        onChapterSelect={manuscript.handleChapterSelect}
+        onActSelect={manuscript.handleActSelect}
+        onRefresh={manuscript.handleRefresh}
+        onAddScene={manuscript.handleAddScene}
+        onAddChapter={manuscript.handleAddChapter}
+        onAddAct={manuscript.handleAddAct}
+        onDeleteScene={manuscript.handleDeleteScene}
+        onDeleteChapter={manuscript.handleDeleteChapter}
+        onDeleteAct={manuscript.handleDeleteAct}
+        onUpdateActName={manuscript.handleUpdateActName}
+        onUpdateChapterName={manuscript.handleUpdateChapterName}
+        onUpdateSceneName={manuscript.handleUpdateSceneName}
+        // ✨ UPDATED: Complete auto-save functionality
+        onSceneContentChange={manuscript.handleSceneContentChange}
+        isSavingContent={manuscript.isSavingContent}
+        lastSaved={manuscript.lastSaved}
+        autoSaveEnabled={manuscript.autoSaveEnabled}
+        setAutoSaveEnabled={manuscript.setAutoSaveEnabled}
+        handleManualSave={manuscript.handleManualSave}
+        pendingChanges={manuscript.pendingChanges}
+        isMainSidebarCollapsed={isMainSidebarCollapsed}
+        // ✅ FIXED: Pass navigation as a component instead of individual props
+        navigationComponent={
+          <ManuscriptNavigationBar
+            navigationContext={manuscript.getNavigationContext()}
+          />
+        }
+      />
+    </div>
   );
 }
 

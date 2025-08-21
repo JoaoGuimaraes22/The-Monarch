@@ -1,5 +1,5 @@
 // src/app/components/manuscript/chapter-tree/draggable-scene-item.tsx
-// ✨ UPDATED: Replaced Edit3 button with + button for adding scenes + improved 3-line layout
+// ✨ UPDATED: Replaced Edit3 button with + button for adding scenes + transparent add button styling
 
 import React, { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -164,36 +164,34 @@ export const DraggableSceneItem: React.FC<DraggableSceneItemProps> = ({
         </div>
       </div>
 
-      {/* Line 2: Action buttons - only show on hover */}
-      <div
-        className={`flex items-center justify-between mb-1 transition-opacity ${
-          isHovered ? "opacity-100" : "opacity-0"
-        }`}
-      >
+      {/* Line 2: Action buttons - always visible with transparent/dotted style */}
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center space-x-1">
           {/* Add Scene Button */}
           {onAddScene && (
             <button
               onClick={handleAddScene}
               disabled={isAddingScene}
-              className={`px-1.5 py-0.5 rounded text-xs transition-colors ${
-                isAddingScene
-                  ? "bg-gray-600 text-gray-400"
-                  : "bg-blue-600 hover:bg-blue-500 text-blue-100"
+              className={`flex items-center space-x-1 px-1.5 py-0.5 text-xs rounded transition-all duration-200 border ${
+                isHovered || isAddingScene
+                  ? "bg-blue-600 hover:bg-blue-500 text-blue-100 border-blue-600"
+                  : "bg-transparent text-blue-400 border-blue-400 border-dashed hover:bg-blue-600 hover:text-blue-100 hover:border-blue-600 hover:border-solid"
               }`}
               title="Add scene after this one"
             >
-              <Plus className="w-3 h-3 inline mr-0.5" />
-              Scene
+              <Plus className="w-3 h-3" />
+              <span>{isAddingScene ? "Adding..." : "Scene"}</span>
             </button>
           )}
         </div>
 
+        {/* Delete Scene Button - still only show on hover */}
         <div className="flex items-center space-x-1">
-          {/* Delete Scene Button */}
           <button
             onClick={handleDeleteScene}
-            className="p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-colors"
+            className={`p-1 rounded text-red-400 hover:bg-red-400 hover:text-white transition-all duration-200 ${
+              isHovered ? "opacity-100" : "opacity-0"
+            }`}
             title="Delete this scene"
           >
             <Trash2 className="w-3 h-3" />

@@ -415,87 +415,91 @@ export const DraggableManuscriptTree: React.FC<
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-    >
-      <div data-drag-type={dragType} className="space-y-4">
-        {novel.acts.map((act) => (
-          <ActContainer
-            key={act.id}
-            act={act}
-            isSelected={selectedActId === act.id}
-            isExpanded={expandedActs.has(act.id)} // ✨ NEW: Check if act is expanded
-            onToggle={() => onActToggle(act.id)} // ✨ NEW: Toggle act expansion
-            onActSelect={onActSelect}
-            onAddChapter={onAddChapter}
-            onDeleteAct={onActDelete}
-            onUpdateActName={onUpdateActName}
-            viewDensity={viewDensity}
-          >
-            {/* Chapters in SortableContext (only shown when act is expanded) */}
-            <div className="p-2 space-y-1">
-              <SortableContext
-                items={act.chapters.map((chapter) => chapter.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {act.chapters.map((chapter) => (
-                  <DraggableChapterContainer
-                    key={chapter.id}
-                    chapter={chapter}
-                    actId={act.id}
-                    isSelected={selectedChapterId === chapter.id}
-                    isExpanded={expandedChapters.has(chapter.id)}
-                    selectedSceneId={selectedSceneId}
-                    onToggle={() => onChapterToggle(chapter.id)}
-                    onSelect={onChapterSelect}
-                    onSceneSelect={onSceneSelect}
-                    onSceneDelete={onSceneDelete}
-                    onAddScene={onAddScene}
-                    onAddChapter={onAddChapter}
-                    onDeleteChapter={onChapterDelete}
-                    onUpdateChapterName={onUpdateChapterName}
-                    onUpdateSceneName={onUpdateSceneName}
-                    viewDensity={viewDensity}
-                  />
-                ))}
-              </SortableContext>
-            </div>
-          </ActContainer>
-        ))}
+    <div className="draggable-manuscript-tree">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div data-drag-type={dragType} className="space-y-4">
+          {novel.acts.map((act) => (
+            <ActContainer
+              key={act.id}
+              act={act}
+              isSelected={selectedActId === act.id}
+              isExpanded={expandedActs.has(act.id)} // ✨ NEW: Check if act is expanded
+              onToggle={() => onActToggle(act.id)} // ✨ NEW: Toggle act expansion
+              onActSelect={onActSelect}
+              onAddChapter={onAddChapter}
+              onDeleteAct={onActDelete}
+              onUpdateActName={onUpdateActName}
+              viewDensity={viewDensity}
+            >
+              {/* Chapters in SortableContext (only shown when act is expanded) */}
+              <div className="p-2 space-y-1">
+                <SortableContext
+                  items={act.chapters.map((chapter) => chapter.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {act.chapters.map((chapter) => (
+                    <DraggableChapterContainer
+                      key={chapter.id}
+                      chapter={chapter}
+                      actId={act.id}
+                      isSelected={selectedChapterId === chapter.id}
+                      isExpanded={expandedChapters.has(chapter.id)}
+                      selectedSceneId={selectedSceneId}
+                      onToggle={() => onChapterToggle(chapter.id)}
+                      onSelect={onChapterSelect}
+                      onSceneSelect={onSceneSelect}
+                      onSceneDelete={onSceneDelete}
+                      onAddScene={onAddScene}
+                      onAddChapter={onAddChapter}
+                      onDeleteChapter={onChapterDelete}
+                      onUpdateChapterName={onUpdateChapterName}
+                      onUpdateSceneName={onUpdateSceneName}
+                      viewDensity={viewDensity}
+                    />
+                  ))}
+                </SortableContext>
+              </div>
+            </ActContainer>
+          ))}
 
-        {/* Loading Overlay */}
-        {isReordering && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-4 flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <span className="text-white">Reordering...</span>
+          {/* Loading Overlay */}
+          {isReordering && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-gray-800 rounded-lg p-4 flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                <span className="text-white">Reordering...</span>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Enhanced Drag Overlay */}
-      <DragOverlay>
-        {activeScene ? (
-          <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-white">
-                {activeScene.title || `Scene ${activeScene.order}`}
-              </span>
+        {/* Enhanced Drag Overlay */}
+        <DragOverlay>
+          {activeScene ? (
+            <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-white">
+                  {activeScene.title || `Scene ${activeScene.order}`}
+                </span>
+              </div>
             </div>
-          </div>
-        ) : activeChapter ? (
-          <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-white">{activeChapter.title}</span>
+          ) : activeChapter ? (
+            <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-white">
+                  {activeChapter.title}
+                </span>
+              </div>
             </div>
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
   );
 };

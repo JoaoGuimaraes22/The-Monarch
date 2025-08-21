@@ -25,6 +25,16 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.manuscript-page {
+  --font-scale: 0.88;
+  font-size: calc(1rem * var(--font-scale));
+}
+
+.manuscript-page *,
+.manuscript-page * * {
+  font-size: inherit !important;
+}
+
 /* Custom scrollbar for manuscript sidebar */
 .scrollbar-thin {
   scrollbar-width: thin;
