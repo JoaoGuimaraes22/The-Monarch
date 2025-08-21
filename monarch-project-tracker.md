@@ -32,7 +32,7 @@ src/
 │   │       └── [novelId]/
 │   │           ├── layout.tsx     # Workspace wrapper layout
 │   │           ├── dashboard/page.tsx # Main workspace dashboard
-│   │           ├── manuscript/page.tsx # ✅ COMPLETE: Clean with modular hooks
+│   │           ├── manuscript/page.tsx # ✅ COMPLETE: Clean with modular hooks + NEW NAVIGATION
 │   │           └── characters/page.tsx # Placeholder
 │   ├── (marketing)/
 │   │   └── layout.tsx             # Marketing layout wrapper
@@ -54,47 +54,50 @@ src/
 │   │   │   ├── logo.tsx
 │   │   │   ├── editable-text.tsx  # ✅ COMPLETE: Full lifecycle callbacks & flexible layout
 │   │   │   ├── delete-confirmation-dialog.tsx  # ✅ MOVED: Generic reusable dialog
-│   │   │   ├── collapsible-sidebar.tsx         # ✅ NEW: Shared sidebar pattern
-│   │   │   ├── status-indicator.tsx            # ✅ NEW: Consistent status display
-│   │   │   ├── word-count-display.tsx          # ✅ NEW: Unified word count formatting
-│   │   │   └── toggle-button.tsx               # ✅ NEW: Reusable expand/collapse controls
-│   │   ├── novel-selection-page/  # Feature components
-│   │   │   ├── page-header.tsx
-│   │   │   ├── novel-card.tsx
-│   │   │   ├── create-novel-form.tsx
-│   │   │   ├── empty-state.tsx
-│   │   │   ├── novels-grid.tsx
-│   │   │   └── delete-confirmation-dialog.tsx  # Novel-specific dialog
-│   │   ├── workspace/             # Workspace components
-│   │   │   ├── sidebar.tsx
-│   │   │   ├── sidebar-context.tsx # Context for sidebar state management
-│   │   │   ├── workspace-layout.tsx
-│   │   │   └── dashboard-page.tsx  # Dashboard page component
-│   │   ├── manuscript/            # ✅ COMPLETE: Clean organized structure
-│   │   │   ├── import-system/     # ✅ COMPLETE: Import workflow components grouped
-│   │   │   │   ├── docx-uploader.tsx          # ✅ FULLY FIXED: New API format + response handling
-│   │   │   │   ├── structure-preview.tsx      # Structure preview component
-│   │   │   │   ├── manuscript-empty-state.tsx # Empty state with import options
-│   │   │   │   └── index.ts                   # Barrel exports
-│   │   │   ├── contextual-import/ # ✅ COMPLETE: Full contextual import system
-│   │   │   │   ├── types.ts                   # ✅ COMPLETE: All TypeScript interfaces
-│   │   │   │   ├── utils.ts                   # ✅ COMPLETE: Clean explicit selection utils
-│   │   │   │   ├── contextual-import-dialog.tsx # ✅ COMPLETE: Full working dialog with API integration
-│   │   │   │   └── index.ts                   # ✅ COMPLETE: Complete barrel exports
-│   │   │   ├── manuscript-editor/ # ✅ COMPLETE: Organized by function
+│   │   │   ├── status-indicator.tsx # ✅ NEW: Universal status indicators for scenes/chapters
+│   │   │   ├── collapsible-sidebar.tsx # ✅ NEW: Reusable sidebar pattern
+│   │   │   └── index.ts
+│   │   ├── workspace/             # ✅ ENHANCED: Workspace components with context
+│   │   │   ├── workspace-header.tsx       # ✅ COMPLETE: Breadcrumb navigation
+│   │   │   ├── workspace-sidebar.tsx      # ✅ COMPLETE: Novel navigation
+│   │   │   ├── sidebar-context.tsx        # ✅ NEW: Shared sidebar state
+│   │   │   └── index.ts
+│   │   ├── novel-selection-page/  # ✅ COMPLETE: Novel selection with enhanced features
+│   │   │   ├── novel-card.tsx            # ✅ ENHANCED: Dropdown menu & delete functionality
+│   │   │   ├── novel-grid.tsx
+│   │   │   ├── create-novel-dialog.tsx   # ✅ ENHANCED: Better form handling
+│   │   │   ├── delete-confirmation-dialog.tsx # ✅ MOVED to ui/
+│   │   │   └── index.ts
+│   │   ├── manuscript/
+│   │   │   ├── import-system/     # ✅ COMPLETE: Enhanced document import
+│   │   │   │   ├── manuscript-empty-state.tsx  # ✅ COMPLETE: Professional empty state
+│   │   │   │   ├── docx-uploader.tsx           # ✅ ENHANCED: Progress tracking, auto-fix integration
+│   │   │   │   ├── import-progress.tsx         # ✅ COMPLETE: Real-time progress tracking
+│   │   │   │   ├── structure-preview.tsx       # ✅ COMPLETE: Interactive preview with auto-fix
+│   │   │   │   └── index.ts
+│   │   │   ├── contextual-import/ # ✅ COMPLETE: Working contextual import system!
+│   │   │   │   ├── contextual-import-dialog.tsx # ✅ COMPLETE: Full flow implementation
+│   │   │   │   ├── mode-selection.tsx          # ✅ COMPLETE: Target mode selection
+│   │   │   │   ├── target-selection.tsx        # ✅ COMPLETE: Smart navigation flow
+│   │   │   │   ├── file-upload.tsx             # ✅ COMPLETE: Drag & drop with context awareness
+│   │   │   │   ├── import-preview.tsx          # ✅ COMPLETE: Preview with structure analysis
+│   │   │   │   ├── types.ts                    # ✅ COMPLETE: Complete type definitions
+│   │   │   │   └── index.ts
+│   │   │   ├── manuscript-editor/ # ✅ COMPLETE: Full-featured editor organized by function
 │   │   │   │   ├── layout/                    # Layout components
-│   │   │   │   │   ├── manuscript-header.tsx
-│   │   │   │   │   ├── manuscript-structure-sidebar.tsx  # ✅ ENHANCED: Hover-only add buttons + collapsible tools + selected-act chapter controls
-│   │   │   │   │   ├── manuscript-metadata-sidebar.tsx   # ✅ UPDATED: Uses shared components
-│   │   │   │   │   ├── delete-all-button.tsx             # ✅ ENHANCED: Size prop & compact UI
-│   │   │   │   │   ├── compact-auto-save-tools.tsx       # ✅ ENHANCED: Auto-save UI + import button + structure controls
+│   │   │   │   │   ├── manuscript-header.tsx              # ✅ UPDATED: NavigationComponent integration
+│   │   │   │   │   ├── manuscript-navigation-bar.tsx      # ✅ NEW: Clean navigation with primary/secondary levels
+│   │   │   │   │   ├── manuscript-structure-sidebar.tsx   # ✅ ENHANCED: Hover-only add buttons + collapsible tools + selected-act chapter controls
+│   │   │   │   │   ├── manuscript-metadata-sidebar.tsx    # ✅ UPDATED: Uses shared components
+│   │   │   │   │   ├── delete-all-button.tsx              # ✅ ENHANCED: Size prop & compact UI
+│   │   │   │   │   ├── compact-auto-save-tools.tsx        # ✅ ENHANCED: Auto-save UI + import button + structure controls
 │   │   │   │   │   └── index.ts
 │   │   │   │   ├── content-views/             # Content display modes
-│   │   │   │   │   ├── manuscript-content-area.tsx       # ✅ COMPLETE: Full rename functionality
-│   │   │   │   │   ├── types.ts                          # Content view types
+│   │   │   │   │   ├── manuscript-content-area.tsx        # ✅ COMPLETE: Full rename functionality
+│   │   │   │   │   ├── types.ts                           # Content view types
 │   │   │   │   │   ├── grid-view/
-│   │   │   │   │   │   ├── scene-card.tsx               # ✅ COMPLETE: Optimized inline editing
-│   │   │   │   │   │   ├── scene-grid.tsx               # ✅ COMPLETE: Full rename support + Act renaming + Chapter focus
+│   │   │   │   │   │   ├── scene-card.tsx                # ✅ COMPLETE: Optimized inline editing
+│   │   │   │   │   │   ├── scene-grid.tsx                # ✅ COMPLETE: Full rename support + Act renaming + Chapter focus
 │   │   │   │   │   │   └── index.ts
 │   │   │   │   │   └── index.ts
 │   │   │   │   ├── controls/                  # UI controls
@@ -103,7 +106,7 @@ src/
 │   │   │   │   ├── services/                  # Business logic
 │   │   │   │   │   ├── content-aggregation-service.ts
 │   │   │   │   │   └── index.ts
-│   │   │   │   ├── manuscript-editor.tsx      # ✅ COMPLETE: Main coordinator with contextual import integration
+│   │   │   │   ├── manuscript-editor.tsx      # ✅ COMPLETE: Main coordinator with navigation integration
 │   │   │   │   ├── scene-text-editor.tsx      # ✅ ENHANCED: Floating toolbox + em dash + horizontal line + keyboard shortcuts
 │   │   │   │   └── index.ts
 │   │   │   └── chapter-tree/      # ✅ COMPLETE: Full-featured with view density + 3-line layout + hover-only buttons
@@ -141,12 +144,15 @@ src/
 │               └── import-fixed/route.ts # ✅ COMPLETE: Standardized import-fixed with typing
 ├── hooks/
 │   ├── manuscript/               # ✅ COMPLETE: Modular hook architecture
-│   │   ├── useManuscriptLogic.ts # ✅ REFACTORED: Main orchestrator hook
+│   │   ├── navigation/           # ✅ NEW: Clean navigation system
+│   │   │   ├── useManuscriptNavigation.ts # ✅ NEW: Primary/secondary navigation logic
+│   │   │   └── types.ts          # ✅ NEW: Navigation type definitions
+│   │   ├── useManuscriptLogic.ts # ✅ REFACTORED: Main orchestrator hook with navigation
 │   │   ├── useManuscriptState.ts # ✅ NEW: Dedicated state management
 │   │   ├── useManuscriptCRUD.ts  # ✅ NEW: CRUD operations with local state updates
 │   │   ├── useAutoSave.ts        # ✅ NEW: Dedicated auto-save functionality
 │   │   ├── useContextualImport.ts # ✅ COMPLETE: Contextual import hook with error handling
-│   │   └── index.ts              # ✅ COMPLETE: Barrel exports
+│   │   └── index.ts              # ✅ COMPLETE: Barrel exports with navigation types
 │   ├── novels/                   # Novel-related hooks directory
 │   └── useNovels.ts              # Novel hooks
 ├── lib/
@@ -160,118 +166,81 @@ src/
 │   ├── novels/                   # ✅ MODERNIZED: Complete service layer with parameter objects
 │   │   ├── index.ts              # ✅ MODERNIZED: Service aggregator with modern methods
 │   │   ├── types.ts              # ✅ UPDATED: All TypeScript interfaces with novelId, actId, etc.
-│   │   ├── novel-service.ts      # Novel CRUD operations + clearNovelStructure
-│   │   ├── scene-service.ts      # ✅ MODERNIZED: Parameter object methods
-│   │   ├── chapter-service.ts    # ✅ MODERNIZED: Parameter object methods
-│   │   ├── act-service.ts        # ✅ MODERNIZED: Parameter object methods
-│   │   └── utils/
-│   │       ├── word-count.ts     # Word count utilities
-│   │       └── order-management.ts # Drag-and-drop reordering logic
-│   └── doc-parse/                # ✅ COMPLETE: Refactored parser system
-│       ├── enhanced-docx-parser.ts   # Main parser coordinator
-│       ├── auto-fix-service.ts       # ✅ COMPLETE: Auto-fix with advanced title pattern matching
-│       ├── structure-analyzer.ts     # Issue detection & validation
-│       ├── types.ts                  # ✅ UPDATED: Added issues property to ParsedStructure
-│       ├── index.ts                  # Clean barrel exports
-│       ├── detectors/
-│       │   ├── act-detector.ts       # Act detection logic
-│       │   ├── chapter-detector.ts   # Chapter detection logic
-│       │   └── scene-detector.ts     # Scene detection logic
-│       └── utils/
-│           ├── html-converter.ts     # HTML conversion utilities
-│           ├── text-extractors.ts    # Text extraction utilities
-│           └── validators.ts         # Validation utilities
-└── prisma/
-    ├── schema.prisma             # Database schema (Acts, Chapters, Scenes)
-    ├── dev.db                    # SQLite database
-    └── migrations/               # Database migrations
-        ├── 20250816173852_init/
-        ├── 20250816194920_add_manuscript_structure/
-        └── migration_lock.toml
+│   │   ├── query-service.ts      # ✅ MODERNIZED: Type-safe query methods with parameter objects
+│   │   ├── novel-service.ts      # ✅ MODERNIZED: Novel operations with parameter objects
+│   │   ├── structure-service.ts  # ✅ MODERNIZED: Structure operations with parameter objects
+│   │   ├── scene-service.ts      # ✅ MODERNIZED: Scene operations with parameter objects
+│   │   ├── chapter-service.ts    # ✅ MODERNIZED: Chapter operations with parameter objects
+│   │   ├── act-service.ts        # ✅ MODERNIZED: Act operations with parameter objects
+│   │   └── reorder-service.ts    # ✅ MODERNIZED: Reordering operations with parameter objects
+│   ├── doc-parse/                # ✅ COMPLETE: Document parsing system
+│   │   ├── index.ts              # ✅ COMPLETE: Main parser with auto-fix
+│   │   ├── types.ts              # ✅ COMPLETE: Parser type definitions
+│   │   ├── document-parser.ts    # ✅ COMPLETE: Core parsing logic with enhanced validation
+│   │   ├── structure-validator.ts # ✅ COMPLETE: Smart validation with auto-fix suggestions
+│   │   ├── auto-fix.ts           # ✅ COMPLETE: Automatic structure fixing
+│   │   └── content-extractor.ts  # ✅ COMPLETE: Content extraction and cleaning
+│   └── utils.ts                  # Utility functions
 ```
 
-## 🗄️ Database Setup
+## 🎉 COMPLETED SYSTEMS
 
-**Stack**: Prisma + SQLite  
-**Current Schema**:
+### **🎉 FINALIZED: Clean Navigation System - WORKING!**
 
-```prisma
-model Novel {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  coverImage  String?
-  wordCount   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  acts        Act[]
-  @@map("novels")
-}
-
-model Act {
-  id        String   @id @default(cuid())
-  title     String
-  order     Int
-  novelId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  novel     Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
-  chapters  Chapter[]
-  @@map("acts")
-}
-
-model Chapter {
-  id        String   @id @default(cuid())
-  title     String
-  order     Int
-  actId     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  act       Act     @relation(fields: [actId], references: [id], onDelete: Cascade)
-  scenes    Scene[]
-  @@map("chapters")
-}
-
-model Scene {
-  id        String   @id @default(cuid())
-  title     String   @default("")          # Scene title field
-  content   String   @default("")
-  wordCount Int      @default(0)
-  order     Int
-  chapterId String
-  povCharacter String?
-  sceneType    String   @default("")
-  notes        String   @default("")
-  status       String   @default("draft") # draft, review, complete
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  @@map("scenes")
-}
-```
-
-## 🎉 Recently Completed Features
-
-### **🎉 FINALIZED: Enhanced Scene Text Editor with Floating Toolbox**
-
-**Achievement**: Built a professional writing-focused text editor with floating controls
+**Achievement**: Built and shipped a completely new navigation system with clean architecture and perfect behavior
 
 **Key Innovations**:
 
+1. **✅ Clean Architecture Separation**
+
+   - **Primary Navigation**: Changes view focus/selection (what you're editing)
+   - **Secondary Navigation**: Scrolls within current view (navigation aid only)
+   - **View-Specific Contexts**: Scene (primary only), Chapter (primary + secondary), Act (primary + secondary)
+
+2. **✅ Perfect Behavior Matrix Implementation**
+
+   ```
+   VIEW MODE | PRIMARY LEVEL      | SECONDARY LEVEL    | BEHAVIOR
+   ----------|-------------------|-------------------|----------
+   Scene     | Scenes in Chapter | None              | Scene selection
+   Chapter   | Chapters in Act   | Scenes in Chapter | Chapter selection + scene scrolling
+   Act       | Acts              | Chapters in Act   | Act selection + chapter scrolling
+   ```
+
+3. **✅ Seamless Header Integration**
+
+   - **Replaced title area**: Navigation component takes place of traditional title
+   - **Preserved controls**: View mode selectors (Scene/Chapter/Act + Document/Grid) stay on right
+   - **Clean separation**: Navigation handles navigation, header handles mode switching
+
+4. **✅ Modern Component Architecture**
+
+   - **Modular types**: Clean interfaces in `navigation/types.ts`
+   - **Dedicated hook**: `useManuscriptNavigation` with primary/secondary separation
+   - **Reusable component**: `ManuscriptNavigationBar` adapts to any context
+   - **Flexible integration**: `navigationComponent` prop pattern for clean composition
+
+**Implementation Status**: ✅ **SHIPPED AND WORKING**
+
+### **🎉 FINALIZED: Enhanced Scene Text Editor with Floating Toolbox**
+
+**Achievement**: Created a modern, distraction-free writing experience with professional text editing features
+
+**Key Features**:
+
 1. **✅ Floating Toolbox Design**
 
-   - **Bottom-right positioning** - Always accessible while writing
-   - **Expandable/collapsible** - Clean interface when not needed
-   - **Smooth animations** - Professional slide-up animation with rotation
-   - **Visual feedback** - Blue active state with 45° rotation when open
+   - **Distraction-free writing** - No fixed toolbars taking up screen space
+   - **Context-sensitive appearance** - Toolbox only shows when needed
+   - **Smooth animations** - Professional slide-in/out with hover states
+   - **Strategic positioning** - Bottom-right corner, away from writing area
 
-2. **✅ Writer-Friendly Features**
+2. **✅ Smart Auto-Replacement System**
 
-   - **Em dash auto-replacement** - Type `--` → converts to `—` automatically
-   - **Horizontal line insertion** - Button + keyboard shortcut (`Ctrl+Shift+-`)
-   - **Font size controls** - Adjustable from 12px-24px with live display
-   - **Live word count** - Real-time word counting with formatting
-   - **Auto-save integration** - Visual saving indicators
+   - **Em dash conversion** - Double hyphens (`--`) automatically become em dashes (`—`)
+   - **Real-time processing** - Instant conversion as you type
+   - **Undo support** - Ctrl+Z reverses auto-replacements
+   - **Context-aware** - Only replaces in appropriate contexts
 
 3. **✅ Professional Formatting Tools**
 
@@ -340,107 +309,19 @@ model Scene {
    - **Smart Positioning Logic**: Reverse-order reordering to avoid conflicts
    - **Professional Error Handling**: Comprehensive error management with user feedback
 
-3. **✅ Complete ADD Modes Implementation**
-   **Add New Act**: Position Selection → File Upload → Content Import ✅
-   **Add New Chapter**: Act Selection → Position Selection → File Upload → Content Import ✅
-   **Add New Scene**: Act Selection → Chapter Selection → Position Selection → File Upload ✅
+3. **✅ Complete ADD Mode Implementation**
 
-4. **✅ Production-Ready Architecture**
-   - **Real-Time Integration**: Import button in manuscript editor sidebar
-   - **Live Context Creation**: Dynamic import context from current novel structure
-   - **Professional Hook System**: `useContextualImport` for API management
-   - **Complete Error Recovery**: User-friendly error messages and retry capability
-   - **Success Feedback**: Automatic manuscript refresh and import statistics
+   - **New Act**: Creates new act at specified position with imported structure
+   - **New Chapter**: Creates new chapter within selected act at specified position
+   - **New Scene**: Creates new scene within selected chapter at specified position
+   - **Perfect Integration**: All modes work seamlessly with existing manuscript structure
 
-**Implementation Status**: ✅ **SHIPPED AND WORKING**
-
-### **🎉 FINALIZED: Enhanced DOCX Upload Parser System**
-
-**Achievement**: Professional document import with auto-fix capabilities working perfectly
-
-**Implementation**: ✅ **ALL ROUTES WORKING**
-
-- Enhanced rate limiting with environment-based configuration
-- Fixed middleware context preservation and file handling
-- Complete auto-fix system with advanced title pattern matching
-- Professional error handling and user feedback
-- Backward/forward compatible API response formats
-
-### **🎉 FINALIZED: Complete API Route Modernization**
-
-**Achievement**: All API routes use modern parameter objects, professional validation, and standardized responses
-
-**Implementation**: ✅ **ALL ENDPOINTS MODERNIZED**
-
-- Type-safe parameter object methods for all services
-- Professional Zod validation for all requests/responses
-- Cross-entity operations (scenes between chapters, chapters between acts)
-- Configurable rate limiting with development/production settings
-- Structured error responses and request tracking
-
-## 🚀 Next Priority Features
-
-### **🎯 HIGH PRIORITY: Ready for Implementation**
-
-1. **📌 Replace Modes Implementation** - **[NEXT STEP]**
-
-   - ✅ UI flow designed and perfected for ADD modes (COMPLETE)
-   - ⏳ Implement replace-act, replace-chapter, replace-scene API processing
-   - ⏳ Add replace mode UI flows to contextual import dialog
-   - ⏳ Build service layer for content replacement logic
-
-2. **🔍 Enhanced Scene Text Editor Features** - Build on the floating toolbox foundation
-
-   - **Focus Mode** - Distraction-free writing with dimmed interface
-   - **Writing Goals** - Daily word count targets and session tracking
-   - **Find & Replace** - Essential for editing long scenes
-   - **Reading Time Estimates** - Help writers gauge scene length
-
-3. **👥 Character Management System** - Track characters, relationships, and scene appearances
-
-### **📋 MEDIUM PRIORITY: Planning Phase**
-
-1. **🔍 Global Search & Find** - Search across all scenes/chapters/acts with advanced filtering
-2. **📋 Scene Metadata Enhancement** - Extended scene properties (mood, tension, conflicts)
-3. **📤 Export & Publishing** - Clean HTML/Word export with professional formatting
-4. **🔗 Cross-Reference System** - Link scenes, characters, and plot elements
-
-### **🌟 LONG-TERM: Future Enhancements**
-
-1. **🌲 Version Control & Branching** - Git-like manuscript versioning with merge capabilities
-2. **👥 Collaborative Writing** - Multi-author support with real-time editing
-3. **🤖 AI Writing Assistant** - Context-aware suggestions and continuity checking
-4. **📚 Professional Publishing** - Advanced typesetting and industry-standard formatting
-
-## 📧 Technical Achievements
-
-### **✅ Complete Scene Text Editor Excellence**:
-
-- **Floating Toolbox Design**: Bottom-right positioned, expandable/collapsible
-- **Writer-Friendly Features**: Em dash auto-replacement, horizontal lines, font controls
-- **Professional Formatting**: Bold, italic, strikethrough with active states
-- **Keyboard Shortcuts**: Standard shortcuts plus custom ones (Ctrl+Shift+- for horizontal line)
-- **Clean Interface**: No fixed toolbar clutter, always accessible while writing
-- **Auto-Save Integration**: Visual saving indicators and real-time word count
-
-### **✅ Complete Manuscript Tree Excellence**:
-
-- **Hover-Only Add Buttons**: Clean interface with contextual button appearance
-- **3-Line Layout System**: Full-width titles, dedicated action line, optional metadata
-- **Compact Button Design**: Small, color-coded +Scene (blue) and +Chapter (yellow) buttons
-- **Smart Chapter Controls**: Context-aware controls that work only on selected act
-- **Professional UX**: Smooth transitions, proper visual hierarchy, organized layout
-
-### **✅ Complete Contextual Import System Excellence**:
-
-- **Perfect UX Flow**: Explicit target selection eliminates confusion
-- **Smart Positioning**: Beginning/End for speed, precision for control
-- **Visual Clarity**: Order numbers, clear previews, bumping logic shown
-- **Universal Pattern**: Same flow logic for all content types
-- **Professional Navigation**: Context-aware step progression
-- **Real API Integration**: Working FormData handling with proper validation
-- **Live Manuscript Integration**: Import button integrated into editor sidebar
-- **Professional Error Handling**: User-friendly messages and recovery flows
+4. **✅ Enhanced User Experience**
+   - **Contextual UI**: Each step shows relevant options based on previous selections
+   - **Progress Tracking**: Clear visual feedback during import process
+   - **Error Recovery**: Graceful handling of validation errors and conflicts
+   - **Manuscript Integration**: Import button integrated into editor sidebar
+   - **Professional Error Handling**: User-friendly messages and recovery flows
 
 ### **✅ Complete Document Import System Excellence**:
 
@@ -473,87 +354,16 @@ model Scene {
 ```json
 {
   "success": true,
+  "message": "Chapter created successfully",
   "data": {
-    "imported": {
-      "acts": 1,
-      "chapters": 3,
-      "scenes": 12,
-      "wordCount": 5000
-    },
-    "created": {
-      "actIds": ["act_123"],
-      "chapterIds": ["ch_456", "ch_789"],
-      "sceneIds": ["sc_101", "sc_102"]
-    },
-    "structure": {
-      "totalActs": 5,
-      "totalChapters": 25,
-      "totalScenes": 87,
-      "totalWordCount": 50000
-    }
-  },
-  "message": "Document imported successfully (1 acts, 3 chapters, 12 scenes)",
-  "meta": {
-    "timestamp": "2025-08-20T...",
-    "requestId": "req_1692...",
-    "version": "1.0"
+    "chapter": { "id": "ch_xyz", "title": "New Chapter", "order": 3 },
+    "structure": { "acts": 3, "chapters": 8, "scenes": 24 }
   }
 }
 ```
 
-### **✅ Modular Hook Architecture Excellence**:
-
-- **Clean Separation**: Auto-save, state management, and business logic in focused hooks
-- **Reusable Components**: Auto-save hook can be used for other content types
-- **Easy Testing**: Each hook can be unit tested independently
-- **Performance Optimized**: Better memoization and reduced re-renders
-- **Type Safety**: Complete TypeScript coverage across all hooks
-
-## 🎉 Development Status
-
-**Your Monarch Story Platform now features:**
-
-✅ **SHIPPED: Enhanced Scene Text Editor with Floating Toolbox** - Professional writing experience with floating controls  
-✅ **SHIPPED: Enhanced Manuscript Tree with Hover-Only Buttons** - Clean interface with contextual controls  
-✅ **SHIPPED: Complete Contextual Import System** - Full working implementation with all ADD modes  
-✅ **FINALIZED: Enhanced DOCX Upload Parser** - Professional document processing with auto-fix capabilities  
-✅ **FINALIZED: Complete API Route Modernization** - All routes use modern parameter objects and professional validation  
-✅ **FINALIZED: Enhanced Service Layer** - Type-safe methods with cross-entity support  
-✅ **FINALIZED: Professional TypeScript Architecture** - Complete interface alignment  
-✅ **FINALIZED: Modular Hook Architecture** - Clean, testable, focused hooks  
-✅ **FINALIZED: Smart Auto-Save System** - Complete debounced content saving with UI controls  
-✅ **FINALIZED: Universal Renaming System** - Complete inline editing for all elements  
-✅ **FINALIZED: Enhanced Grid View** - Act renaming and chapter focus buttons  
-✅ **FINALIZED: Act Document View with Chapter Boundaries** - Perfect chapter separation with proper add buttons  
-✅ **FINALIZED: Complete UI Layout & Error Resolution** - Professional layout with perfect sidebar spacing  
-✅ **Professional Auto-Save Experience** - 2-second debouncing with manual override and real-time status  
-✅ **Advanced EditableText Components** - Lifecycle management with flexible layout options  
-✅ **Smart Content Persistence** - Real-time word count updates without page refreshes  
-✅ **Comprehensive Status Tracking** - Pending changes monitoring with timestamp formatting  
-✅ **Type-Safe Architecture** - Complete TypeScript coverage with proper interfaces  
-✅ **Production Ready Core** - All fundamental manuscript editing features with fully modernized API  
-✅ **Professional Import System** - Complete document import workflow with working auto-fix capabilities
-
-## 🚀 NEXT IMPLEMENTATION: Replace Modes for Contextual Import
-
-**Goal**: Complete the contextual import system by adding replace functionality
-
-**Ready to Build**: All foundation systems are in place!
-
-**Implementation Steps**:
-
-1. **✅ ADD Modes**: Complete and working perfectly! ✅
-2. **⏳ Replace Modes**: Implement replace-act, replace-chapter, replace-scene
-3. **⏳ UI Enhancement**: Add replace flows to the dialog
-4. **⏳ API Processing**: Build replacement logic in the API route
-5. **⏳ Testing**: Comprehensive testing of all replace modes
-
-**Key Innovation**: Transform the contextual import system from "add-only" to a complete content management solution where users can both expand and replace any part of their manuscript structure!
+**Next: Complete the system with Replace modes.** 🎉
 
 ---
 
-**The platform now provides a complete professional writing experience with enhanced scene text editor featuring floating toolbox, hover-only manuscript tree buttons, fully working contextual import system (ADD modes), auto-fix functionality, standardized API architecture, modular hook system, smart auto-save, perfect UI layout, comprehensive content management, enhanced grid view features, and robust error handling! Next: Complete the system with Replace modes.** 🎉
-
----
-
-_Complete story platform with enhanced scene text editor (floating toolbox with em dash auto-replacement, horizontal lines, and keyboard shortcuts), enhanced manuscript tree (hover-only buttons, 3-line layout, compact design), working contextual import system (ADD modes shipped!), document import system (including auto-fix), modernized API routes, parameter object service methods, enhanced type safety, professional middleware architecture, modular hook system, smart auto-save functionality, universal renaming capabilities, perfect Act document view with chapter boundaries, enhanced grid view with act renaming and chapter focus buttons, optimized layouts, professional component library, comprehensive content management, enhanced rate limiting system, and complete contextual import system with working ADD modes. Ready for Replace modes implementation and enhanced text editor features._
+_Complete story platform with enhanced scene text editor (floating toolbox with em dash auto-replacement, horizontal lines, and keyboard shortcuts), enhanced manuscript tree (hover-only buttons, 3-line layout, compact design), working contextual import system (ADD modes shipped!), document import system (including auto-fix), modernized API routes, parameter object service methods, enhanced type safety, professional middleware architecture, modular hook system, smart auto-save functionality, universal renaming capabilities, perfect Act document view with chapter boundaries, enhanced grid view with act renaming and chapter focus buttons, optimized layouts, professional component library, comprehensive content management, enhanced rate limiting system, complete contextual import system with working ADD modes, and clean navigation system with primary/secondary separation integrated into header. Ready for Replace modes implementation and enhanced text editor features._
