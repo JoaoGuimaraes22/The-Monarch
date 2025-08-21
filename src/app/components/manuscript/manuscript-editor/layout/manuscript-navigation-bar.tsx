@@ -1,7 +1,7 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-navigation-bar.tsx
 // Navigation component that adapts to view mode (Scene/Chapter/Act)
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import {
   NavigationContext,
@@ -29,6 +29,26 @@ export const ManuscriptNavigationBar: React.FC<
   const [isPrimaryDropdownOpen, setIsPrimaryDropdownOpen] = useState(false);
   const [isSecondaryDropdownOpen, setIsSecondaryDropdownOpen] = useState(false);
 
+  // ✅ FIX: Add refs to track dropdown containers
+  const primaryDropdownRef = useRef<HTMLDivElement>(null);
+  const secondaryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // ✅ FIX: Improved handleItemClick with proper event handling
+  const handleItemClick = (
+    itemId: string,
+    levelType: "primary" | "secondary"
+  ) => {
+    console.log("Item clicked:", itemId);
+    onNavigationSelect(itemId, levelType);
+
+    // Close the appropriate dropdown
+    if (levelType === "primary") {
+      setIsPrimaryDropdownOpen(false);
+    } else {
+      setIsSecondaryDropdownOpen(false);
+    }
+  };
+
   // Render a single navigation level
   const renderNavigationLevel = (
     level: NavigationLevel,
@@ -41,6 +61,9 @@ export const ManuscriptNavigationBar: React.FC<
     const setDropdownOpen = isSecondary
       ? setIsSecondaryDropdownOpen
       : setIsPrimaryDropdownOpen;
+
+    // ✅ FIX: Get the correct ref for this dropdown
+    const dropdownRef = isSecondary ? secondaryDropdownRef : primaryDropdownRef;
 
     return (
       <div
@@ -63,7 +86,7 @@ export const ManuscriptNavigationBar: React.FC<
         </button>
 
         {/* Title with Dropdown */}
-        <div className="relative min-w-96">
+        <div className="relative min-w-96" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!isDropdownOpen)}
             className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors hover:bg-gray-700 min-w-full ${
@@ -84,10 +107,7 @@ export const ManuscriptNavigationBar: React.FC<
               {level.items.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    onNavigationSelect(item.id, levelType);
-                    setDropdownOpen(false);
-                  }}
+                  onClick={() => handleItemClick(item.id, levelType)}
                   className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-gray-700 ${
                     item.isCurrent
                       ? "bg-blue-900/30 text-blue-300"
@@ -130,11 +150,26 @@ export const ManuscriptNavigationBar: React.FC<
     );
   };
 
-  // Close dropdowns when clicking outside
-  React.useEffect(() => {
+  // ✅ FIX: Properly check if click is outside dropdown containers
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isPrimaryDropdownOpen || isSecondaryDropdownOpen) {
+      const target = event.target as Node;
+
+      // Check if click is outside primary dropdown
+      if (
+        isPrimaryDropdownOpen &&
+        primaryDropdownRef.current &&
+        !primaryDropdownRef.current.contains(target)
+      ) {
         setIsPrimaryDropdownOpen(false);
+      }
+
+      // Check if click is outside secondary dropdown
+      if (
+        isSecondaryDropdownOpen &&
+        secondaryDropdownRef.current &&
+        !secondaryDropdownRef.current.contains(target)
+      ) {
         setIsSecondaryDropdownOpen(false);
       }
     };
@@ -163,32 +198,25 @@ export const ManuscriptNavigationBar: React.FC<
 };
 
 /*
-===== NAVIGATION BAR FEATURES =====
+===== FIXES APPLIED =====
 
-✅ ADAPTIVE LAYOUT:
-- Single level for Scene/Chapter views
-- Dual level for Act view (acts + chapters)
+✅ DROPDOWN CLICK FIX:
+- Added refs to track dropdown containers
+- Improved handleClickOutside to check if click is actually outside
+- Created dedicated handleItemClick function
+- Properly handle event propagation
 
-✅ COMPLETE CONTROLS:
-- Previous/Next buttons with proper disabled states
-- Dropdown for direct selection
-- Position indicators (1 of 5)
+✅ EVENT HANDLING:
+- Separated item click logic from dropdown close logic
+- Added console.log for debugging
+- Ensured proper event flow
 
-✅ VISUAL DESIGN:
-- Clean, compact design
-- Hover states and transitions
-- Current item highlighting
-- Proper z-index for dropdowns
+✅ IMPROVED ARCHITECTURE:
+- Better separation of concerns
+- More predictable dropdown behavior
+- Cleaner event management
 
-✅ INTERACTION:
-- Click outside to close dropdowns
-- Keyboard navigation ready
-- Disabled state handling
-
-✅ RESPONSIVE:
-- Truncated text for long titles
-- Max width on dropdowns
-- Scrollable dropdown lists
-
-Ready to integrate into ManuscriptHeader! 🎉
+The key issue was that the original handleClickOutside was closing 
+dropdowns on ANY mousedown event, even clicks inside the dropdown.
+Now it properly checks if the click is outside the dropdown container.
 */
