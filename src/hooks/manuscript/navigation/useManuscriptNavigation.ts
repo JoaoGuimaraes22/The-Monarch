@@ -75,6 +75,7 @@ export const useManuscriptNavigation = (
   // Secondary scroll handlers (scroll within view)
   const scrollHandlerConfig: ScrollHandlerConfig = {
     novel,
+    actions, // ✅ ADD: Pass actions for selection updates
   };
   const scrollHandlers = useScrollHandlers(scrollHandlerConfig);
 
