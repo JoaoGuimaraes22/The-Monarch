@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/manuscript-editor.tsx
-// ✨ COMPLETE: Fixed props and added content saving functionality
+// ✨ COMPLETE: Fixed props and added content saving functionality + Chapter Numbering
 
 import React, { useState, useCallback, useMemo } from "react";
 import {
@@ -97,6 +97,10 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
     useState(false);
 
   const [contextualImportOpen, setContextualImportOpen] = useState(false);
+
+  // ✨ NEW: Chapter numbering state
+  const [continuousChapterNumbering, setContinuousChapterNumbering] =
+    useState(false);
 
   // 3. CREATE A SIMPLE MOCK CONTEXT (we'll make this real in the next step):
   const mockImportContext: ImportContext = {
@@ -246,6 +250,9 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           pendingChanges={pendingChanges}
           isSavingContent={isSavingContent}
           lastSaved={lastSaved}
+          // ✨ NEW: Chapter numbering props
+          continuousChapterNumbering={continuousChapterNumbering}
+          setContinuousChapterNumbering={setContinuousChapterNumbering}
           isCollapsed={isStructureSidebarCollapsed}
           onToggleCollapse={() =>
             setIsStructureSidebarCollapsed(!isStructureSidebarCollapsed)
@@ -295,6 +302,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
             onChapterClick={onChapterSelect}
             // ✨ NEW: Pass the individual scene change handler
             onIndividualSceneChange={handleIndividualSceneChange}
+            // ✨ NEW: Pass chapter numbering mode
+            continuousChapterNumbering={continuousChapterNumbering}
             marginLeft="0"
             marginRight="0"
           />
@@ -330,24 +339,25 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
 };
 
 /*
-===== MINIMAL CHANGES MADE =====
+===== CHAPTER NUMBERING CHANGES MADE =====
 
-✅ ONLY 2 CHANGES:
-1. Added import: ManuscriptNavigationBar
-2. Added navigation bar JSX between header and content
+✅ ADDED:
+1. State: const [continuousChapterNumbering, setContinuousChapterNumbering] = useState(false);
+2. Props to ManuscriptStructureSidebar:
+   - continuousChapterNumbering={continuousChapterNumbering}
+   - setContinuousChapterNumbering={setContinuousChapterNumbering}
+3. Prop to ManuscriptContentArea:
+   - continuousChapterNumbering={continuousChapterNumbering}
 
-✅ WHAT THE NAVIGATION BAR DOES:
-- Shows between header and content area
-- Adapts automatically based on navigationContext:
-  - Scene view: Primary scene navigation only
-  - Chapter view: Primary (chapters) + Secondary (scenes for scrolling)
-  - Act view: Primary (acts) + Secondary (chapters for scrolling)
+✅ WHAT THIS FIXES:
+- The "setContinuousChapterNumbering is not a function" error
+- Enables the chapter numbering toggle to work properly
+- Passes the state down through the component chain correctly
 
 ✅ NO OTHER CHANGES:
-- All existing props preserved
-- All existing functionality intact
-- All existing imports unchanged
-- All existing logic unchanged
+- All existing functionality preserved
+- All existing props intact
+- Minimal addition for maximum functionality
 
-Ready to test the new navigation system!
+The toggle should now work correctly!
 */

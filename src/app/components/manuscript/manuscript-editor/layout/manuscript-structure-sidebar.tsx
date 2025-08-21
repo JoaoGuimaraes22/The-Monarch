@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// ✨ SIMPLIFIED: All tools functionality moved to CompactAutoSaveTools
+// ✨ SIMPLIFIED: All tools functionality moved to CompactAutoSaveTools + Chapter Numbering
 
 import React, { useState, useEffect } from "react";
 import { BookOpen } from "lucide-react";
@@ -41,6 +41,9 @@ interface ManuscriptStructureSidebarProps {
   lastSaved: Date | null;
   // ✨ Contextual import prop
   onOpenContextualImport?: () => void;
+  // ✨ NEW: Chapter numbering props
+  continuousChapterNumbering: boolean;
+  setContinuousChapterNumbering: (enabled: boolean) => void;
 }
 
 export const ManuscriptStructureSidebar: React.FC<
@@ -74,6 +77,9 @@ export const ManuscriptStructureSidebar: React.FC<
   isSavingContent,
   lastSaved,
   onOpenContextualImport,
+  // ✨ NEW: Destructure chapter numbering props
+  continuousChapterNumbering,
+  setContinuousChapterNumbering,
 }) => {
   const [viewDensity, setViewDensity] = useState<ViewDensity>("detailed");
   const [expandedActs, setExpandedActs] = useState<Set<string>>(new Set());
@@ -336,6 +342,9 @@ export const ManuscriptStructureSidebar: React.FC<
                 onExpandAllChapters={expandAllChapters}
                 onCollapseAllChapters={collapseAllChapters}
                 getCurrentlySelectedAct={getCurrentlySelectedAct}
+                // ✨ NEW: Pass chapter numbering props
+                continuousChapterNumbering={continuousChapterNumbering}
+                setContinuousChapterNumbering={setContinuousChapterNumbering}
               />
             )}
           </div>
