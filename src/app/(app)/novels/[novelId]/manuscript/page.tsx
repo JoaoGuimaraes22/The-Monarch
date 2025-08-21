@@ -123,6 +123,12 @@ export default function ManuscriptPage({ params }: ManuscriptPageProps) {
       handleManualSave={manuscript.handleManualSave}
       pendingChanges={manuscript.pendingChanges}
       isMainSidebarCollapsed={isMainSidebarCollapsed}
+      // ✨ NEW: Navigation props from useManuscriptLogic
+      navigationContext={manuscript.getNavigationContext()}
+      onPreviousNavigation={manuscript.handlePreviousNavigation}
+      onNextNavigation={manuscript.handleNextNavigation}
+      onNavigationSelect={manuscript.handleNavigationSelect}
+      showNavigation={true}
     />
   );
 }

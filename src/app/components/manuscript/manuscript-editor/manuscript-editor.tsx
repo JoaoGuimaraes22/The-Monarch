@@ -14,6 +14,7 @@ import {
 } from "@/app/components/manuscript/manuscript-editor";
 
 import { ContextualImportDialog } from "@/app/components/manuscript/contextual-import";
+import { NavigationContext } from "@/hooks/manuscript/useManuscriptNavigation";
 import type { ImportContext } from "@/app/components/manuscript/contextual-import";
 
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -49,6 +50,15 @@ interface ManuscriptEditorProps {
   pendingChanges: boolean;
   isMainSidebarCollapsed: boolean;
   onAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
+  // ✨ NEW: Navigation props
+  navigationContext?: NavigationContext;
+  onPreviousNavigation?: () => void;
+  onNextNavigation?: () => void;
+  onNavigationSelect?: (
+    itemId: string,
+    level?: "primary" | "secondary"
+  ) => void;
+  showNavigation?: boolean;
 }
 
 export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
@@ -82,6 +92,12 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   handleManualSave,
   pendingChanges,
   isMainSidebarCollapsed,
+  // ✨ NEW: Navigation props
+  navigationContext,
+  onPreviousNavigation,
+  onNextNavigation,
+  onNavigationSelect,
+  showNavigation = true,
 }) => {
   // State management - these are for the MANUSCRIPT sidebars, separate from main workspace sidebar
   const [isStructureSidebarCollapsed, setIsStructureSidebarCollapsed] =
@@ -266,6 +282,12 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
             subtitle={formattedSubtitle}
             hasSelectedScene={!!selectedScene}
             isReadOnly={viewMode !== "scene"}
+            // ✨ NEW: Navigation props
+            navigationContext={navigationContext}
+            onPreviousNavigation={onPreviousNavigation}
+            onNextNavigation={onNextNavigation}
+            onNavigationSelect={onNavigationSelect}
+            showNavigation={showNavigation}
           />
 
           {/* Content Area */}
