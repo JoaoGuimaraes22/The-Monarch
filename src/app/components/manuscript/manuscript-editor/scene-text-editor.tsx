@@ -169,6 +169,75 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           }
         }
 
+        // ✨ NEW: Handle delete line shortcut (Ctrl+Shift+K)
+        if (event.key === "K" && event.ctrlKey && event.shiftKey) {
+          event.preventDefault();
+
+          const { selection } = view.state;
+          const { $from, $to } = selection;
+
+          // If we have a selection, delete the entire lines that contain the selection
+          if (!selection.empty) {
+            // Find the start and end positions of the lines containing the selection
+            const startLinePos = $from.start($from.depth);
+            const endLinePos = $to.end($to.depth);
+
+            // Delete the entire line range
+            const tr = view.state.tr;
+            tr.delete(startLinePos, endLinePos);
+
+            // If there's content after the deleted lines, we might need to adjust
+            if (endLinePos < view.state.doc.content.size) {
+              // Check if we need to merge with the next paragraph
+              const nextChar = view.state.doc.textBetween(
+                endLinePos,
+                endLinePos + 1
+              );
+              if (nextChar && nextChar !== "\n") {
+                // Insert a paragraph break to maintain structure
+                tr.insert(
+                  startLinePos,
+                  view.state.schema.nodes.paragraph.create()
+                );
+              }
+            }
+
+            view.dispatch(tr);
+            return true;
+          }
+
+          // For cursor position (no selection), delete the current line
+          else {
+            // Get the current paragraph node
+            const currentNode = $from.parent;
+            const currentPos = $from.pos;
+
+            // Calculate the start and end of the current paragraph
+            const nodeStart = currentPos - $from.parentOffset;
+            const nodeEnd = nodeStart + currentNode.nodeSize;
+
+            const tr = view.state.tr;
+
+            // If this is the only paragraph or the last paragraph, replace with empty paragraph
+            if (
+              view.state.doc.childCount === 1 ||
+              nodeEnd >= view.state.doc.content.size
+            ) {
+              tr.replaceWith(
+                nodeStart,
+                nodeEnd,
+                view.state.schema.nodes.paragraph.create()
+              );
+            } else {
+              // Delete the entire paragraph node
+              tr.delete(nodeStart, nodeEnd);
+            }
+
+            view.dispatch(tr);
+            return true;
+          }
+        }
+
         // ✨ NEW: Handle horizontal line shortcut (Ctrl+Shift+-)
         if (event.key === "_" && event.ctrlKey && event.shiftKey) {
           event.preventDefault();
@@ -197,6 +266,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
             return true;
           }
         }
+
         return false;
       },
     },
