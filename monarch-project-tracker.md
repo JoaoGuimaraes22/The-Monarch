@@ -57,8 +57,7 @@ src/
 │   │   │   ├── collapsible-sidebar.tsx         # ✅ NEW: Shared sidebar pattern
 │   │   │   ├── status-indicator.tsx            # ✅ NEW: Consistent status display
 │   │   │   ├── word-count-display.tsx          # ✅ NEW: Unified word count formatting
-│   │   │   ├── toggle-button.tsx               # ✅ NEW: Reusable expand/collapse controls
-│   │   │   └── index.ts           # Barrel exports
+│   │   │   └── toggle-button.tsx               # ✅ NEW: Reusable expand/collapse controls
 │   │   ├── novel-selection-page/  # Feature components
 │   │   │   ├── page-header.tsx
 │   │   │   ├── novel-card.tsx
@@ -85,10 +84,10 @@ src/
 │   │   │   ├── manuscript-editor/ # ✅ COMPLETE: Organized by function
 │   │   │   │   ├── layout/                    # Layout components
 │   │   │   │   │   ├── manuscript-header.tsx
-│   │   │   │   │   ├── manuscript-structure-sidebar.tsx  # ✅ ENHANCED: Compact auto-save UI + contextual import
+│   │   │   │   │   ├── manuscript-structure-sidebar.tsx  # ✅ ENHANCED: Hover-only add buttons + collapsible tools + selected-act chapter controls
 │   │   │   │   │   ├── manuscript-metadata-sidebar.tsx   # ✅ UPDATED: Uses shared components
 │   │   │   │   │   ├── delete-all-button.tsx             # ✅ ENHANCED: Size prop & compact UI
-│   │   │   │   │   ├── compact-auto-save-tools.tsx       # ✅ ENHANCED: Auto-save UI + import button
+│   │   │   │   │   ├── compact-auto-save-tools.tsx       # ✅ ENHANCED: Auto-save UI + import button + structure controls
 │   │   │   │   │   └── index.ts
 │   │   │   │   ├── content-views/             # Content display modes
 │   │   │   │   │   ├── manuscript-content-area.tsx       # ✅ COMPLETE: Full rename functionality
@@ -105,15 +104,15 @@ src/
 │   │   │   │   │   ├── content-aggregation-service.ts
 │   │   │   │   │   └── index.ts
 │   │   │   │   ├── manuscript-editor.tsx      # ✅ COMPLETE: Main coordinator with contextual import integration
-│   │   │   │   ├── scene-text-editor.tsx      # Scene text editing component
+│   │   │   │   ├── scene-text-editor.tsx      # ✅ ENHANCED: Floating toolbox + em dash + horizontal line + keyboard shortcuts
 │   │   │   │   └── index.ts
-│   │   │   └── chapter-tree/      # ✅ COMPLETE: Full-featured with view density
+│   │   │   └── chapter-tree/      # ✅ COMPLETE: Full-featured with view density + 3-line layout + hover-only buttons
 │   │   │       ├── types.ts                      # Shared interfaces
 │   │   │       ├── utils.ts                      # ✅ ENHANCED: Utility functions with shared status configs
 │   │   │       ├── add-act-interface.tsx         # Add act UI component
-│   │   │       ├── draggable-scene-item.tsx      # ✅ ENHANCED: Full functionality + view density
-│   │   │       ├── draggable-chapter-container.tsx # ✅ ENHANCED: Full functionality + view density
-│   │   │       ├── draggable-manuscript-tree.tsx # ✅ COMPLETE: Full functionality + view density
+│   │   │       ├── draggable-scene-item.tsx      # ✅ ENHANCED: 3-line layout + hover-only buttons + compact add buttons
+│   │   │       ├── draggable-chapter-container.tsx # ✅ ENHANCED: 3-line layout + hover-only buttons + compact add buttons
+│   │   │       ├── draggable-manuscript-tree.tsx # ✅ COMPLETE: 3-line layout + hover-only buttons + compact add buttons
 │   │   │       └── index.ts                      # Barrel exports
 │   └── api/                       # ✅ FULLY MODERNIZED: Complete API route standardization
 │       └── novels/
@@ -253,6 +252,75 @@ model Scene {
 
 ## 🎉 Recently Completed Features
 
+### **🎉 FINALIZED: Enhanced Scene Text Editor with Floating Toolbox**
+
+**Achievement**: Built a professional writing-focused text editor with floating controls
+
+**Key Innovations**:
+
+1. **✅ Floating Toolbox Design**
+
+   - **Bottom-right positioning** - Always accessible while writing
+   - **Expandable/collapsible** - Clean interface when not needed
+   - **Smooth animations** - Professional slide-up animation with rotation
+   - **Visual feedback** - Blue active state with 45° rotation when open
+
+2. **✅ Writer-Friendly Features**
+
+   - **Em dash auto-replacement** - Type `--` → converts to `—` automatically
+   - **Horizontal line insertion** - Button + keyboard shortcut (`Ctrl+Shift+-`)
+   - **Font size controls** - Adjustable from 12px-24px with live display
+   - **Live word count** - Real-time word counting with formatting
+   - **Auto-save integration** - Visual saving indicators
+
+3. **✅ Professional Formatting Tools**
+
+   - **Bold/Italic/Strikethrough** with active state highlighting
+   - **Keyboard shortcuts** - Standard shortcuts (Ctrl+B, Ctrl+I, etc.)
+   - **Horizontal rule** - Perfect for scene breaks and sections
+   - **Typography focus** - Serif fonts and proper line height for reading
+
+4. **✅ Clean Interface Design**
+   - **No toolbar clutter** - Floating toolbox removes fixed header space
+   - **Contextual tooltips** - All buttons show helpful shortcuts
+   - **Status indicators** - Saving status and helper tips
+   - **Dark theme consistency** - Matches overall platform design
+
+**Implementation Status**: ✅ **SHIPPED AND WORKING**
+
+### **🎉 FINALIZED: Enhanced Manuscript Tree with Hover-Only Buttons**
+
+**Achievement**: Cleaned up the manuscript tree interface with better UX patterns
+
+**Key Improvements**:
+
+1. **✅ Hover-Only Add Buttons**
+
+   - **Clean interface** - No visual clutter when browsing
+   - **Contextual appearance** - Buttons only show when hovering over elements
+   - **Smooth transitions** - Fade in/out animations for professional feel
+   - **Color-coded buttons** - Blue for scenes, yellow for chapters
+
+2. **✅ Improved 3-Line Layout System**
+
+   - **Line 1: Full-width titles** - Maximum space for act/chapter/scene names
+   - **Line 2: Action buttons** - Dedicated space for add/delete operations
+   - **Line 3: Metadata** - Word counts, scene counts in detailed view only
+   - **Better organization** - Clear visual hierarchy
+
+3. **✅ Compact Button Design**
+
+   - **Smaller buttons** - `+Scene` and `+Chapter` with compact padding
+   - **Better colors** - Blue and yellow matching the reference design
+   - **Simplified text** - Just "Scene" and "Chapter" instead of "Add Scene"
+
+4. **✅ Smart Chapter Controls**
+   - **Selected-act only** - Chapter expand/collapse works only on current act
+   - **Context-aware status** - Shows which act's chapters are being controlled
+   - **Disabled when appropriate** - Grayed out when no act selected
+
+**Implementation Status**: ✅ **SHIPPED AND WORKING**
+
 ### **🎉 FINALIZED: Complete Contextual Import System - WORKING!**
 
 **Achievement**: Built and shipped a fully functional contextual import system that perfectly matches the designed flow
@@ -273,39 +341,16 @@ model Scene {
    - **Professional Error Handling**: Comprehensive error management with user feedback
 
 3. **✅ Complete ADD Modes Implementation**
-
-   **Add New Act**:
-
-   - Position Selection → File Upload → Content Import ✅
-   - Smart act ordering with proper bumping of existing acts ✅
-   - All document content imported as chapters and scenes ✅
-
-   **Add New Chapter**:
-
-   - Act Selection → Position Selection → File Upload → Content Import ✅
-   - All document content imported as scenes in the new chapter ✅
-   - Smart chapter ordering within the selected act ✅
-
-   **Add New Scene**:
-
-   - Act Selection → Chapter Selection → Position Selection → File Upload ✅
-   - All document content imported as scenes in the selected chapter ✅
-   - Smart scene ordering with proper positioning ✅
+   **Add New Act**: Position Selection → File Upload → Content Import ✅
+   **Add New Chapter**: Act Selection → Position Selection → File Upload → Content Import ✅
+   **Add New Scene**: Act Selection → Chapter Selection → Position Selection → File Upload ✅
 
 4. **✅ Production-Ready Architecture**
-
    - **Real-Time Integration**: Import button in manuscript editor sidebar
    - **Live Context Creation**: Dynamic import context from current novel structure
    - **Professional Hook System**: `useContextualImport` for API management
    - **Complete Error Recovery**: User-friendly error messages and retry capability
    - **Success Feedback**: Automatic manuscript refresh and import statistics
-
-5. **✅ Technical Excellence**
-   - **Parameter Object Methods**: All service methods use modern TypeScript patterns
-   - **Clean Component Architecture**: Reusable components with proper separation of concerns
-   - **Type Safety**: Complete TypeScript coverage with no 'any' types
-   - **Professional Middleware**: Rate limiting, file validation, and error handling
-   - **Optimized Performance**: Efficient database operations with proper transactions
 
 **Implementation Status**: ✅ **SHIPPED AND WORKING**
 
@@ -337,14 +382,20 @@ model Scene {
 
 ### **🎯 HIGH PRIORITY: Ready for Implementation**
 
-1. **🔌 Replace Modes Implementation** - **[NEXT STEP]**
+1. **📌 Replace Modes Implementation** - **[NEXT STEP]**
 
    - ✅ UI flow designed and perfected for ADD modes (COMPLETE)
    - ⏳ Implement replace-act, replace-chapter, replace-scene API processing
    - ⏳ Add replace mode UI flows to contextual import dialog
    - ⏳ Build service layer for content replacement logic
 
-2. **📝 Enhanced Scene Text Editor** - Professional Tiptap editor with rich text formatting
+2. **🔍 Enhanced Scene Text Editor Features** - Build on the floating toolbox foundation
+
+   - **Focus Mode** - Distraction-free writing with dimmed interface
+   - **Writing Goals** - Daily word count targets and session tracking
+   - **Find & Replace** - Essential for editing long scenes
+   - **Reading Time Estimates** - Help writers gauge scene length
+
 3. **👥 Character Management System** - Track characters, relationships, and scene appearances
 
 ### **📋 MEDIUM PRIORITY: Planning Phase**
@@ -361,7 +412,24 @@ model Scene {
 3. **🤖 AI Writing Assistant** - Context-aware suggestions and continuity checking
 4. **📚 Professional Publishing** - Advanced typesetting and industry-standard formatting
 
-## 🔧 Technical Achievements
+## 📧 Technical Achievements
+
+### **✅ Complete Scene Text Editor Excellence**:
+
+- **Floating Toolbox Design**: Bottom-right positioned, expandable/collapsible
+- **Writer-Friendly Features**: Em dash auto-replacement, horizontal lines, font controls
+- **Professional Formatting**: Bold, italic, strikethrough with active states
+- **Keyboard Shortcuts**: Standard shortcuts plus custom ones (Ctrl+Shift+- for horizontal line)
+- **Clean Interface**: No fixed toolbar clutter, always accessible while writing
+- **Auto-Save Integration**: Visual saving indicators and real-time word count
+
+### **✅ Complete Manuscript Tree Excellence**:
+
+- **Hover-Only Add Buttons**: Clean interface with contextual button appearance
+- **3-Line Layout System**: Full-width titles, dedicated action line, optional metadata
+- **Compact Button Design**: Small, color-coded +Scene (blue) and +Chapter (yellow) buttons
+- **Smart Chapter Controls**: Context-aware controls that work only on selected act
+- **Professional UX**: Smooth transitions, proper visual hierarchy, organized layout
 
 ### **✅ Complete Contextual Import System Excellence**:
 
@@ -445,6 +513,8 @@ model Scene {
 
 **Your Monarch Story Platform now features:**
 
+✅ **SHIPPED: Enhanced Scene Text Editor with Floating Toolbox** - Professional writing experience with floating controls  
+✅ **SHIPPED: Enhanced Manuscript Tree with Hover-Only Buttons** - Clean interface with contextual controls  
 ✅ **SHIPPED: Complete Contextual Import System** - Full working implementation with all ADD modes  
 ✅ **FINALIZED: Enhanced DOCX Upload Parser** - Professional document processing with auto-fix capabilities  
 ✅ **FINALIZED: Complete API Route Modernization** - All routes use modern parameter objects and professional validation  
@@ -482,8 +552,8 @@ model Scene {
 
 ---
 
-**The platform now provides a complete professional writing experience with fully working contextual import system (ADD modes), auto-fix functionality, standardized API architecture, modular hook system, smart auto-save, perfect UI layout, comprehensive content management, enhanced grid view features, and robust error handling! Next: Complete the system with Replace modes.** 🎉
+**The platform now provides a complete professional writing experience with enhanced scene text editor featuring floating toolbox, hover-only manuscript tree buttons, fully working contextual import system (ADD modes), auto-fix functionality, standardized API architecture, modular hook system, smart auto-save, perfect UI layout, comprehensive content management, enhanced grid view features, and robust error handling! Next: Complete the system with Replace modes.** 🎉
 
 ---
 
-_Complete story platform with working contextual import system (ADD modes shipped!), document import system (including auto-fix), modernized API routes, parameter object service methods, enhanced type safety, professional middleware architecture, modular hook system, smart auto-save functionality, universal renaming capabilities, perfect Act document view with chapter boundaries, enhanced grid view with act renaming and chapter focus buttons, optimized layouts, professional component library, comprehensive content management, enhanced rate limiting system, and complete contextual import system with working ADD modes. Ready for Replace modes implementation._
+_Complete story platform with enhanced scene text editor (floating toolbox with em dash auto-replacement, horizontal lines, and keyboard shortcuts), enhanced manuscript tree (hover-only buttons, 3-line layout, compact design), working contextual import system (ADD modes shipped!), document import system (including auto-fix), modernized API routes, parameter object service methods, enhanced type safety, professional middleware architecture, modular hook system, smart auto-save functionality, universal renaming capabilities, perfect Act document view with chapter boundaries, enhanced grid view with act renaming and chapter focus buttons, optimized layouts, professional component library, comprehensive content management, enhanced rate limiting system, and complete contextual import system with working ADD modes. Ready for Replace modes implementation and enhanced text editor features._
