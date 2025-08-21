@@ -555,7 +555,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
             key="toolbox-toggle" // React key to ensure single instance
             onClick={() => setIsToolboxOpen(!isToolboxOpen)}
             className={`
-              w-12 h-12 rounded-full shadow-xl ring-2 
+              w-12 h-12 rounded-full ring-2 
               transition-all duration-300 ease-in-out
               flex items-center justify-center
               hover:scale-110 hover:shadow-2xl
