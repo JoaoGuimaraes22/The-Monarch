@@ -52,15 +52,8 @@ interface ManuscriptEditorProps {
   pendingChanges: boolean;
   isMainSidebarCollapsed: boolean;
   onAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
-  // ✨ NEW: Navigation props
-  navigationContext?: NavigationContext;
-  onPreviousNavigation?: () => void;
-  onNextNavigation?: () => void;
-  onNavigationSelect?: (
-    itemId: string,
-    level?: "primary" | "secondary"
-  ) => void;
-  showNavigation?: boolean;
+  // ✅ UPDATED: Navigation component prop
+  navigationComponent?: React.ReactNode;
 }
 
 export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
@@ -94,12 +87,8 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   handleManualSave,
   pendingChanges,
   isMainSidebarCollapsed,
-  // ✨ NEW: Navigation props
-  navigationContext,
-  onPreviousNavigation,
-  onNextNavigation,
-  onNavigationSelect,
-  showNavigation = true,
+  // ✅ UPDATED: Navigation component prop
+  navigationComponent,
 }) => {
   // State management - these are for the MANUSCRIPT sidebars, separate from main workspace sidebar
   const [isStructureSidebarCollapsed, setIsStructureSidebarCollapsed] =
@@ -284,15 +273,11 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
             subtitle={formattedSubtitle}
             hasSelectedScene={!!selectedScene}
             isReadOnly={viewMode !== "scene"}
-            // ✨ REMOVED: Navigation props from header since we're adding separate navigation bar
+            // ✅ UPDATED: Pass navigation component to header
+            navigationComponent={navigationComponent}
           />
 
-          {/* ✅ NEW: Navigation Bar */}
-          {showNavigation && navigationContext && (
-            <div className="border-b border-gray-700 bg-gray-800 px-4 py-3">
-              <ManuscriptNavigationBar navigationContext={navigationContext} />
-            </div>
-          )}
+          {/* ✅ REMOVED: Separate navigation bar since it's now in the header */}
 
           {/* Content Area */}
           <ManuscriptContentArea

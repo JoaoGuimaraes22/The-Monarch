@@ -1,62 +1,100 @@
 // src/app/(app)/novels/[novelId]/manuscript/page.tsx
-// ✅ UPDATED: Using new clean navigation system
+// ✨ UPDATED: Added auto-save functionality props
 
 "use client";
 
-import React from "react";
-import { useParams } from "next/navigation";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  ManuscriptEmptyState,
+  DocxUploader,
+} from "@/app/components/manuscript/import-system/";
 import { ManuscriptEditor } from "@/app/components/manuscript/manuscript-editor";
-import { useManuscriptLogic } from "@/hooks/manuscript";
+import { ManuscriptNavigationBar } from "@/app/components/manuscript/manuscript-editor/layout/manuscript-navigation-bar";
+import { useManuscriptLogic } from "@/hooks/manuscript/useManuscriptLogic";
+import { useSidebar } from "@/app/components/workspace/sidebar-context";
 
-export default function ManuscriptPage() {
-  const params = useParams();
-  const novelId = params.novelId as string;
+interface ManuscriptPageProps {
+  params: Promise<{
+    novelId: string;
+  }>;
+}
 
+export default function ManuscriptPage({ params }: ManuscriptPageProps) {
+  const [novelId, setNovelId] = useState<string>("");
+  const [showUploader, setShowUploader] = useState(false);
+
+  // Get main sidebar state from context
+  const { isMainSidebarCollapsed } = useSidebar();
+
+  // ✨ ALL MANUSCRIPT LOGIC IN CUSTOM HOOK - Now with auto-save!
   const manuscript = useManuscriptLogic(novelId);
-  const [isMainSidebarCollapsed, setIsMainSidebarCollapsed] =
-    React.useState(false);
 
-  if (manuscript.loading) {
+  // ===== COMPONENT-SPECIFIC LOGIC (Only UI and routing) =====
+
+  // Await params and extract novelId
+  useEffect(() => {
+    params.then(({ novelId }) => {
+      setNovelId(novelId);
+    });
+  }, [params]);
+
+  // Handle import success
+  const handleImportSuccess = useCallback(() => {
+    setShowUploader(false);
+    manuscript.loadNovelStructure(novelId);
+  }, [manuscript, novelId]);
+
+  // Handle start writing manually
+  const handleStartWriting = useCallback(() => {
+    console.log("Start writing manually");
+  }, []);
+
+  // ===== RENDER LOGIC (Simple and clean) =====
+
+  // Loading state
+  if (!novelId || manuscript.loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading manuscript...</p>
+      <div className="p-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-700 rounded w-1/2"></div>
         </div>
       </div>
     );
   }
 
-  if (manuscript.error) {
+  // Show uploader modal
+  if (showUploader) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center text-red-400">
-          <p className="text-xl mb-4">Error loading manuscript</p>
-          <p className="text-gray-400 mb-4">{manuscript.error}</p>
-          <button
-            onClick={manuscript.handleRefresh}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
+      <div className="p-8">
+        <DocxUploader
+          novelId={novelId}
+          onImportSuccess={handleImportSuccess}
+          onCancel={() => setShowUploader(false)}
+        />
       </div>
     );
   }
+  console.log("🔍 RENDER CHECK:");
+  console.log("🔍 manuscript.hasStructure:", manuscript.hasStructure);
+  console.log("🔍 manuscript.novel:", manuscript.novel);
+  console.log("🔍 manuscript.loading:", manuscript.loading);
 
-  if (!manuscript.novel) {
+  // Then the existing condition:
+  if (!manuscript.hasStructure) {
+    console.log("🔍 SHOWING EMPTY STATE because hasStructure is false");
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center text-gray-400">
-          <p className="text-xl">No manuscript found</p>
-        </div>
-      </div>
+      <ManuscriptEmptyState
+        onShowUploader={() => setShowUploader(true)}
+        onStartWriting={handleStartWriting}
+      />
     );
   }
 
+  // ✨ UPDATED: Main manuscript editor with navigation component
   return (
     <ManuscriptEditor
-      novel={manuscript.novel}
+      novel={manuscript.novel!}
       selectedScene={manuscript.selectedScene}
       selectedChapter={manuscript.selectedChapter}
       selectedAct={manuscript.selectedAct}
@@ -77,7 +115,7 @@ export default function ManuscriptPage() {
       onUpdateActName={manuscript.handleUpdateActName}
       onUpdateChapterName={manuscript.handleUpdateChapterName}
       onUpdateSceneName={manuscript.handleUpdateSceneName}
-      // Auto-save functionality
+      // ✨ UPDATED: Complete auto-save functionality
       onSceneContentChange={manuscript.handleSceneContentChange}
       isSavingContent={manuscript.isSavingContent}
       lastSaved={manuscript.lastSaved}
@@ -86,59 +124,28 @@ export default function ManuscriptPage() {
       handleManualSave={manuscript.handleManualSave}
       pendingChanges={manuscript.pendingChanges}
       isMainSidebarCollapsed={isMainSidebarCollapsed}
-      // ===== NEW NAVIGATION SYSTEM =====
-      navigationContext={manuscript.getNavigationContext()}
-      // Legacy handlers for backward compatibility
-      onPreviousNavigation={() => {
-        // Map to new navigation system based on context
-        const context = manuscript.getNavigationContext();
-        if (context.navigation.primary.hasPrevious) {
-          context.navigation.primary.onPrevious();
-        }
-      }}
-      onNextNavigation={() => {
-        // Map to new navigation system based on context
-        const context = manuscript.getNavigationContext();
-        if (context.navigation.primary.hasNext) {
-          context.navigation.primary.onNext();
-        }
-      }}
-      onNavigationSelect={(itemId: string, level?: "primary" | "secondary") => {
-        // Map to new navigation system
-        const context = manuscript.getNavigationContext();
-        if (level === "secondary" && "secondary" in context.navigation) {
-          context.navigation.secondary.onScrollTo(itemId);
-        } else {
-          context.navigation.primary.onSelect(itemId);
-        }
-      }}
-      showNavigation={true}
+      // ✅ FIXED: Pass navigation as a component instead of individual props
+      navigationComponent={
+        <ManuscriptNavigationBar
+          navigationContext={manuscript.getNavigationContext()}
+        />
+      }
     />
   );
 }
 
 /*
-===== INTEGRATION UPDATES =====
+===== FIXES APPLIED =====
 
-✅ NEW NAVIGATION INTEGRATION:
-- Added navigationContext from new navigation system
-- Mapped legacy navigation handlers to new system
-- Maintained backward compatibility for existing components
+✅ UPDATED NAVIGATION INTEGRATION:
+- Added import for ManuscriptNavigationBar
+- Replaced old navigation props with navigationComponent prop
+- Pass ManuscriptNavigationBar as the navigationComponent
 
-✅ CLEAN HANDLER MAPPING:
-- Primary navigation uses onSelect (changes view focus)
-- Secondary navigation uses onScrollTo (just scrolls)
-- Proper level-aware routing of navigation events
+✅ CLEAN INTEGRATION:
+- Navigation component gets the context from manuscript.getNavigationContext()
+- Header will now render the navigation component in place of the title
+- View mode selectors stay on the right side
 
-✅ PRESERVED FUNCTIONALITY:
-- All existing props and handlers maintained
-- Auto-save functionality preserved
-- Error handling and loading states unchanged
-
-✅ READY FOR TESTING:
-- Navigation context provides clean data structure
-- Handlers properly route to new navigation system
-- Backward compatibility ensures existing components work
-
-This integration allows testing the new navigation while maintaining compatibility!
+This should now work with the updated header that expects navigationComponent!
 */
