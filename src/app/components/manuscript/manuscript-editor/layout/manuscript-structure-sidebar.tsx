@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/layout/manuscript-structure-sidebar.tsx
-// ✨ ENHANCED: Complete scrollable design with proper fixed/scrollable areas
+// ✨ ENHANCED: Added act collapse/expand functionality
 
 import React, { useState, useEffect } from "react";
 import { BookOpen } from "lucide-react";
@@ -39,7 +39,7 @@ interface ManuscriptStructureSidebarProps {
   pendingChanges: boolean;
   isSavingContent: boolean;
   lastSaved: Date | null;
-  // ✨ NEW: Contextual import prop
+  // ✨ Contextual import prop
   onOpenContextualImport?: () => void;
 }
 
@@ -74,10 +74,12 @@ export const ManuscriptStructureSidebar: React.FC<
   pendingChanges,
   isSavingContent,
   lastSaved,
-  // ✨ NEW: Contextual import prop
+  // Contextual import prop
   onOpenContextualImport,
 }) => {
-  // Smart chapter expansion state management
+  // ✨ NEW: Act expansion state management
+  const [expandedActs, setExpandedActs] = useState<Set<string>>(new Set());
+  // Chapter expansion state management
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(
     new Set()
   );
@@ -86,20 +88,21 @@ export const ManuscriptStructureSidebar: React.FC<
   // View density state
   const [viewDensity, setViewDensity] = useState<ViewDensity>("detailed");
 
-  // Initialize with smart defaults
+  // ✨ ENHANCED: Initialize with smart defaults for both acts and chapters
   useEffect(() => {
     if (!novel.acts || novel.acts.length === 0) return;
 
+    const allActIds = novel.acts.map((act) => act.id);
     const allChapterIds = novel.acts.flatMap((act) =>
       act.chapters.map((chapter) => chapter.id)
     );
 
-    if (allChapterIds.length === 0) return;
+    if (allActIds.length === 0) return;
 
     // Smart initialization strategy
     if (isFirstLoad) {
       if (selectedScene) {
-        // Find and expand the chapter containing the selected scene
+        // Find and expand the act and chapter containing the selected scene
         const selectedChapter = novel.acts
           .flatMap((act) => act.chapters)
           .find((chapter) =>
@@ -107,18 +110,105 @@ export const ManuscriptStructureSidebar: React.FC<
           );
 
         if (selectedChapter) {
-          setExpandedChapters(new Set([selectedChapter.id]));
+          // Find the act containing this chapter
+          const selectedAct = novel.acts.find((act) =>
+            act.chapters.some((ch) => ch.id === selectedChapter.id)
+          );
+
+          if (selectedAct) {
+            setExpandedActs(new Set([selectedAct.id]));
+            setExpandedChapters(new Set([selectedChapter.id]));
+          }
         }
-      } else if (allChapterIds.length <= 5) {
-        // Auto-expand if few chapters
-        setExpandedChapters(new Set(allChapterIds));
       } else {
-        // Expand only first chapter
-        setExpandedChapters(new Set([allChapterIds[0]]));
+        // Smart defaults based on novel size
+        if (allActIds.length <= 3) {
+          // Auto-expand all acts if few acts
+          setExpandedActs(new Set(allActIds));
+
+          if (allChapterIds.length <= 8) {
+            // Auto-expand all chapters if few chapters total
+            setExpandedChapters(new Set(allChapterIds));
+          } else {
+            // Expand only first chapter of each act
+            const firstChapters = novel.acts
+              .map((act) => act.chapters[0]?.id)
+              .filter(Boolean);
+            setExpandedChapters(new Set(firstChapters));
+          }
+        } else {
+          // Expand only first act
+          setExpandedActs(new Set([allActIds[0]]));
+          // Expand only first chapter
+          setExpandedChapters(new Set([allChapterIds[0]]));
+        }
       }
       setIsFirstLoad(false);
     }
   }, [novel.acts, selectedScene, isFirstLoad]);
+
+  // ✨ NEW: Act toggle handler
+  const handleActToggle = (actId: string) => {
+    const newExpanded = new Set(expandedActs);
+    if (newExpanded.has(actId)) {
+      newExpanded.delete(actId);
+      // Also collapse all chapters in this act
+      const actChapterIds =
+        novel.acts
+          .find((act) => act.id === actId)
+          ?.chapters.map((ch) => ch.id) || [];
+      const newExpandedChapters = new Set(expandedChapters);
+      actChapterIds.forEach((chId) => newExpandedChapters.delete(chId));
+      setExpandedChapters(newExpandedChapters);
+    } else {
+      newExpanded.add(actId);
+    }
+    setExpandedActs(newExpanded);
+  };
+
+  // Enhanced chapter toggle handler
+  const handleChapterToggle = (chapterId: string) => {
+    const newExpanded = new Set(expandedChapters);
+    if (newExpanded.has(chapterId)) {
+      newExpanded.delete(chapterId);
+    } else {
+      newExpanded.add(chapterId);
+
+      // Auto-expand parent act if not already expanded
+      const parentAct = novel.acts.find((act) =>
+        act.chapters.some((ch) => ch.id === chapterId)
+      );
+      if (parentAct && !expandedActs.has(parentAct.id)) {
+        const newExpandedActs = new Set(expandedActs);
+        newExpandedActs.add(parentAct.id);
+        setExpandedActs(newExpandedActs);
+      }
+    }
+    setExpandedChapters(newExpanded);
+  };
+
+  // ✨ NEW: Expand/collapse all functions
+  const expandAllActs = () => {
+    const allActIds = novel.acts?.map((act) => act.id) || [];
+    setExpandedActs(new Set(allActIds));
+  };
+
+  const collapseAllActs = () => {
+    setExpandedActs(new Set());
+    setExpandedChapters(new Set()); // Also collapse all chapters
+  };
+
+  const expandAllChapters = () => {
+    const allChapterIds =
+      novel.acts?.flatMap((act) => act.chapters.map((ch) => ch.id)) || [];
+    setExpandedChapters(new Set(allChapterIds));
+    // Also expand all acts to show chapters
+    expandAllActs();
+  };
+
+  const collapseAllChapters = () => {
+    setExpandedChapters(new Set());
+  };
 
   // Collapsed content for sidebar
   const collapsedContent = (
@@ -142,9 +232,9 @@ export const ManuscriptStructureSidebar: React.FC<
       collapsedContent={collapsedContent}
       position="left"
     >
-      {/* ✅ ENHANCED: Better container structure for scrolling */}
+      {/* Enhanced container structure for scrolling */}
       <div className="h-full flex flex-col">
-        {/* ✅ FIXED HEADER: This stays at the top, doesn't scroll */}
+        {/* FIXED HEADER: This stays at the top, doesn't scroll */}
         <div className="flex-shrink-0 border-b border-gray-700 bg-gray-800">
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
@@ -166,7 +256,7 @@ export const ManuscriptStructureSidebar: React.FC<
               </div>
             </div>
 
-            {/* ✅ Auto-Save Tools - Fixed at top */}
+            {/* Auto-Save Tools - Fixed at top */}
             <CompactAutoSaveTools
               autoSaveEnabled={autoSaveEnabled}
               setAutoSaveEnabled={setAutoSaveEnabled}
@@ -181,10 +271,33 @@ export const ManuscriptStructureSidebar: React.FC<
           </div>
         </div>
 
-        {/* ✅ SCROLLABLE CONTENT AREA: This is the main scrolling container */}
+        {/* SCROLLABLE CONTENT AREA */}
         <div className="flex-1 flex flex-col min-h-0">
-          {/* ✅ CHAPTER STATS: Fixed below header */}
+          {/* ✨ ENHANCED: Structure stats with act/chapter controls */}
           <div className="flex-shrink-0 p-4 bg-gray-800 border-b border-gray-700">
+            {/* Acts Controls */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-400">
+                {expandedActs.size} of {novel.acts?.length || 0} acts expanded
+              </span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={expandAllActs}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Expand All Acts
+                </button>
+                <span className="text-xs text-gray-600">•</span>
+                <button
+                  onClick={collapseAllActs}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Collapse All
+                </button>
+              </div>
+            </div>
+
+            {/* Chapters Controls */}
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-gray-400">
                 {expandedChapters.size} of{" "}
@@ -193,28 +306,22 @@ export const ManuscriptStructureSidebar: React.FC<
               </span>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => {
-                    const allChapterIds =
-                      novel.acts?.flatMap((act) =>
-                        act.chapters.map((c) => c.id)
-                      ) || [];
-                    setExpandedChapters(new Set(allChapterIds));
-                  }}
+                  onClick={expandAllChapters}
                   className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  Expand All
+                  Expand All Chapters
                 </button>
                 <span className="text-xs text-gray-600">•</span>
                 <button
-                  onClick={() => setExpandedChapters(new Set())}
+                  onClick={collapseAllChapters}
                   className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  Collapse All
+                  Collapse All Chapters
                 </button>
               </div>
             </div>
 
-            {/* ✅ NOVEL STATS: Quick overview */}
+            {/* Novel Stats */}
             <div className="flex items-center space-x-4 text-xs text-gray-400">
               <span>{novel.acts?.length || 0} acts</span>
               <span className="text-gray-600">•</span>
@@ -232,7 +339,7 @@ export const ManuscriptStructureSidebar: React.FC<
             </div>
           </div>
 
-          {/* ✅ MAIN SCROLLABLE TREE AREA */}
+          {/* MAIN SCROLLABLE TREE AREA */}
           <div className="flex-1 overflow-y-auto manuscript-sidebar-scroll smooth-scroll scroll-pt-safe">
             <div className="p-2">
               <DraggableManuscriptTree
@@ -240,16 +347,10 @@ export const ManuscriptStructureSidebar: React.FC<
                 selectedSceneId={selectedScene?.id}
                 selectedChapterId={selectedChapterId}
                 selectedActId={selectedActId}
+                expandedActs={expandedActs} // ✨ NEW: Pass expanded acts
                 expandedChapters={expandedChapters}
-                onChapterToggle={(chapterId) => {
-                  const newExpanded = new Set(expandedChapters);
-                  if (newExpanded.has(chapterId)) {
-                    newExpanded.delete(chapterId);
-                  } else {
-                    newExpanded.add(chapterId);
-                  }
-                  setExpandedChapters(newExpanded);
-                }}
+                onActToggle={handleActToggle} // ✨ NEW: Act toggle handler
+                onChapterToggle={handleChapterToggle}
                 onSceneSelect={onSceneSelect}
                 onChapterSelect={onChapterSelect || (() => {})}
                 onActSelect={onActSelect || (() => {})}

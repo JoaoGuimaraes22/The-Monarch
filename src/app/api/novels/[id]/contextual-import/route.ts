@@ -17,20 +17,35 @@ import { novelService, NovelWithStructure } from "@/lib/novels";
 // ===== VALIDATION SCHEMAS =====
 
 const TargetSchema = z.object({
-  mode: z.enum(["new-act", "new-chapter", "new-scene"]),
+  mode: z.enum([
+    "new-act",
+    "new-chapter",
+    "new-scene",
+    "replace-act",
+    "replace-chapter",
+    "replace-scene",
+  ]),
   targetActId: z.string().optional(),
   targetChapterId: z.string().optional(),
-  position: z.enum(["beginning", "end", "specific"]),
+  targetSceneId: z.string().optional(),
+  position: z.enum(["beginning", "end", "specific", "replace"]),
   specificPosition: z.number().min(1).optional(),
 });
 
 // ===== TYPESCRIPT INTERFACES =====
 
 interface ImportTarget {
-  mode: "new-act" | "new-chapter" | "new-scene";
+  mode:
+    | "new-act"
+    | "new-chapter"
+    | "new-scene"
+    | "replace-act"
+    | "replace-chapter"
+    | "replace-scene";
   targetActId?: string;
   targetChapterId?: string;
-  position: "beginning" | "end" | "specific";
+  targetSceneId?: string;
+  position: "beginning" | "end" | "specific" | "replace";
   specificPosition?: number;
 }
 
@@ -196,12 +211,78 @@ async function validateImportTarget(
       }
       break;
 
+    case "replace-act":
+      if (!target.targetActId) {
+        throw new Error("Target act ID is required for replace act mode");
+      }
+      const replaceAct = novel.acts.find(
+        (act) => act.id === target.targetActId
+      );
+      if (!replaceAct) {
+        throw new Error("Target act not found for replacement");
+      }
+      break;
+
+    case "replace-chapter":
+      if (!target.targetActId || !target.targetChapterId) {
+        throw new Error(
+          "Both target act ID and chapter ID are required for replace chapter mode"
+        );
+      }
+      const actForReplaceChapter = novel.acts.find(
+        (act) => act.id === target.targetActId
+      );
+      if (!actForReplaceChapter) {
+        throw new Error("Target act not found");
+      }
+      const replaceChapter = actForReplaceChapter.chapters.find(
+        (ch) => ch.id === target.targetChapterId
+      );
+      if (!replaceChapter) {
+        throw new Error("Target chapter not found for replacement");
+      }
+      break;
+
+    case "replace-scene":
+      if (
+        !target.targetActId ||
+        !target.targetChapterId ||
+        !target.targetSceneId
+      ) {
+        throw new Error(
+          "Target act ID, chapter ID, and scene ID are required for replace scene mode"
+        );
+      }
+      const actForReplaceScene = novel.acts.find(
+        (act) => act.id === target.targetActId
+      );
+      if (!actForReplaceScene) {
+        throw new Error("Target act not found");
+      }
+      const chapterForReplaceScene = actForReplaceScene.chapters.find(
+        (ch) => ch.id === target.targetChapterId
+      );
+      if (!chapterForReplaceScene) {
+        throw new Error("Target chapter not found");
+      }
+      const replaceScene = chapterForReplaceScene.scenes.find(
+        (sc) => sc.id === target.targetSceneId
+      );
+      if (!replaceScene) {
+        throw new Error("Target scene not found for replacement");
+      }
+      break;
+
     default:
       throw new Error(`Unsupported import mode: ${target.mode}`);
   }
 
-  // Validate position
-  if (target.position === "specific" && !target.specificPosition) {
+  // Validate position (only for new modes)
+  if (
+    target.mode.startsWith("new-") &&
+    target.position === "specific" &&
+    !target.specificPosition
+  ) {
     throw new Error(
       "Specific position number is required when using specific position mode"
     );
@@ -227,6 +308,20 @@ async function processContextualImport(
 
     case "new-scene":
       return await processNewScene(novelId, parsedStructure, target, novel);
+
+    case "replace-act":
+      return await processReplaceAct(novelId, parsedStructure, target, novel);
+
+    case "replace-chapter":
+      return await processReplaceChapter(
+        novelId,
+        parsedStructure,
+        target,
+        novel
+      );
+
+    case "replace-scene":
+      return await processReplaceScene(novelId, parsedStructure, target, novel);
 
     default:
       throw new Error(`Unsupported import mode: ${target.mode}`);
@@ -566,6 +661,284 @@ async function processNewScene(
             act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
           0
         ) + sceneCount,
+      totalWordCount: novel.wordCount + parsedStructure.wordCount,
+    },
+  };
+}
+
+// ===== REPLACE ACT IMPORT =====
+
+async function processReplaceAct(
+  novelId: string,
+  parsedStructure: ParsedStructure,
+  target: ImportTarget,
+  novel: NovelWithStructure
+): Promise<ImportResult> {
+  console.log("🔄 Replacing act...");
+
+  const targetAct = novel.acts.find((act) => act.id === target.targetActId);
+  if (!targetAct) {
+    throw new Error("Target act not found");
+  }
+
+  // Keep the existing order and title for reference
+  const existingOrder = targetAct.order;
+  const existingTitle = targetAct.title;
+
+  // Delete the existing act (this will cascade delete all chapters and scenes)
+  await novelService.deleteAct(target.targetActId!);
+
+  // Create new act with the same order
+  const newActTitle = parsedStructure.acts[0]?.title || existingTitle;
+  const newAct = await novelService.createAct({
+    novelId,
+    title: newActTitle,
+    order: existingOrder,
+  });
+
+  // Import all chapters from the document into this new act
+  let chapterOrder = 1;
+  const createdChapterIds: string[] = [];
+  const createdSceneIds: string[] = [];
+
+  for (const parsedAct of parsedStructure.acts) {
+    for (const parsedChapter of parsedAct.chapters) {
+      const newChapter = await novelService.createChapter({
+        actId: newAct.id,
+        title: parsedChapter.title,
+        order: chapterOrder++,
+      });
+      createdChapterIds.push(newChapter.id);
+
+      // Import all scenes from this chapter
+      let sceneOrder = 1;
+      for (const parsedScene of parsedChapter.scenes) {
+        const newScene = await novelService.createScene({
+          chapterId: newChapter.id,
+          title: parsedScene.title || `Scene ${sceneOrder}`,
+          content: parsedScene.content,
+          order: sceneOrder++,
+        });
+        createdSceneIds.push(newScene.id);
+      }
+    }
+  }
+
+  // Calculate total scenes
+  const totalScenes = parsedStructure.acts.reduce(
+    (sum, act) =>
+      sum + act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+    0
+  );
+
+  return {
+    imported: {
+      acts: 1,
+      chapters: createdChapterIds.length,
+      scenes: totalScenes,
+      wordCount: parsedStructure.wordCount,
+    },
+    created: {
+      actIds: [newAct.id],
+      chapterIds: createdChapterIds,
+      sceneIds: createdSceneIds,
+    },
+    structure: {
+      totalActs: novel.acts.length, // Same number of acts
+      totalChapters:
+        novel.acts.reduce((sum, act) => sum + act.chapters.length, 0) -
+        targetAct.chapters.length +
+        createdChapterIds.length,
+      totalScenes:
+        novel.acts.reduce(
+          (sum, act) =>
+            sum +
+            act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+          0
+        ) -
+        targetAct.chapters.reduce((sum, ch) => sum + ch.scenes.length, 0) +
+        totalScenes,
+      totalWordCount: novel.wordCount + parsedStructure.wordCount,
+    },
+  };
+}
+
+// ===== REPLACE CHAPTER IMPORT =====
+
+async function processReplaceChapter(
+  novelId: string,
+  parsedStructure: ParsedStructure,
+  target: ImportTarget,
+  novel: NovelWithStructure
+): Promise<ImportResult> {
+  console.log("🔄 Replacing chapter...");
+
+  const targetAct = novel.acts.find((act) => act.id === target.targetActId);
+  if (!targetAct) {
+    throw new Error("Target act not found");
+  }
+
+  const targetChapter = targetAct.chapters.find(
+    (ch) => ch.id === target.targetChapterId
+  );
+  if (!targetChapter) {
+    throw new Error("Target chapter not found");
+  }
+
+  // Keep the existing order and title for reference
+  const existingOrder = targetChapter.order;
+  const existingTitle = targetChapter.title;
+  const existingSceneCount = targetChapter.scenes.length;
+
+  // Delete the existing chapter (this will cascade delete all scenes)
+  await novelService.deleteChapter(target.targetChapterId!);
+
+  // Create new chapter with the same order
+  const newChapterTitle =
+    parsedStructure.acts[0]?.chapters[0]?.title || existingTitle;
+  const newChapter = await novelService.createChapter({
+    actId: target.targetActId!,
+    title: newChapterTitle,
+    order: existingOrder,
+  });
+
+  // Import all scenes from all chapters in the document
+  let sceneOrder = 1;
+  let totalScenes = 0;
+  const createdSceneIds: string[] = [];
+
+  for (const parsedAct of parsedStructure.acts) {
+    for (const parsedChapter of parsedAct.chapters) {
+      for (const parsedScene of parsedChapter.scenes) {
+        const newScene = await novelService.createScene({
+          chapterId: newChapter.id,
+          title: parsedScene.title || `Scene ${sceneOrder}`,
+          content: parsedScene.content,
+          order: sceneOrder++,
+        });
+        createdSceneIds.push(newScene.id);
+        totalScenes++;
+      }
+    }
+  }
+
+  return {
+    imported: {
+      acts: 0,
+      chapters: 1,
+      scenes: totalScenes,
+      wordCount: parsedStructure.wordCount,
+    },
+    created: {
+      actIds: [],
+      chapterIds: [newChapter.id],
+      sceneIds: createdSceneIds,
+    },
+    structure: {
+      totalActs: novel.acts.length,
+      totalChapters: novel.acts.reduce(
+        (sum, act) => sum + act.chapters.length,
+        0
+      ), // Same number of chapters
+      totalScenes:
+        novel.acts.reduce(
+          (sum, act) =>
+            sum +
+            act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+          0
+        ) -
+        existingSceneCount +
+        totalScenes,
+      totalWordCount: novel.wordCount + parsedStructure.wordCount,
+    },
+  };
+}
+
+// ===== REPLACE SCENE IMPORT =====
+
+async function processReplaceScene(
+  novelId: string,
+  parsedStructure: ParsedStructure,
+  target: ImportTarget,
+  novel: NovelWithStructure
+): Promise<ImportResult> {
+  console.log("🔄 Replacing scene...");
+
+  const targetAct = novel.acts.find((act) => act.id === target.targetActId);
+  if (!targetAct) {
+    throw new Error("Target act not found");
+  }
+
+  const targetChapter = targetAct.chapters.find(
+    (ch) => ch.id === target.targetChapterId
+  );
+  if (!targetChapter) {
+    throw new Error("Target chapter not found");
+  }
+
+  const targetScene = targetChapter.scenes.find(
+    (sc) => sc.id === target.targetSceneId
+  );
+  if (!targetScene) {
+    throw new Error("Target scene not found");
+  }
+
+  // For scene replacement, we'll take the first scene from the document
+  // and combine all content if there are multiple scenes
+  let combinedContent = "";
+  let combinedTitle = targetScene.title; // Keep existing title as fallback
+
+  // Collect all content from the parsed document
+  for (const parsedAct of parsedStructure.acts) {
+    for (const parsedChapter of parsedAct.chapters) {
+      for (const parsedScene of parsedChapter.scenes) {
+        if (parsedScene.title && !combinedTitle) {
+          combinedTitle = parsedScene.title; // Use first scene title if available
+        }
+        if (combinedContent) {
+          combinedContent += "\n\n---\n\n"; // Separator between scenes
+        }
+        combinedContent += parsedScene.content;
+      }
+    }
+  }
+
+  // Update the existing scene with the new content
+  const updatedScene = await novelService.updateScene(target.targetSceneId!, {
+    title: combinedTitle,
+    content: combinedContent,
+  });
+
+  // Calculate total scenes in imported document (for reporting)
+  const totalImportedScenes = parsedStructure.acts.reduce(
+    (sum, act) =>
+      sum + act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+    0
+  );
+
+  return {
+    imported: {
+      acts: 0,
+      chapters: 0,
+      scenes: totalImportedScenes,
+      wordCount: parsedStructure.wordCount,
+    },
+    created: {
+      actIds: [],
+      chapterIds: [],
+      sceneIds: [], // No new scenes created, existing scene updated
+    },
+    structure: {
+      totalActs: novel.acts.length,
+      totalChapters: novel.acts.reduce(
+        (sum, act) => sum + act.chapters.length,
+        0
+      ),
+      totalScenes: novel.acts.reduce(
+        (sum, act) =>
+          sum + act.chapters.reduce((chSum, ch) => chSum + ch.scenes.length, 0),
+        0
+      ), // Same number of scenes
       totalWordCount: novel.wordCount + parsedStructure.wordCount,
     },
   };

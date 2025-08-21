@@ -312,7 +312,6 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           setContextualImportOpen(false);
           onRefresh(); // This should refresh your manuscript data
           // Optional: show success message
-          alert("Import completed! (This is just a test for now)");
         }}
       />
     </>

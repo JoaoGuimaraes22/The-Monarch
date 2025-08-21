@@ -1,5 +1,5 @@
 // src/app/components/manuscript/contextual-import/contextual-import-dialog.tsx
-// ✨ UPDATED: Real API integration with working ADD modes
+// ✅ COMPLETE: Full contextual import dialog with ALL 6 modes (ADD + REPLACE)
 
 import React, { useState, useRef } from "react";
 import {
@@ -38,6 +38,7 @@ type ImportStep =
   | "mode-selection"
   | "act-selection"
   | "chapter-selection"
+  | "scene-selection"
   | "position-selection"
   | "file-upload"
   | "importing";
@@ -82,7 +83,7 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
   const handleModeSelect = (mode: ImportTarget["mode"]) => {
     const target: ImportTarget = {
       mode,
-      position: "beginning", // Default position
+      position: mode.startsWith("replace-") ? "replace" : "beginning", // Default position
     };
     setSelectedTarget(target);
 
@@ -92,6 +93,12 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
     } else if (mode === "new-chapter") {
       setCurrentStep("act-selection");
     } else if (mode === "new-scene") {
+      setCurrentStep("act-selection");
+    } else if (mode === "replace-act") {
+      setCurrentStep("act-selection");
+    } else if (mode === "replace-chapter") {
+      setCurrentStep("act-selection");
+    } else if (mode === "replace-scene") {
       setCurrentStep("act-selection");
     }
   };
@@ -106,6 +113,12 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
       setCurrentStep("position-selection");
     } else if (selectedTarget.mode === "new-scene") {
       setCurrentStep("chapter-selection");
+    } else if (selectedTarget.mode === "replace-act") {
+      setCurrentStep("file-upload"); // Replace act goes straight to file upload
+    } else if (selectedTarget.mode === "replace-chapter") {
+      setCurrentStep("chapter-selection");
+    } else if (selectedTarget.mode === "replace-scene") {
+      setCurrentStep("chapter-selection");
     }
   };
 
@@ -114,7 +127,22 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
 
     const updatedTarget = { ...selectedTarget, targetChapterId: chapterId };
     setSelectedTarget(updatedTarget);
-    setCurrentStep("position-selection");
+
+    if (selectedTarget.mode === "new-scene") {
+      setCurrentStep("position-selection");
+    } else if (selectedTarget.mode === "replace-chapter") {
+      setCurrentStep("file-upload"); // Replace chapter goes straight to file upload
+    } else if (selectedTarget.mode === "replace-scene") {
+      setCurrentStep("scene-selection");
+    }
+  };
+
+  const handleSceneSelect = (sceneId: string) => {
+    if (!selectedTarget) return;
+
+    const updatedTarget = { ...selectedTarget, targetSceneId: sceneId };
+    setSelectedTarget(updatedTarget);
+    setCurrentStep("file-upload"); // Replace scene goes straight to file upload
   };
 
   const handlePositionSelect = (
@@ -188,6 +216,7 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
   // Step 1: Mode Selection
   const ModeSelection = () => {
     const modes = [
+      // ADD MODES
       {
         id: "new-act" as const,
         icon: Crown,
@@ -195,6 +224,7 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
         description: "Import as a brand new act in your novel",
         color: "text-purple-400",
         bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
+        category: "add",
       },
       {
         id: "new-chapter" as const,
@@ -203,6 +233,7 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
         description: "Import as a new chapter in a specific act",
         color: "text-blue-400",
         bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
+        category: "add",
       },
       {
         id: "new-scene" as const,
@@ -211,11 +242,43 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
         description: "Import as new scenes in a specific chapter",
         color: "text-green-400",
         bgColor: "bg-green-500/10 hover:bg-green-500/20",
+        category: "add",
+      },
+      // REPLACE MODES
+      {
+        id: "replace-act" as const,
+        icon: Crown,
+        title: "Replace Act",
+        description: "Replace an entire act with imported content",
+        color: "text-red-400",
+        bgColor: "bg-red-500/10 hover:bg-red-500/20",
+        category: "replace",
+      },
+      {
+        id: "replace-chapter" as const,
+        icon: BookOpen,
+        title: "Replace Chapter",
+        description: "Replace a chapter with imported content",
+        color: "text-orange-400",
+        bgColor: "bg-orange-500/10 hover:bg-orange-500/20",
+        category: "replace",
+      },
+      {
+        id: "replace-scene" as const,
+        icon: FileEdit,
+        title: "Replace Scene",
+        description: "Replace a scene with imported content",
+        color: "text-yellow-400",
+        bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20",
+        category: "replace",
       },
     ];
 
+    const addModes = modes.filter((m) => m.category === "add");
+    const replaceModes = modes.filter((m) => m.category === "replace");
+
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">
             Import Document
@@ -226,43 +289,97 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          {modes.map((mode) => {
-            const Icon = mode.icon;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => handleModeSelect(mode.id)}
-                className={`p-4 rounded-lg border border-gray-600 ${mode.bgColor} text-left transition-all hover:border-gray-500`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Icon className={`w-6 h-6 ${mode.color}`} />
-                  <div>
-                    <h3 className="font-medium text-white">{mode.title}</h3>
-                    <p className="text-sm text-gray-400">{mode.description}</p>
+        {/* ADD MODES */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
+            Add New Content
+          </h3>
+          <div className="grid grid-cols-1 gap-2">
+            {addModes.map((mode) => {
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.id}
+                  onClick={() => handleModeSelect(mode.id)}
+                  className={`p-3 rounded-lg border border-gray-600 ${mode.bgColor} text-left transition-all hover:border-gray-500`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Icon className={`w-5 h-5 ${mode.color}`} />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-white text-sm">
+                        {mode.title}
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        {mode.description}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 ml-auto" />
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* REPLACE MODES */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
+            Replace Existing Content
+          </h3>
+          <div className="grid grid-cols-1 gap-2">
+            {replaceModes.map((mode) => {
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.id}
+                  onClick={() => handleModeSelect(mode.id)}
+                  className={`p-3 rounded-lg border border-gray-600 ${mode.bgColor} text-left transition-all hover:border-gray-500`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Icon className={`w-5 h-5 ${mode.color}`} />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-white text-sm">
+                        {mode.title}
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        {mode.description}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
   };
 
-  // Step 2: Act Selection (for new-chapter and new-scene)
+  // Step 2: Act Selection (for new-chapter, new-scene, and all replace modes)
   const ActSelection = () => {
+    const isReplaceMode = selectedTarget?.mode.startsWith("replace-");
+
+    let description = "";
+    if (selectedTarget?.mode === "new-chapter") {
+      description = "Choose which act to add the new chapter to";
+    } else if (selectedTarget?.mode === "new-scene") {
+      description = "Choose which act contains the chapter for new scenes";
+    } else if (selectedTarget?.mode === "replace-act") {
+      description = "Choose which act to replace with imported content";
+    } else if (selectedTarget?.mode === "replace-chapter") {
+      description = "Choose which act contains the chapter to replace";
+    } else if (selectedTarget?.mode === "replace-scene") {
+      description = "Choose which act contains the scene to replace";
+    }
+
     return (
       <div className="space-y-4">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">
             Select Target Act
           </h2>
-          <p className="text-gray-300 text-sm">
-            Choose which act to add the new{" "}
-            {selectedTarget?.mode === "new-chapter" ? "chapter" : "scenes"} to
-          </p>
+          <p className="text-gray-300 text-sm">{description}</p>
         </div>
 
         <div className="space-y-2">
@@ -293,11 +410,20 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
     );
   };
 
-  // Step 3: Chapter Selection (for new-scene)
+  // Step 3: Chapter Selection (for new-scene, replace-chapter, replace-scene)
   const ChapterSelection = () => {
     const chapters = selectedTarget?.targetActId
       ? getChaptersForAct(context, selectedTarget.targetActId)
       : [];
+
+    let description = "";
+    if (selectedTarget?.mode === "new-scene") {
+      description = "Choose which chapter to add the new scenes to";
+    } else if (selectedTarget?.mode === "replace-chapter") {
+      description = "Choose which chapter to replace with imported content";
+    } else if (selectedTarget?.mode === "replace-scene") {
+      description = "Choose which chapter contains the scene to replace";
+    }
 
     return (
       <div className="space-y-4">
@@ -305,9 +431,7 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
           <h2 className="text-xl font-semibold text-white mb-2">
             Select Target Chapter
           </h2>
-          <p className="text-gray-300 text-sm">
-            Choose which chapter to add the new scenes to
-          </p>
+          <p className="text-gray-300 text-sm">{description}</p>
         </div>
 
         <div className="space-y-2">
@@ -338,8 +462,58 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
     );
   };
 
-  // Step 4: Position Selection
+  // Step 4: Scene Selection (for replace-scene)
+  const SceneSelection = () => {
+    const scenes = selectedTarget?.targetChapterId
+      ? getScenesForChapter(context, selectedTarget.targetChapterId)
+      : [];
+
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-white mb-2">
+            Select Target Scene
+          </h2>
+          <p className="text-gray-300 text-sm">
+            Choose which scene to replace with imported content
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {scenes.map((scene) => (
+            <button
+              key={scene.id}
+              onClick={() => handleSceneSelect(scene.id)}
+              className="w-full p-3 text-left bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-white">
+                  {getTargetDisplayText("scene", scene)}
+                </span>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setCurrentStep("chapter-selection")}
+          className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>Back to chapter selection</span>
+        </button>
+      </div>
+    );
+  };
+
+  // Step 5: Position Selection (only for new modes)
   const PositionSelection = () => {
+    // Only show position selection for "new-" modes
+    if (!selectedTarget?.mode.startsWith("new-")) {
+      return null;
+    }
+
     // Get existing items for position calculation
     let existingItems: Array<{ order: number }> = [];
     let itemType = "item";
@@ -433,8 +607,11 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
     );
   };
 
-  // Step 5: File Upload
+  // Step 6: File Upload
   const FileUpload = () => {
+    const isReplaceMode = selectedTarget?.mode.startsWith("replace-");
+    const verb = isReplaceMode ? "replace" : "import";
+
     return (
       <div className="space-y-4">
         <div className="text-center">
@@ -442,7 +619,7 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
             Upload Document
           </h2>
           <p className="text-gray-300 text-sm">
-            Select your .docx file to import
+            Select your .docx file to {verb}
           </p>
         </div>
 
@@ -479,17 +656,29 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
         />
 
         <button
-          onClick={() => setCurrentStep("position-selection")}
+          onClick={() => {
+            // Smart back button logic for replace vs new modes
+            if (selectedTarget?.mode === "replace-act") {
+              setCurrentStep("act-selection");
+            } else if (selectedTarget?.mode === "replace-chapter") {
+              setCurrentStep("chapter-selection");
+            } else if (selectedTarget?.mode === "replace-scene") {
+              setCurrentStep("scene-selection");
+            } else {
+              // For new modes, go back to position selection
+              setCurrentStep("position-selection");
+            }
+          }}
           className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Back to position</span>
+          <span>Back</span>
         </button>
       </div>
     );
   };
 
-  // Step 6: Importing
+  // Step 7: Importing
   const Importing = () => {
     return (
       <div className="text-center space-y-4">
@@ -526,6 +715,8 @@ const ContextualImportDialog: React.FC<ContextualImportDialogProps> = ({
         return <ActSelection />;
       case "chapter-selection":
         return <ChapterSelection />;
+      case "scene-selection":
+        return <SceneSelection />;
       case "position-selection":
         return <PositionSelection />;
       case "file-upload":

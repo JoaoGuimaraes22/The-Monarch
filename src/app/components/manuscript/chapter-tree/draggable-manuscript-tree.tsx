@@ -1,70 +1,71 @@
 // src/app/components/manuscript/chapter-tree/draggable-manuscript-tree.tsx
-// ✨ UPDATED: Fixed props to match new positioned adding system
+// ✨ ENHANCED: Added act collapse/expand functionality
 
 import React, { useState } from "react";
 import {
   DndContext,
   DragEndEvent,
   DragOverEvent,
-  DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
-  closestCenter,
-  useDroppable,
+  PointerSensor,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { FileText, Book, Crown, Plus, Trash2 } from "lucide-react";
+import { Crown, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 import { DraggableChapterContainer } from "./draggable-chapter-container";
+import { DraggableSceneItem } from "./draggable-scene-item";
 import { EditableText, WordCountDisplay } from "@/app/components/ui";
 
-// Enhanced Act Drop Container Component with Actions
-interface ActDropContainerProps {
+// ✨ NEW: Act container component with collapse/expand
+interface ActContainerProps {
   act: Act;
-  children: React.ReactNode;
-  isSelected?: boolean;
+  isSelected: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
   onActSelect?: (act: Act) => void;
-  onAddChapter?: (actId: string, afterChapterId?: string) => void; // ✨ UPDATED
+  onAddChapter?: (actId: string, afterChapterId?: string) => void;
   onDeleteAct?: (actId: string) => void;
   onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
   viewDensity?: "clean" | "detailed";
+  children?: React.ReactNode;
 }
 
-const ActDropContainer: React.FC<ActDropContainerProps> = ({
+const ActContainer: React.FC<ActContainerProps> = ({
   act,
-  children,
-  isSelected = false,
+  isSelected,
+  isExpanded,
+  onToggle,
   onActSelect,
   onAddChapter,
   onDeleteAct,
+
   onUpdateActName,
   viewDensity = "detailed",
+  children,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isAddingChapter, setIsAddingChapter] = useState(false);
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: `act-${act.id}`,
-    data: {
-      type: "act",
-      act,
-      accepts: ["chapter"],
-    },
-  });
+  const handleActClick = () => {
+    if (onActSelect) {
+      onActSelect(act);
+    }
+  };
 
-  // Handle add chapter (at end of act)
   const handleAddChapter = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onAddChapter) return;
 
     setIsAddingChapter(true);
     try {
-      await onAddChapter(act.id); // Add at end - no afterChapterId
+      await onAddChapter(act.id);
     } catch (error) {
       console.error("Failed to add chapter:", error);
     } finally {
@@ -72,19 +73,15 @@ const ActDropContainer: React.FC<ActDropContainerProps> = ({
     }
   };
 
-  // Handle act delete
   const handleDeleteAct = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onDeleteAct) return;
 
-    if (
-      window.confirm(`Delete "${act.title}" and all its chapters and scenes?`)
-    ) {
+    if (window.confirm(`Delete "${act.title}" and all its content?`)) {
       onDeleteAct(act.id);
     }
   };
 
-  // Handle act name update
   const handleUpdateActName = async (newTitle: string) => {
     if (onUpdateActName) {
       await onUpdateActName(act.id, newTitle);
@@ -99,70 +96,65 @@ const ActDropContainer: React.FC<ActDropContainerProps> = ({
   );
   const totalWords = act.chapters.reduce(
     (sum, ch) =>
-      sum + ch.scenes.reduce((chSum, scene) => chSum + scene.wordCount, 0),
+      sum +
+      ch.scenes.reduce((sceneSum, scene) => sceneSum + scene.wordCount, 0),
     0
   );
 
   return (
     <div
-      ref={setNodeRef}
-      className={`
-        space-y-2 transition-all duration-200
-        ${isOver ? "bg-blue-900/20 border border-blue-500 rounded" : ""}
-      `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      className={`
+        group rounded-lg border transition-all duration-200
+        ${
+          isSelected
+            ? "border-red-500 bg-red-500/10"
+            : "border-gray-600 hover:border-gray-500"
+        }
+      `}
     >
       {/* Act Header */}
-      <div
-        className={`
-          group flex items-center space-x-3 py-3 px-4 rounded-lg cursor-pointer transition-all
-          ${
-            isSelected
-              ? "bg-red-900/30 border-l-4 border-red-500 text-white"
-              : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
-          }
-        `}
-        onClick={() => onActSelect?.(act)}
-      >
-        {/* Act Icon */}
-        <Crown className="w-5 h-5 flex-shrink-0 text-red-400" />
+      <div className="flex items-center justify-between p-3">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          {/* Expand/Collapse Button */}
+          <button
+            onClick={onToggle}
+            className="p-1 text-gray-400 hover:text-white transition-colors"
+            title={isExpanded ? "Collapse act" : "Expand act"}
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
 
-        {/* Act Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-medium text-gray-400">
-              ACT {act.order}
-            </span>
+          {/* Act Icon */}
+          <Crown
+            className={`w-5 h-5 ${
+              isSelected ? "text-red-400" : "text-purple-400"
+            }`}
+          />
 
-            {/* Editable Act Title */}
-            <div className="flex-1 min-w-0">
-              <EditableText
-                value={act.title}
-                onSave={handleUpdateActName}
-                placeholder="Act name"
-                className="text-base font-semibold"
-                maxLength={100}
-              />
-            </div>
+          {/* Act Title */}
+          <div className="flex-1 min-w-0" onClick={handleActClick}>
+            <EditableText
+              value={act.title}
+              onSave={handleUpdateActName}
+              className="font-medium text-white"
+              placeholder="Act title..."
+            />
           </div>
 
-          {/* Act metadata - Only show in detailed view */}
+          {/* Act Stats */}
           {viewDensity === "detailed" && (
-            <div className="flex items-center space-x-2 text-xs mt-1">
-              <span className="text-gray-500">
-                {totalChapters} chapter{totalChapters !== 1 ? "s" : ""}
-              </span>
-              <span className="text-gray-500">•</span>
-              <span className="text-gray-500">
-                {totalScenes} scene{totalScenes !== 1 ? "s" : ""}
-              </span>
-              <span className="text-gray-500">•</span>
-              <WordCountDisplay
-                count={totalWords}
-                variant="compact"
-                className="text-gray-500"
-              />
+            <div className="flex items-center space-x-3 text-xs text-gray-400">
+              <span>{totalChapters} chapters</span>
+              <span className="text-gray-600">•</span>
+              <span>{totalScenes} scenes</span>
+              <span className="text-gray-600">•</span>
+              <WordCountDisplay count={totalWords} variant="compact" />
             </div>
           )}
         </div>
@@ -170,13 +162,13 @@ const ActDropContainer: React.FC<ActDropContainerProps> = ({
         {/* Action Buttons */}
         <div
           className={`
-          flex items-center space-x-1 transition-opacity
-          ${
-            isHovered || isSelected
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100"
-          }
-        `}
+            flex items-center space-x-1 transition-opacity duration-200
+            ${
+              isHovered || isSelected
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
+            }
+          `}
         >
           {/* Add Chapter Button */}
           {onAddChapter && (
@@ -205,12 +197,12 @@ const ActDropContainer: React.FC<ActDropContainerProps> = ({
         </div>
       </div>
 
-      {/* Chapters */}
-      {children}
+      {/* Chapters (only shown when expanded) */}
+      {isExpanded && <div className="border-t border-gray-600">{children}</div>}
 
-      {/* Add Chapter at End Button */}
-      {(totalChapters === 0 || (isHovered && onAddChapter)) && (
-        <div className="ml-2 py-2">
+      {/* Add Chapter at End Button (when expanded and hovered) */}
+      {isExpanded && (totalChapters === 0 || (isHovered && onAddChapter)) && (
+        <div className="border-t border-gray-600 p-3">
           <button
             onClick={handleAddChapter}
             disabled={isAddingChapter}
@@ -233,22 +225,23 @@ const ActDropContainer: React.FC<ActDropContainerProps> = ({
   );
 };
 
-// ✨ UPDATED: Main Component Props with correct function signatures
+// ✨ ENHANCED: Main component props with act expansion
 interface DraggableManuscriptTreeProps {
   novel: NovelWithStructure;
   selectedSceneId?: string;
   selectedChapterId?: string;
   selectedActId?: string;
+  expandedActs: Set<string>; // ✨ NEW: Expanded acts state
   expandedChapters: Set<string>;
   viewDensity?: "clean" | "detailed";
   onSceneSelect: (sceneId: string, scene: Scene) => void;
   onChapterSelect: (chapter: Chapter) => void;
   onActSelect?: (act: Act) => void;
+  onActToggle: (actId: string) => void; // ✨ NEW: Act toggle handler
   onChapterToggle: (chapterId: string) => void;
   onSceneDelete: (sceneId: string, title: string) => void;
   onChapterDelete?: (chapterId: string) => void;
   onActDelete?: (actId: string) => void;
-  // ✨ UPDATED: Fixed function signatures to support positioned adding
   onAddScene?: (chapterId: string, afterSceneId?: string) => void;
   onAddChapter?: (actId: string, afterChapterId?: string) => void;
   onUpdateActName?: (actId: string, newTitle: string) => Promise<void>;
@@ -264,11 +257,13 @@ export const DraggableManuscriptTree: React.FC<
   selectedSceneId,
   selectedChapterId,
   selectedActId,
+  expandedActs, // ✨ NEW: Use expanded acts
   expandedChapters,
   viewDensity = "detailed",
   onSceneSelect,
   onChapterSelect,
   onActSelect,
+  onActToggle, // ✨ NEW: Act toggle handler
   onChapterToggle,
   onSceneDelete,
   onChapterDelete,
@@ -294,12 +289,7 @@ export const DraggableManuscriptTree: React.FC<
     })
   );
 
-  // UPDATED: Reorder operations for draggable-manuscript-tree.tsx
-  // These functions should replace the existing reorder functions
-
-  // ===== API REORDER FUNCTIONS (Updated for new API format) =====
-
-  // Scene reordering with new request/response format
+  // Scene reordering with API call
   const reorderScene = async (
     sceneId: string,
     newChapterId: string,
@@ -310,10 +300,9 @@ export const DraggableManuscriptTree: React.FC<
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // ✅ UPDATED: New request format matching ReorderSceneSchema
         body: JSON.stringify({
           newOrder,
-          ...(newChapterId && { newChapterId }), // Only include if moving to different chapter
+          ...(newChapterId && { newChapterId }),
         }),
       }
     );
@@ -323,16 +312,10 @@ export const DraggableManuscriptTree: React.FC<
       throw new Error(error.error || "Failed to reorder scene");
     }
 
-    // ✅ UPDATED: Handle new standardized response format
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "Failed to reorder scene");
-    }
-
-    return result.data; // Return the updated scene data
+    return response.json();
   };
 
-  // Chapter reordering with new request/response format
+  // Chapter reordering with API call
   const reorderChapter = async (
     chapterId: string,
     newActId: string,
@@ -343,10 +326,9 @@ export const DraggableManuscriptTree: React.FC<
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // ✅ UPDATED: New request format matching ReorderChapterSchema
         body: JSON.stringify({
           newOrder,
-          ...(newActId && { newActId }), // Only include if moving to different act
+          ...(newActId && { newActId }),
         }),
       }
     );
@@ -356,51 +338,19 @@ export const DraggableManuscriptTree: React.FC<
       throw new Error(error.error || "Failed to reorder chapter");
     }
 
-    // ✅ UPDATED: Handle new standardized response format
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "Failed to reorder chapter");
-    }
-
-    return result.data; // Return the updated chapter data
-  };
-
-  // Act reordering with new request/response format
-  const reorderAct = async (actId: string, newOrder: number) => {
-    const response = await fetch(
-      `/api/novels/${novel.id}/acts/${actId}/reorder`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        // ✅ UPDATED: New request format matching ReorderActSchema
-        body: JSON.stringify({ newOrder }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to reorder act");
-    }
-
-    // ✅ UPDATED: Handle new standardized response format
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || "Failed to reorder act");
-    }
-
-    return result.data; // Return the updated act data
+    return response.json();
   };
 
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const data = active.data.current;
+    const dragData = active.data.current;
 
-    if (data?.type === "scene") {
-      setActiveScene(data.scene);
+    if (dragData?.type === "scene") {
+      setActiveScene(dragData.scene);
       setDragType("scene");
-    } else if (data?.type === "chapter") {
-      setActiveChapter(data.chapter);
+    } else if (dragData?.type === "chapter") {
+      setActiveChapter(dragData.chapter);
       setDragType("chapter");
     }
   };
@@ -408,8 +358,6 @@ export const DraggableManuscriptTree: React.FC<
   const handleDragOver = (event: DragOverEvent) => {
     // Handle drag over logic if needed
   };
-
-  // Replace the handleDragEnd function with this corrected version
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -420,78 +368,59 @@ export const DraggableManuscriptTree: React.FC<
 
     if (!over || active.id === over.id) return;
 
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    if (!activeData || !overData) return;
+
+    setIsReordering(true);
+
     try {
-      setIsReordering(true);
+      // Handle scene reordering
+      if (activeData.type === "scene" && overData.type === "scene") {
+        const activeScene = activeData.scene;
+        const overScene = overData.scene;
 
-      if (dragType === "scene") {
-        const activeData = active.data.current;
-        const overData = over.data.current;
-
-        if (activeData?.type === "scene" && overData) {
-          if (overData.type === "scene") {
-            // Scene over scene - reorder within chapter or move between chapters
-            const targetChapterId = overData.chapterId;
-            const targetOrder = overData.scene.order;
-
-            await reorderScene(
-              activeData.scene.id,
-              targetChapterId,
-              targetOrder
-            );
-          } else if (overData.type === "chapter") {
-            // Scene over chapter - move to end of chapter
-            const targetChapterId = overData.chapter.id;
-            const targetChapter = novel.acts
-              .flatMap((act) => act.chapters)
-              .find((ch) => ch.id === targetChapterId);
-
-            if (targetChapter) {
-              const newOrder = targetChapter.scenes.length + 1;
-              await reorderScene(
-                activeData.scene.id,
-                targetChapterId,
-                newOrder
-              );
-            }
-          }
-        }
-      } else if (dragType === "chapter") {
-        const activeData = active.data.current;
-        const overData = over.data.current;
-
-        if (activeData?.type === "chapter" && overData?.type === "chapter") {
-          // ✅ FIXED: Chapter over chapter - reorder chapters within same act
-          const draggedChapter = activeData.chapter;
-          const targetChapter = overData.chapter;
-
-          // Find the act that contains the target chapter
-          const targetAct = novel.acts.find((act) =>
-            act.chapters.some((ch) => ch.id === targetChapter.id)
+        if (activeScene.chapterId !== overScene.chapterId) {
+          // Moving to different chapter
+          await reorderScene(
+            activeScene.id,
+            overScene.chapterId,
+            overScene.order
           );
-
-          if (targetAct) {
-            const targetOrder = targetChapter.order;
-            const targetActId = targetAct.id;
-
-            // ✅ FIXED: Now calling with all 3 required parameters
-            await reorderChapter(draggedChapter.id, targetActId, targetOrder);
-          }
-        }
-      } else if (dragType === "act") {
-        const activeData = active.data.current;
-        const overData = over.data.current;
-
-        if (activeData?.type === "act" && overData?.type === "act") {
-          // Act over act - reorder acts
-          const targetOrder = overData.act.order;
-          await reorderAct(activeData.act.id, targetOrder);
+        } else {
+          // Same chapter reordering
+          const newOrder = overScene.order;
+          await reorderScene(activeScene.id, overScene.chapterId, newOrder);
         }
       }
 
-      // Refresh the data after reordering
+      // Handle chapter reordering
+      if (activeData.type === "chapter" && overData.type === "chapter") {
+        const activeChapter = activeData.chapter;
+        const overChapter = overData.chapter;
+
+        if (activeData.actId !== overData.actId) {
+          // Moving to different act
+          await reorderChapter(
+            activeChapter.id,
+            overData.actId,
+            overChapter.order
+          );
+        } else {
+          // Same act reordering
+          await reorderChapter(
+            activeChapter.id,
+            overData.actId,
+            overChapter.order
+          );
+        }
+      }
+
+      // Refresh the tree after successful reorder
       onRefresh();
     } catch (error) {
-      console.error("❌ Drag and drop failed:", error);
+      console.error("Reorder failed:", error);
       alert("Failed to reorder. Please try again.");
     } finally {
       setIsReordering(false);
@@ -506,21 +435,22 @@ export const DraggableManuscriptTree: React.FC<
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      {/* Drag Type Context */}
       <div data-drag-type={dragType} className="space-y-4">
         {novel.acts.map((act) => (
-          <ActDropContainer
+          <ActContainer
             key={act.id}
             act={act}
             isSelected={selectedActId === act.id}
+            isExpanded={expandedActs.has(act.id)} // ✨ NEW: Check if act is expanded
+            onToggle={() => onActToggle(act.id)} // ✨ NEW: Toggle act expansion
             onActSelect={onActSelect}
-            onAddChapter={onAddChapter} // ✨ UPDATED: Now supports positioned adding
+            onAddChapter={onAddChapter}
             onDeleteAct={onActDelete}
             onUpdateActName={onUpdateActName}
             viewDensity={viewDensity}
           >
-            {/* Chapters in SortableContext */}
-            <div className="ml-2 space-y-1">
+            {/* Chapters in SortableContext (only shown when act is expanded) */}
+            <div className="p-2 space-y-1">
               <SortableContext
                 items={act.chapters.map((chapter) => chapter.id)}
                 strategy={verticalListSortingStrategy}
@@ -537,8 +467,8 @@ export const DraggableManuscriptTree: React.FC<
                     onSelect={onChapterSelect}
                     onSceneSelect={onSceneSelect}
                     onSceneDelete={onSceneDelete}
-                    onAddScene={onAddScene} // ✨ UPDATED: Now supports positioned adding
-                    onAddChapter={onAddChapter} // ✨ CRITICAL: Pass onAddChapter to chapters!
+                    onAddScene={onAddScene}
+                    onAddChapter={onAddChapter}
                     onDeleteChapter={onChapterDelete}
                     onUpdateChapterName={onUpdateChapterName}
                     onUpdateSceneName={onUpdateSceneName}
@@ -547,7 +477,7 @@ export const DraggableManuscriptTree: React.FC<
                 ))}
               </SortableContext>
             </div>
-          </ActDropContainer>
+          </ActContainer>
         ))}
 
         {/* Loading Overlay */}
@@ -564,21 +494,17 @@ export const DraggableManuscriptTree: React.FC<
       {/* Enhanced Drag Overlay */}
       <DragOverlay>
         {activeScene ? (
-          <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 shadow-lg">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
             <div className="flex items-center space-x-2">
-              <FileText className="w-4 h-4 text-blue-400" />
-              <span className="text-white font-medium">
+              <span className="text-sm text-white">
                 {activeScene.title || `Scene ${activeScene.order}`}
               </span>
             </div>
           </div>
         ) : activeChapter ? (
-          <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 shadow-lg">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
             <div className="flex items-center space-x-2">
-              <Book className="w-4 h-4 text-yellow-400" />
-              <span className="text-white font-medium">
-                {activeChapter.title}
-              </span>
+              <span className="text-sm text-white">{activeChapter.title}</span>
             </div>
           </div>
         ) : null}
@@ -586,47 +512,3 @@ export const DraggableManuscriptTree: React.FC<
     </DndContext>
   );
 };
-
-/*
-===== CHANGES MADE =====
-
-✅ UPDATED: Scene reordering request format
-   OLD: { newChapterId, newOrder }
-   NEW: { newOrder, newChapterId? } // newChapterId is optional
-
-✅ UPDATED: Chapter reordering request format  
-   OLD: { newOrder } (same-act only)
-   NEW: { newOrder, newActId? } // newActId is optional for cross-act moves
-
-✅ UPDATED: Act reordering request format
-   OLD: { newOrder }
-   NEW: { newOrder } // Same format, but now handles standardized response
-
-✅ UPDATED: All response handling
-   - Check result.success before proceeding
-   - Use result.data for the updated entity
-   - Use result.error for error messages
-
-===== SCHEMA VALIDATION =====
-
-These requests now validate against:
-- ReorderSceneSchema: { newOrder: number, newChapterId?: string }
-- ReorderChapterSchema: { newOrder: number, newActId?: string }  
-- ReorderActSchema: { newOrder: number }
-
-===== CROSS-ENTITY MOVES =====
-
-✅ Scenes can now move between chapters (newChapterId)
-✅ Chapters can now move between acts (newActId)
-✅ Acts stay within the same novel (no cross-novel moves)
-
-===== RESPONSE FORMAT =====
-
-All reorder operations return:
-{
-  "success": true,
-  "data": { updated entity with new order/parent  },
-  "message": "Entity reordered successfully",
-  "meta": { "timestamp": "...", "requestId": "...", "version": "1.0" }
-}
-*/
