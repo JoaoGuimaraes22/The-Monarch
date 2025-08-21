@@ -40,10 +40,10 @@ export const ManuscriptHeader: React.FC<ManuscriptHeaderProps> = ({
     contentDisplayMode === "grid"; // Or for grid view
 
   return (
-    <div className="border-b border-gray-700 bg-gray-800">
-      {/* ✨ ALWAYS COMPACT: No collapse toggle, details below title */}
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
+    <div className="sticky top-0 z-40 border-b border-gray-700 bg-gray-800">
+      {/* ✨ REDUCED PADDING: Less bottom padding for more compact header */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex-1 min-w-0">
             {/* ✨ COMPACT LAYOUT: Title with details below */}
             <div>
