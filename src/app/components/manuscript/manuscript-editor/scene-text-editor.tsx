@@ -1,13 +1,24 @@
+// src/app/components/manuscript/manuscript-editor/scene-text-editor.tsx
+// ✨ ENHANCED: Added floating toolbox to the original working implementation
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Italic, Underline, Type, Plus, Minus } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  Underline,
+  Type,
+  Plus,
+  Minus,
+  Minus as HorizontalRule,
+} from "lucide-react";
 
 interface SceneTextEditorProps {
   content: string;
   onContentChange: (content: string) => void;
-  onAddScene?: (chapterId: string, afterSceneId?: string) => void; // ✨ NEW
-  onAddChapter?: (actId: string, afterChapterId?: string) => void; // ✨ NEW
+  onAddScene?: (chapterId: string, afterSceneId?: string) => void;
+  onAddChapter?: (actId: string, afterChapterId?: string) => void;
   placeholder?: string;
   readOnly?: boolean;
 }
@@ -15,8 +26,8 @@ interface SceneTextEditorProps {
 export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
   content,
   onContentChange,
-  onAddScene, // ✨ NEW
-  onAddChapter, // ✨ NEW
+  onAddScene,
+  onAddChapter,
   placeholder = "Start writing your scene...",
   readOnly = false,
 }) => {
@@ -24,6 +35,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [fontSize, setFontSize] = useState(16);
+  const [isToolboxOpen, setIsToolboxOpen] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Font size adjustment functions
@@ -35,7 +47,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
     setFontSize((prev) => Math.max(prev - 2, 12)); // Min 12px
   };
 
-  // ✨ NEW: Handle clicks on Add Scene/Chapter buttons
+  // Handle clicks on Add Scene/Chapter buttons
   const handleAddButtonClick = useCallback(
     async (event: Event) => {
       const target = event.target as HTMLElement;
@@ -70,7 +82,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
     [onAddScene, onAddChapter]
   );
 
-  // ✨ NEW: Setup click handlers for add buttons
+  // Setup click handlers for add buttons
   useEffect(() => {
     const editorContainer = editorRef.current;
     if (!editorContainer) return;
@@ -121,11 +133,17 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
             class: "editor-break",
           },
         },
+        // Enable horizontal rule
+        horizontalRule: {
+          HTMLAttributes: {
+            class: "editor-hr",
+          },
+        },
       }),
     ],
     content: content,
     editable: !readOnly,
-    immediatelyRender: false, // ✅ KEY FIX: Disable immediate rendering
+    immediatelyRender: false, // KEY FIX: Disable immediate rendering
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       debouncedSave(html);
@@ -147,6 +165,35 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           } else {
             // Regular Enter: Create new paragraph (double spacing effect)
             editor?.commands.splitBlock();
+            return true;
+          }
+        }
+
+        // ✨ NEW: Handle horizontal line shortcut (Ctrl+Shift+-)
+        if (event.key === "_" && event.ctrlKey && event.shiftKey) {
+          event.preventDefault();
+          editor?.commands.setHorizontalRule();
+          return true;
+        }
+
+        // Handle em dash replacement
+        if (event.key === "-") {
+          const { selection } = view.state;
+          const { $from } = selection;
+
+          // Get text before cursor
+          const textBefore = $from.parent.textBetween(
+            Math.max(0, $from.parentOffset - 1),
+            $from.parentOffset
+          );
+
+          // If there's already a dash, replace both with em dash
+          if (textBefore === "-") {
+            event.preventDefault();
+            const tr = view.state.tr;
+            tr.delete(selection.from - 1, selection.to);
+            tr.insertText("—");
+            view.dispatch(tr);
             return true;
           }
         }
@@ -172,7 +219,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
   }, []);
 
   const stripHtmlToText = (html: string): string => {
-    if (typeof document === "undefined") return ""; // ✅ SSR safety check
+    if (typeof document === "undefined") return ""; // SSR safety check
     const temp = document.createElement("div");
     temp.innerHTML = html;
     return temp.textContent || temp.innerText || "";
@@ -184,7 +231,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
         .filter((word) => word.length > 0).length
     : 0;
 
-  // ✅ Don't render editor until mounted (client-side only)
+  // Don't render editor until mounted (client-side only)
   if (!isMounted) {
     return (
       <div className="h-full flex flex-col bg-gray-700 rounded-lg overflow-hidden">
@@ -206,99 +253,130 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-700 rounded-lg overflow-hidden">
-      {/* Toolbar */}
+    <div className="h-full flex flex-col bg-gray-700 rounded-lg overflow-hidden relative">
+      {/* Editor Content - Full height */}
+      <div ref={editorRef} className="flex-1 overflow-y-auto">
+        <EditorContent editor={editor} />
+      </div>
+
+      {/* ✨ NEW: Floating Toolbox - Bottom Right */}
       {!readOnly && (
-        <div className="flex items-center space-x-2 p-3 border-b border-gray-600 bg-gray-800">
-          {/* Formatting Controls */}
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`p-2 rounded transition-colors ${
-                editor.isActive("bold")
-                  ? "bg-red-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-600"
-              }`}
-              title="Bold"
-            >
-              <Bold className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`p-2 rounded transition-colors ${
-                editor.isActive("italic")
-                  ? "bg-red-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-600"
-              }`}
-              title="Italic"
-            >
-              <Italic className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => editor.chain().focus().toggleStrike().run()}
-              className={`p-2 rounded transition-colors ${
-                editor.isActive("strike")
-                  ? "bg-red-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-600"
-              }`}
-              title="Strikethrough"
-            >
-              <Underline className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="fixed bottom-6 right-6 z-50">
+          {/* Expanded Toolbox */}
+          {isToolboxOpen && (
+            <div className="mb-3 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-3 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="flex flex-col space-y-3">
+                {/* Formatting Controls */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => editor.chain().focus().toggleBold().run()}
+                    className={`p-2 rounded transition-colors ${
+                      editor.isActive("bold")
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300 hover:bg-gray-600 hover:text-white"
+                    }`}
+                    title="Bold (Ctrl+B)"
+                  >
+                    <Bold className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleItalic().run()}
+                    className={`p-2 rounded transition-colors ${
+                      editor.isActive("italic")
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300 hover:bg-gray-600 hover:text-white"
+                    }`}
+                    title="Italic (Ctrl+I)"
+                  >
+                    <Italic className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => editor.chain().focus().toggleStrike().run()}
+                    className={`p-2 rounded transition-colors ${
+                      editor.isActive("strike")
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300 hover:bg-gray-600 hover:text-white"
+                    }`}
+                    title="Strikethrough"
+                  >
+                    <Underline className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() =>
+                      editor.chain().focus().setHorizontalRule().run()
+                    }
+                    className="p-2 rounded transition-colors text-gray-300 hover:bg-gray-600 hover:text-white"
+                    title="Insert Horizontal Line (Ctrl+Shift+-)"
+                  >
+                    <HorizontalRule className="w-4 h-4" />
+                  </button>
+                </div>
 
-          {/* Font Size Controls */}
-          <div className="flex items-center space-x-1 border-l border-gray-600 pl-3">
-            <button
-              onClick={decreaseFontSize}
-              disabled={fontSize <= 12}
-              className={`p-2 rounded transition-colors ${
-                fontSize <= 12
-                  ? "text-gray-600 cursor-not-allowed"
-                  : "text-gray-400 hover:text-white hover:bg-gray-600"
-              }`}
-              title="Decrease font size"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <div className="flex items-center space-x-1 px-2">
-              <Type className="w-4 h-4 text-gray-400" />
-              <span className="text-xs text-gray-400 min-w-[24px] text-center">
-                {fontSize}
-              </span>
+                {/* Font Size Controls */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={decreaseFontSize}
+                      className="p-1 rounded transition-colors text-gray-300 hover:bg-gray-600 hover:text-white"
+                      title="Decrease Font Size"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="text-xs text-gray-300 px-2 min-w-[2.5rem] text-center">
+                      {fontSize}px
+                    </span>
+                    <button
+                      onClick={increaseFontSize}
+                      className="p-1 rounded transition-colors text-gray-300 hover:bg-gray-600 hover:text-white"
+                      title="Increase Font Size"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats and Info */}
+                <div className="border-t border-gray-600 pt-2 space-y-1">
+                  <div className="text-xs text-gray-400 text-center">
+                    {wordCount.toLocaleString()} words
+                  </div>
+                  <div className="text-xs text-gray-500 text-center">
+                    Type <code className="bg-gray-600 px-1 rounded">--</code>{" "}
+                    for em dash (—)
+                  </div>
+                  <div className="text-xs text-gray-500 text-center">
+                    Press{" "}
+                    <code className="bg-gray-600 px-1 rounded">
+                      Ctrl+Shift+-
+                    </code>{" "}
+                    for horizontal line
+                  </div>
+                  {isSaving && (
+                    <div className="text-xs text-blue-400 text-center">
+                      Saving...
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <button
-              onClick={increaseFontSize}
-              disabled={fontSize >= 24}
-              className={`p-2 rounded transition-colors ${
-                fontSize >= 24
-                  ? "text-gray-600 cursor-not-allowed"
-                  : "text-gray-400 hover:text-white hover:bg-gray-600"
-              }`}
-              title="Increase font size"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+          )}
 
-          <div className="flex-1"></div>
-
-          {/* Word Count & Save Status */}
-          <div className="flex items-center space-x-3 text-xs">
-            {isSaving && <span className="text-yellow-400">Saving...</span>}
-            <span className="text-gray-400">
-              {wordCount.toLocaleString()} words
-            </span>
-          </div>
+          {/* Toggle Button */}
+          <button
+            onClick={() => setIsToolboxOpen(!isToolboxOpen)}
+            className={`w-12 h-12 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
+              isToolboxOpen
+                ? "bg-blue-600 text-white rotate-45"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+            }`}
+            title={isToolboxOpen ? "Close toolbox" : "Open formatting tools"}
+          >
+            <Type className="w-5 h-5" />
+          </button>
         </div>
       )}
 
-      {/* Editor */}
-      <div className="flex-1 overflow-auto" ref={editorRef}>
-        <EditorContent editor={editor} className="h-full" />
-      </div>
-
-      {/* Custom styles */}
+      {/* Original Styles */}
       <style jsx global>{`
         .ProseMirror {
           height: 100%;
@@ -345,7 +423,31 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           text-decoration: line-through;
         }
 
-        /* ✨ NEW: Styles for add buttons */
+        /* NEW: Horizontal rule styling */
+        .editor-hr {
+          border: none;
+          border-top: 2px solid #4b5563;
+          margin: 2rem 0;
+          width: 100%;
+        }
+
+        /* NEW: Animation for floating toolbox */
+        @keyframes slide-in-from-bottom {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-in {
+          animation: slide-in-from-bottom 0.2s ease-out;
+        }
+
+        /* Styles for add buttons */
         .add-scene-button:hover,
         .add-chapter-button:hover {
           transform: translateY(-2px);
