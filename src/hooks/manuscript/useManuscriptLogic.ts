@@ -1,13 +1,18 @@
 // src/hooks/manuscript/useManuscriptLogic.ts
-// ✅ ENHANCED: Added view mode preservation for document view operations + auto-scene chapter creation
+// ✅ REFACTORED: Clean orchestrator using modular hook architecture
 
-import { useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useManuscriptState } from "./useManuscriptState";
 import { useManuscriptCRUD } from "./useManuscriptCRUD";
 import { useAutoSave } from "./useAutoSave";
+import { useManuscriptSelection } from "./useManuscriptSelection";
+import { useManuscriptNavigation } from "./useManuscriptNavigation";
+import { useManuscriptUpdates } from "./useManuscriptUpdates";
+import { useManuscriptUtils } from "./useManuscriptUtils";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/view-mode-selector";
 import { ContentDisplayMode } from "@/app/components/manuscript/manuscript-editor/content-views/types";
+import { NavigationContext } from "./useManuscriptNavigation";
 
 export interface ManuscriptLogicReturn {
   // State from useManuscriptState
@@ -32,12 +37,21 @@ export interface ManuscriptLogicReturn {
   handleViewModeChange: (mode: ViewMode) => void;
   handleContentDisplayModeChange: (mode: ContentDisplayMode) => void;
 
-  // Selection Handlers
+  // Selection Handlers (from useManuscriptSelection)
   handleSceneSelect: (sceneId: string, scene: Scene) => void;
   handleChapterSelect: (chapter: Chapter) => void;
   handleActSelect: (act: Act) => void;
 
-  // CRUD Handlers
+  // Navigation Handlers (from useManuscriptNavigation)
+  handlePreviousNavigation: () => void;
+  handleNextNavigation: () => void;
+  handleNavigationSelect: (
+    itemId: string,
+    level?: "primary" | "secondary"
+  ) => void;
+  getNavigationContext: () => NavigationContext;
+
+  // CRUD Handlers (enhanced + from useManuscriptCRUD)
   handleAddScene: (chapterId: string, afterSceneId?: string) => Promise<void>;
   handleAddChapter: (actId: string, afterChapterId?: string) => Promise<void>;
   handleAddAct: (title?: string, insertAfterActId?: string) => Promise<void>;
@@ -45,7 +59,7 @@ export interface ManuscriptLogicReturn {
   handleDeleteChapter: (chapterId: string) => Promise<void>;
   handleDeleteAct: (actId: string) => Promise<void>;
 
-  // Update Handlers
+  // Update Handlers (from useManuscriptUpdates)
   handleUpdateActName: (actId: string, newTitle: string) => Promise<void>;
   handleUpdateChapterName: (
     chapterId: string,
@@ -65,7 +79,7 @@ export interface ManuscriptLogicReturn {
 }
 
 export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
-  // ✨ Use dedicated hooks
+  // ===== CORE HOOKS =====
   const { state, actions } = useManuscriptState();
   const autoSave = useAutoSave({
     novelId,
@@ -73,155 +87,55 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     delay: 2000,
   });
 
-  // ===== UTILITY FUNCTIONS FOR SCENE SELECTION =====
+  // ===== MODULAR HOOKS =====
+  const selection = useManuscriptSelection({
+    novel: state.novel,
+    actions,
+  });
 
-  // ✅ Helper to find first scene in a chapter
-  const findFirstSceneInChapter = useCallback(
-    (chapter: Chapter): Scene | null => {
-      if (!chapter.scenes || chapter.scenes.length === 0) return null;
-      const sortedScenes = [...chapter.scenes].sort(
-        (a, b) => a.order - b.order
-      );
-      return sortedScenes[0];
+  const navigation = useManuscriptNavigation({
+    novel: state.novel,
+    selectedScene: state.selectedScene,
+    selectedChapter: state.selectedChapter,
+    selectedAct: state.selectedAct,
+    viewMode: state.viewMode,
+    contentDisplayMode: state.contentDisplayMode,
+    actions,
+    selectionHandlers: selection.handlers,
+    selectionUtils: selection.utils,
+  });
+
+  const updates = useManuscriptUpdates({
+    novelId,
+    actions,
+    currentSelections: {
+      selectedScene: state.selectedScene,
+      selectedChapter: state.selectedChapter,
+      selectedAct: state.selectedAct,
     },
-    []
-  );
+  });
 
-  // ✅ Helper to find first scene in an act
-  const findFirstSceneInAct = useCallback(
-    (act: Act): Scene | null => {
-      if (!act.chapters || act.chapters.length === 0) return null;
-      const sortedChapters = [...act.chapters].sort(
-        (a, b) => a.order - b.order
-      );
+  const utils = useManuscriptUtils({
+    novelId,
+    contentDisplayMode: state.contentDisplayMode,
+    actions,
+  });
 
-      for (const chapter of sortedChapters) {
-        const firstScene = findFirstSceneInChapter(chapter);
-        if (firstScene) return firstScene;
-      }
-      return null;
+  const crud = useManuscriptCRUD({
+    novelId,
+    onStateUpdate: actions.updateNovel,
+    onSelectionUpdate: {
+      setSelectedScene: actions.setSelectedScene,
+      setSelectedChapter: actions.setSelectedChapter,
+      setSelectedAct: actions.setSelectedAct,
+      setViewMode: actions.setViewMode,
     },
-    [findFirstSceneInChapter]
-  );
-
-  // ✅ NEW: Check if we're in document view mode
-  const isInDocumentView = useCallback(() => {
-    return state.contentDisplayMode === "document";
-  }, [state.contentDisplayMode]);
-
-  // ===== NOVEL LOADING =====
-  const loadNovelStructureRef = useRef<((id: string) => Promise<void>) | null>(
-    null
-  );
-
-  loadNovelStructureRef.current = async (id: string) => {
-    console.log("🔄 API CALL: loadNovelStructure called for novelId:", id);
-    try {
-      actions.setLoading(true);
-
-      const response = await fetch(`/api/novels/${id}/structure`);
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to load novel structure");
-      }
-
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        actions.updateNovel(() => result.data.novel);
-        console.log("✅ Novel structure loaded:", result.data.novel);
-      } else {
-        throw new Error(result.error || "Failed to load novel structure");
-      }
-    } catch (error) {
-      console.error("❌ Error loading novel structure:", error);
-      actions.setError(
-        error instanceof Error ? error.message : "Failed to load novel"
-      );
-    } finally {
-      actions.setLoading(false);
-    }
-  };
-
-  const loadNovelStructure = useCallback(async (id: string) => {
-    if (loadNovelStructureRef.current) {
-      await loadNovelStructureRef.current(id);
-    }
-  }, []);
-
-  // ===== SELECTION HANDLERS =====
-  const handleSceneSelect = useCallback(
-    (sceneId: string, scene: Scene) => {
-      actions.setSelectedScene(scene);
-      actions.setViewMode("scene");
-
-      // Find and set parent chapter/act
-      const parentChapter = state.novel?.acts
-        .flatMap((act) => act.chapters)
-        .find((chapter) => chapter.scenes.some((s) => s.id === scene.id));
-
-      if (parentChapter) {
-        actions.setSelectedChapter(parentChapter);
-
-        const parentAct = state.novel?.acts.find((act) =>
-          act.chapters.some((ch) => ch.id === parentChapter.id)
-        );
-
-        if (parentAct) {
-          actions.setSelectedAct(parentAct);
-        }
-      }
+    currentSelections: {
+      selectedScene: state.selectedScene,
+      selectedChapter: state.selectedChapter,
+      selectedAct: state.selectedAct,
     },
-    [state.novel, actions]
-  );
-
-  // ✅ FIXED: Chapter selection now auto-selects first scene for content aggregation
-  const handleChapterSelect = useCallback(
-    (chapter: Chapter) => {
-      actions.setSelectedChapter(chapter);
-      actions.setViewMode("chapter");
-
-      // ✅ CRITICAL FIX: Auto-select first scene so content aggregation works
-      const firstScene = findFirstSceneInChapter(chapter);
-      if (firstScene) {
-        actions.setSelectedScene(firstScene);
-      }
-
-      // Find and set parent act
-      const parentAct = state.novel?.acts.find((act) =>
-        act.chapters.some((ch) => ch.id === chapter.id)
-      );
-
-      if (parentAct) {
-        actions.setSelectedAct(parentAct);
-      }
-    },
-    [state.novel, actions, findFirstSceneInChapter]
-  );
-
-  // ✅ FIXED: Act selection now auto-selects first scene for content aggregation
-  const handleActSelect = useCallback(
-    (act: Act) => {
-      actions.setSelectedAct(act);
-      actions.setViewMode("act");
-
-      // ✅ CRITICAL FIX: Auto-select first scene so content aggregation works
-      const firstScene = findFirstSceneInAct(act);
-      if (firstScene) {
-        actions.setSelectedScene(firstScene);
-
-        // Also set the chapter containing this scene
-        const parentChapter = act.chapters.find((chapter) =>
-          chapter.scenes.some((s) => s.id === firstScene.id)
-        );
-        if (parentChapter) {
-          actions.setSelectedChapter(parentChapter);
-        }
-      }
-    },
-    [actions, findFirstSceneInAct]
-  );
+  });
 
   // ===== VIEW MODE HANDLERS =====
   const handleViewModeChange = useCallback(
@@ -240,7 +154,6 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
 
   // ===== ENHANCED CRUD HANDLERS WITH VIEW MODE PRESERVATION =====
 
-  // ✅ ENHANCED: Scene creation with view mode preservation
   const handleAddScene = useCallback(
     async (chapterId: string, afterSceneId?: string) => {
       if (!novelId) return;
@@ -270,7 +183,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
             const newScene = result.data;
             console.log("✅ Scene created:", newScene);
 
-            // ✅ LOCAL STATE UPDATE
+            // Update local state
             actions.updateNovel((prevNovel) => {
               if (!prevNovel) return prevNovel;
 
@@ -305,19 +218,18 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
               };
             });
 
-            // ✅ NEW: Smart selection based on current view mode
+            // Smart selection based on current view mode
             if (
-              isInDocumentView() &&
+              utils.isInDocumentView() &&
               (state.viewMode === "chapter" || state.viewMode === "act")
             ) {
-              // In document view: Don't change view mode, just refresh the selected scene for content aggregation
+              // Document view: preserve view mode, update selected scene
               console.log(
-                "📄 Document view: Preserving view mode, updating selected scene for content refresh"
+                "📄 Document view: Preserving view mode, updating selected scene"
               );
               actions.setSelectedScene(newScene);
-              // Keep existing viewMode and chapter/act selections
             } else {
-              // In grid view or sidebar creation: Traditional behavior
+              // Grid view or sidebar: traditional behavior
               console.log("🎯 Grid view or sidebar: Selecting new scene");
               actions.setSelectedScene(newScene);
               actions.setViewMode("scene");
@@ -335,16 +247,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error creating scene. Please try again.");
       }
     },
-    [
-      novelId,
-      actions,
-      state.viewMode,
-      state.contentDisplayMode,
-      isInDocumentView,
-    ]
+    [novelId, actions, state.viewMode, utils]
   );
 
-  // ✅ ENHANCED: Chapter creation with view mode preservation + auto-scene creation
   const handleAddChapter = useCallback(
     async (actId: string, afterChapterId?: string) => {
       if (!novelId) return;
@@ -374,7 +279,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
             const newChapter = result.data;
             console.log("✅ Chapter created with auto-scene:", newChapter);
 
-            // ✅ LOCAL STATE UPDATE
+            // Update local state
             actions.updateNovel((prevNovel) => {
               if (!prevNovel) return prevNovel;
 
@@ -406,26 +311,26 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
               };
             });
 
-            // ✅ NEW: Smart selection based on current view mode
-            if (isInDocumentView() && state.viewMode === "act") {
-              // In act document view: Stay in act view, but select new chapter's first scene for content aggregation
+            // Smart selection based on current view mode
+            if (utils.isInDocumentView() && state.viewMode === "act") {
+              // Act document view: stay in act view, update selections
               console.log(
-                "📄 Act document view: Preserving act view, updating selections for content refresh"
+                "📄 Act document view: Preserving act view, updating selections"
               );
-              const firstScene = findFirstSceneInChapter(newChapter);
+              const firstScene =
+                selection.utils.findFirstSceneInChapter(newChapter);
               if (firstScene) {
                 actions.setSelectedScene(firstScene);
                 actions.setSelectedChapter(newChapter);
-                // Keep viewMode as "act"
               }
             } else {
-              // In other views: Traditional behavior - select the new chapter
+              // Other views: traditional behavior
               console.log("🎯 Other view: Selecting new chapter");
               actions.setSelectedChapter(newChapter);
               actions.setViewMode("chapter");
 
-              // Auto-select first scene for content aggregation
-              const firstScene = findFirstSceneInChapter(newChapter);
+              const firstScene =
+                selection.utils.findFirstSceneInChapter(newChapter);
               if (firstScene) {
                 actions.setSelectedScene(firstScene);
               }
@@ -445,17 +350,9 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error creating chapter. Please try again.");
       }
     },
-    [
-      novelId,
-      actions,
-      state.viewMode,
-      state.contentDisplayMode,
-      isInDocumentView,
-      findFirstSceneInChapter,
-    ]
+    [novelId, actions, state.viewMode, utils, selection.utils]
   );
 
-  // ✅ ENHANCED: Act creation (traditional behavior since acts aren't created from document view)
   const handleAddAct = useCallback(
     async (title?: string, insertAfterActId?: string) => {
       if (!novelId) return;
@@ -482,7 +379,7 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
             const newAct = result.data;
             console.log("✅ Act created:", newAct);
 
-            // ✅ LOCAL STATE UPDATE
+            // Update local state
             actions.updateNovel((prevNovel) => {
               if (!prevNovel) return prevNovel;
 
@@ -506,12 +403,11 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
               return { ...prevNovel, acts };
             });
 
-            // ✅ AUTO-SELECT NEW ACT (traditional behavior)
+            // Select new act (traditional behavior)
             actions.setSelectedAct(newAct);
             actions.setViewMode("act");
 
-            // Find first scene for content aggregation
-            const firstScene = findFirstSceneInAct(newAct);
+            const firstScene = selection.utils.findFirstSceneInAct(newAct);
             if (firstScene) {
               actions.setSelectedScene(firstScene);
               const parentChapter = newAct.chapters.find((chapter: Chapter) =>
@@ -534,199 +430,19 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
         alert("Error creating act. Please try again.");
       }
     },
-    [novelId, actions, findFirstSceneInAct]
+    [novelId, actions, selection.utils]
   );
-
-  // ===== DELETE HANDLERS (using existing CRUD) =====
-  const crud = useManuscriptCRUD({
-    novelId,
-    onStateUpdate: actions.updateNovel,
-    onSelectionUpdate: {
-      setSelectedScene: actions.setSelectedScene,
-      setSelectedChapter: actions.setSelectedChapter,
-      setSelectedAct: actions.setSelectedAct,
-      setViewMode: actions.setViewMode,
-    },
-    currentSelections: {
-      selectedScene: state.selectedScene,
-      selectedChapter: state.selectedChapter,
-      selectedAct: state.selectedAct,
-    },
-  });
-
-  // ===== UPDATE HANDLERS (Fixed for new API format) =====
-  const handleUpdateActName = useCallback(
-    async (actId: string, newTitle: string) => {
-      try {
-        const response = await fetch(`/api/novels/${novelId}/acts/${actId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: newTitle }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to update act name");
-        }
-
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          console.log("✅ Act name updated:", result.data);
-
-          actions.updateNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) =>
-                act.id === actId ? { ...act, title: newTitle } : act
-              ),
-            };
-          });
-
-          if (state.selectedAct?.id === actId) {
-            actions.setSelectedAct({ ...state.selectedAct, title: newTitle });
-          }
-        } else {
-          throw new Error(result.error || "Failed to update act name");
-        }
-      } catch (error) {
-        console.error("Error updating act name:", error);
-        throw error;
-      }
-    },
-    [novelId, state.selectedAct, actions]
-  );
-
-  const handleUpdateChapterName = useCallback(
-    async (chapterId: string, newTitle: string) => {
-      try {
-        const response = await fetch(
-          `/api/novels/${novelId}/chapters/${chapterId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: newTitle }),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to update chapter name");
-        }
-
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          console.log("✅ Chapter name updated:", result.data);
-
-          actions.updateNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) =>
-                  chapter.id === chapterId
-                    ? { ...chapter, title: newTitle }
-                    : chapter
-                ),
-              })),
-            };
-          });
-
-          if (state.selectedChapter?.id === chapterId) {
-            actions.setSelectedChapter({
-              ...state.selectedChapter,
-              title: newTitle,
-            });
-          }
-        } else {
-          throw new Error(result.error || "Failed to update chapter name");
-        }
-      } catch (error) {
-        console.error("Error updating chapter name:", error);
-        throw error;
-      }
-    },
-    [novelId, state.selectedChapter, actions]
-  );
-
-  const handleUpdateSceneName = useCallback(
-    async (sceneId: string, newTitle: string) => {
-      try {
-        const response = await fetch(
-          `/api/novels/${novelId}/scenes/${sceneId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: newTitle }),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to update scene name");
-        }
-
-        const result = await response.json();
-
-        if (result.success && result.data) {
-          console.log("✅ Scene name updated:", result.data);
-
-          actions.updateNovel((prevNovel) => {
-            if (!prevNovel) return prevNovel;
-
-            return {
-              ...prevNovel,
-              acts: prevNovel.acts.map((act) => ({
-                ...act,
-                chapters: act.chapters.map((chapter) => ({
-                  ...chapter,
-                  scenes: chapter.scenes.map((scene) =>
-                    scene.id === sceneId ? { ...scene, title: newTitle } : scene
-                  ),
-                })),
-              })),
-            };
-          });
-
-          if (state.selectedScene?.id === sceneId) {
-            actions.setSelectedScene({
-              ...state.selectedScene,
-              title: newTitle,
-            });
-          }
-        } else {
-          throw new Error(result.error || "Failed to update scene name");
-        }
-      } catch (error) {
-        console.error("Error updating scene name:", error);
-        throw error;
-      }
-    },
-    [novelId, state.selectedScene, actions]
-  );
-
-  // ===== UTILITY FUNCTIONS =====
-  const handleRefresh = useCallback(() => {
-    console.log("🔄 EXPLICIT REFRESH: User action triggered refresh");
-    loadNovelStructure(novelId);
-  }, [loadNovelStructure, novelId]);
 
   // ===== INITIALIZATION =====
   useEffect(() => {
     if (novelId) {
       console.log("🚀 Initial load for novelId:", novelId);
-      loadNovelStructure(novelId);
+      utils.loadNovelStructure(novelId);
     }
-  }, [novelId, loadNovelStructure]);
+  }, [novelId, utils]);
 
   // ===== COMPUTED VALUES =====
-  const hasStructure =
-    state.novel && state.novel.acts && state.novel.acts.length > 0;
+  const hasStructure = utils.hasStructure(state.novel);
 
   // ===== RETURN INTERFACE =====
   return {
@@ -745,23 +461,29 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     handleViewModeChange,
     handleContentDisplayModeChange,
 
-    // Selection Handlers (FIXED with auto-scene selection)
-    handleSceneSelect,
-    handleChapterSelect,
-    handleActSelect,
+    // Selection Handlers (from useManuscriptSelection)
+    handleSceneSelect: selection.handlers.handleSceneSelect,
+    handleChapterSelect: selection.handlers.handleChapterSelect,
+    handleActSelect: selection.handlers.handleActSelect,
 
-    // CRUD Handlers (ENHANCED with view mode preservation)
-    handleAddScene, // ✅ Preserves document view mode
-    handleAddChapter, // ✅ Preserves act document view + auto-scene creation
-    handleAddAct, // ✅ Traditional behavior
+    // Navigation Handlers (from useManuscriptNavigation)
+    handlePreviousNavigation: navigation.handlePreviousNavigation,
+    handleNextNavigation: navigation.handleNextNavigation,
+    handleNavigationSelect: navigation.handleNavigationSelect,
+    getNavigationContext: navigation.getNavigationContext,
+
+    // CRUD Handlers (enhanced + from useManuscriptCRUD)
+    handleAddScene,
+    handleAddChapter,
+    handleAddAct,
     handleDeleteScene: crud.handleDeleteScene,
     handleDeleteChapter: crud.handleDeleteChapter,
     handleDeleteAct: crud.handleDeleteAct,
 
-    // Update Handlers (Fixed for new API format)
-    handleUpdateActName,
-    handleUpdateChapterName,
-    handleUpdateSceneName,
+    // Update Handlers (from useManuscriptUpdates)
+    handleUpdateActName: updates.handleUpdateActName,
+    handleUpdateChapterName: updates.handleUpdateChapterName,
+    handleUpdateSceneName: updates.handleUpdateSceneName,
 
     // Auto-save handlers from useAutoSave hook
     handleSceneContentChange: autoSave.actions.handleContentChange,
@@ -771,45 +493,41 @@ export function useManuscriptLogic(novelId: string): ManuscriptLogicReturn {
     },
 
     // Utility
-    handleRefresh,
-    loadNovelStructure,
-    hasStructure: !!hasStructure,
+    handleRefresh: utils.handleRefresh,
+    loadNovelStructure: utils.loadNovelStructure,
+    hasStructure,
   };
 }
 
 /*
-===== KEY ENHANCEMENTS IMPLEMENTED =====
+===== REFACTORING ACHIEVEMENTS =====
 
-✅ AUTO-SCENE CHAPTER CREATION: New chapters automatically include "Scene 1"
-✅ VIEW MODE PRESERVATION: Document view operations stay in document view
-✅ SMART SELECTION: Auto-selects appropriate scenes for content aggregation
-✅ DOCUMENT VIEW STABILITY: Adding scenes/chapters in document view doesn't switch views
+✅ MODULAR ARCHITECTURE: Main logic now orchestrates focused sub-hooks
+✅ CLEAN SEPARATION: Each hook has single responsibility
+✅ NAVIGATION READY: Full navigation system integrated
+✅ MAINTAINABLE: Easy to find and modify specific functionality
+✅ TESTABLE: Individual hooks can be tested in isolation
+✅ EXTENSIBLE: Easy to add new features to appropriate hooks
 
-===== NEW BEHAVIOR MATRIX =====
+===== HOOK RESPONSIBILITIES =====
 
-| Action | Current View | Result |
-|--------|--------------|--------|
-| Add Scene | Chapter Document | Stay in Chapter Document + show new scene inline |
-| Add Scene | Act Document | Stay in Act Document + show new scene inline |
-| Add Scene | Grid/Sidebar | Switch to Scene view (traditional) |
-| Add Chapter | Act Document | Stay in Act Document + show new chapter inline |
-| Add Chapter | Sidebar | Switch to Chapter view (traditional) |
-| Add Act | Any | Switch to Act view (traditional) |
+- useManuscriptLogic: Main orchestrator and enhanced CRUD operations
+- useManuscriptState: Core state management
+- useManuscriptSelection: Selection logic and parent-child relationships
+- useManuscriptNavigation: Navigation behavior matrix implementation
+- useManuscriptUpdates: API update handlers
+- useManuscriptUtils: Utility functions and novel loading
+- useManuscriptCRUD: Basic CRUD operations
+- useAutoSave: Content persistence
 
-===== CONTENT AGGREGATION FIX =====
+===== BENEFITS FOR NAVIGATION =====
 
-- Chapter/Act clicks now auto-select first scene
-- Content aggregation service gets the scene it needs
-- View properly displays chapter/act content
-- No more empty content areas
+The navigation system is now fully integrated and provides:
+- Scene navigation with cross-chapter boundaries
+- Chapter navigation with cross-act boundaries  
+- Act navigation with dual-level controls
+- Smart scroll behavior for act document view
+- Context-aware mode switching
 
-===== IMPLEMENTATION DETAILS =====
-
-1. **isInDocumentView()**: Checks if contentDisplayMode === "document"
-2. **Smart Selection Logic**: Different behavior for document vs grid/sidebar
-3. **Auto-Scene Creation**: Chapter service creates Scene 1 automatically
-4. **State Updates**: Proper local state updates prevent page refreshes
-5. **Content Refresh**: New scenes/chapters appear immediately in document view
-
-This solves all the specified requirements! 🎉
+Ready for UI components! 🎉
 */
