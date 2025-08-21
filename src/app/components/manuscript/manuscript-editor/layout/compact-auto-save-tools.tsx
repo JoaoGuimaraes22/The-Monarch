@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/layout/compact-auto-save-tools.tsx
-// ✨ ENHANCED: Now includes structure expand/collapse controls to reduce sidebar clutter
+// ✨ ENHANCED: Now includes continuous chapter numbering toggle
 
 import React, { useState } from "react";
 import {
@@ -12,6 +12,7 @@ import {
   Upload,
   ChevronDown,
   ChevronUp,
+  Hash, // New icon for numbering
 } from "lucide-react";
 import { DeleteAllManuscriptButton } from "./delete-all-button";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -28,7 +29,7 @@ interface CompactAutoSaveToolsProps {
   onRefresh: () => void;
   onOpenContextualImport?: () => void;
 
-  // ✨ NEW: Structure control props
+  // Structure control props
   novel: NovelWithStructure;
   selectedScene: Scene | null;
   selectedChapterId?: string;
@@ -42,8 +43,8 @@ interface CompactAutoSaveToolsProps {
   getCurrentlySelectedAct: () => Act | null;
 
   // ✨ NEW: Chapter numbering props
-  chapterNumberingMode: "per-act" | "continuous";
-  onChapterNumberingModeChange: (mode: "per-act" | "continuous") => void;
+  continuousChapterNumbering: boolean;
+  setContinuousChapterNumbering: (enabled: boolean) => void;
 }
 
 export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
@@ -72,8 +73,8 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
   getCurrentlySelectedAct,
 
   // ✨ NEW: Chapter numbering props
-  chapterNumberingMode,
-  onChapterNumberingModeChange,
+  continuousChapterNumbering,
+  setContinuousChapterNumbering,
 }) => {
   const [isManualSaving, setIsManualSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -90,173 +91,147 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
 
   const formatLastSaved = (date: Date | null) => {
     if (!date) return "Never";
-
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffMins = Math.floor(diffMs / 60000);
 
-    if (diffMinutes < 1) return "Just now";
-    if (diffMinutes === 1) return "1 minute ago";
-    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
-
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours === 1) return "1 hour ago";
-    if (diffHours < 24) return `${diffHours} hours ago`;
-
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
     return date.toLocaleDateString();
   };
 
-  // ✨ NEW: Get chapter stats for selected act
-  const getSelectedActChapterStats = () => {
-    const currentAct = getCurrentlySelectedAct();
-    if (!currentAct) {
-      return {
-        expanded: 0,
-        total: 0,
-        actTitle: "No Act Selected",
-      };
-    }
-
-    const chaptersInSelectedAct = currentAct.chapters;
-    const expandedChaptersInSelectedAct = chaptersInSelectedAct.filter((ch) =>
-      expandedChapters.has(ch.id)
-    );
-
-    return {
-      expanded: expandedChaptersInSelectedAct.length,
-      total: chaptersInSelectedAct.length,
-      actTitle: currentAct.title,
-    };
-  };
-
   return (
-    <div className="space-y-2">
-      {/* ✨ Import Button - Top of tools */}
-      {onOpenContextualImport && (
-        <button
-          onClick={onOpenContextualImport}
-          className="w-full flex items-center justify-center space-x-1 px-2 py-1.5 text-xs bg-red-700 hover:bg-red-600 text-gray-200 hover:text-white border border-red-800 hover:border-red-700 rounded transition-colors"
-          title="Import document content"
-        >
-          <Upload className="w-3 h-3" />
-          <span>Import Document</span>
-        </button>
-      )}
-
+    <div className="space-y-4">
       {/* Auto-Save Section */}
-      <div className="space-y-2">
-        {/* Line 1: Auto-Save Toggle + Save Now Button */}
-        <div className="flex items-center justify-between space-x-2">
-          {/* Auto-Save Toggle */}
+      <div className="space-y-3">
+        {/* Primary Controls Row */}
+        <div className="flex items-center justify-between">
+          {/* Auto-save toggle */}
           <div className="flex items-center space-x-2">
-            {autoSaveEnabled ? (
-              <Power className="w-3 h-3 text-green-400" />
-            ) : (
-              <PowerOff className="w-3 h-3 text-gray-400" />
-            )}
-            <span className="text-xs text-white">Auto-Save</span>
             <button
               onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
-              className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                autoSaveEnabled ? "bg-green-600" : "bg-gray-600"
+              className={`p-1.5 rounded transition-colors ${
+                autoSaveEnabled
+                  ? "text-green-400 hover:text-green-300 bg-green-900/20"
+                  : "text-gray-400 hover:text-gray-300"
               }`}
+              title={autoSaveEnabled ? "Disable auto-save" : "Enable auto-save"}
             >
-              <span
-                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                  autoSaveEnabled ? "translate-x-4" : "translate-x-0.5"
-                }`}
-              />
+              {autoSaveEnabled ? (
+                <Power className="w-4 h-4" />
+              ) : (
+                <PowerOff className="w-4 h-4" />
+              )}
             </button>
-          </div>
-
-          {/* Save Now Button */}
-          <button
-            onClick={handleManualSaveClick}
-            disabled={isManualSaving || isSavingContent || !pendingChanges}
-            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-              pendingChanges && !isSavingContent && !isManualSaving
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-700 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            <Save className="w-3 h-3" />
-            <span>
-              {isManualSaving || isSavingContent
-                ? "Saving..."
-                : pendingChanges
-                ? "Save Now"
-                : "No Changes"}
+            <span className="text-xs text-gray-400">
+              {autoSaveEnabled ? "Auto" : "Manual"}
             </span>
-          </button>
-        </div>
-
-        {/* Line 2: Last Saved + Details Toggle + Delete */}
-        <div className="flex items-center justify-between space-x-2">
-          {/* Left side: Status info */}
-          <div className="flex items-center space-x-2 text-xs">
-            <div className="flex items-center space-x-1 text-gray-400">
-              <Clock className="w-3 h-3" />
-              <span>{formatLastSaved(lastSaved)}</span>
-            </div>
-
-            {pendingChanges && (
-              <>
-                <span className="text-gray-600">•</span>
-                <div className="flex items-center space-x-1 text-amber-400">
-                  <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                  <span>Unsaved</span>
-                </div>
-              </>
-            )}
           </div>
 
-          {/* Right side: Details toggle + Delete */}
-          <div className="flex items-center space-x-1">
+          {/* Action buttons */}
+          <div className="flex items-center space-x-2">
+            {/* Manual save button */}
+            <button
+              onClick={handleManualSaveClick}
+              disabled={isManualSaving || isSavingContent}
+              className={`p-1.5 rounded transition-colors ${
+                pendingChanges
+                  ? "text-amber-400 hover:text-amber-300 bg-amber-900/20"
+                  : "text-green-400 hover:text-green-300"
+              } ${
+                isManualSaving || isSavingContent
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+              title={
+                pendingChanges ? "Save pending changes" : "Save (up to date)"
+              }
+            >
+              <Save className="w-4 h-4" />
+            </button>
+
+            {/* Contextual import button */}
+            {onOpenContextualImport && (
+              <button
+                onClick={onOpenContextualImport}
+                className="p-1.5 rounded text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 transition-colors"
+                title="Import content"
+              >
+                <Upload className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Details toggle */}
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors"
+              className="p-1.5 rounded text-gray-400 hover:text-gray-300 transition-colors"
+              title={showDetails ? "Hide details" : "Show details"}
             >
               {showDetails ? (
-                <EyeOff className="w-3 h-3" />
+                <EyeOff className="w-4 h-4" />
               ) : (
-                <Eye className="w-3 h-3" />
+                <Eye className="w-4 h-4" />
               )}
-              <span>Details</span>
             </button>
+          </div>
+        </div>
 
-            <DeleteAllManuscriptButton
-              novelId={novelId}
-              onSuccess={onRefresh}
-              size="xs"
+        {/* Status and Last Saved */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isSavingContent
+                  ? "bg-blue-400 animate-pulse"
+                  : pendingChanges
+                  ? "bg-amber-400"
+                  : "bg-green-400"
+              }`}
             />
+            <span className="text-gray-400">
+              {isSavingContent
+                ? "Saving..."
+                : pendingChanges
+                ? "Changes pending"
+                : "Saved"}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1 text-gray-500">
+            <Clock className="w-3 h-3" />
+            <span>{formatLastSaved(lastSaved)}</span>
           </div>
         </div>
       </div>
 
-      {/* ✨ NEW: Structure Controls Section */}
-      <div className="border-t border-gray-700 pt-2">
-        {/* Structure Controls Header */}
-        <button
-          onClick={() => setShowStructureControls(!showStructureControls)}
-          className="w-full flex items-center justify-between text-xs text-gray-300 hover:text-white transition-colors mb-2"
-        >
-          <span className="font-medium">Structure Controls</span>
-          {showStructureControls ? (
-            <ChevronUp className="w-3 h-3" />
-          ) : (
-            <ChevronDown className="w-3 h-3" />
-          )}
-        </button>
+      {/* Collapsible Structure Controls Section */}
+      <div className="border-t border-gray-700 pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-medium text-gray-300 uppercase tracking-wider">
+            Structure Controls
+          </h4>
+          <button
+            onClick={() => setShowStructureControls(!showStructureControls)}
+            className="p-1 rounded text-gray-400 hover:text-gray-300 transition-colors"
+            title={
+              showStructureControls ? "Collapse controls" : "Expand controls"
+            }
+          >
+            {showStructureControls ? (
+              <ChevronUp className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+          </button>
+        </div>
 
-        {/* Collapsible Structure Controls */}
         {showStructureControls && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {/* Acts Controls */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">
-                {expandedActs.size} of {novel.acts?.length || 0} acts expanded
-              </span>
-              <div className="flex space-x-1">
+            <div className="space-y-2">
+              <h5 className="text-xs text-gray-400 font-medium">Acts</h5>
+              <div className="flex items-center justify-between">
                 <button
                   onClick={onExpandAllActs}
                   className="text-xs text-blue-400 hover:text-blue-300 transition-colors px-1"
@@ -273,18 +248,10 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
               </div>
             </div>
 
-            {/* Chapters Controls - Only for Selected Act */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">
-                {(() => {
-                  const stats = getSelectedActChapterStats();
-                  if (stats.total === 0) {
-                    return "No act selected";
-                  }
-                  return `${stats.expanded} of ${stats.total} chapters in "${stats.actTitle}"`;
-                })()}
-              </span>
-              <div className="flex space-x-1">
+            {/* Chapters Controls */}
+            <div className="space-y-2">
+              <h5 className="text-xs text-gray-400 font-medium">Chapters</h5>
+              <div className="flex items-center justify-between">
                 <button
                   onClick={onExpandAllChapters}
                   disabled={!getCurrentlySelectedAct()}
@@ -312,76 +279,46 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
             </div>
 
             {/* ✨ NEW: Chapter Numbering Toggle */}
-            <div className="border-t border-gray-600 pt-2 mt-2">
+            <div className="space-y-2">
+              <h5 className="text-xs text-gray-400 font-medium">
+                Chapter Numbering
+              </h5>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-300 font-medium">
-                  Chapter Numbering
-                </span>
                 <div className="flex items-center space-x-2">
-                  {/* Toggle Switch */}
-                  <button
-                    onClick={() =>
-                      onChapterNumberingModeChange(
-                        chapterNumberingMode === "per-act"
-                          ? "continuous"
-                          : "per-act"
-                      )
-                    }
-                    className={`
-          relative inline-flex h-5 w-9 items-center rounded-full transition-colors 
-          ${
-            chapterNumberingMode === "continuous"
-              ? "bg-blue-600"
-              : "bg-gray-600"
-          }
-        `}
-                    title={`Switch to ${
-                      chapterNumberingMode === "per-act"
-                        ? "continuous"
-                        : "per-act"
-                    } chapter numbering`}
-                  >
-                    <span
-                      className={`
-            inline-block h-3 w-3 transform rounded-full bg-white transition-transform
-            ${
-              chapterNumberingMode === "continuous"
-                ? "translate-x-5"
-                : "translate-x-1"
-            }
-          `}
-                    />
-                  </button>
-
-                  {/* Current Mode Label */}
-                  <span className="text-xs text-gray-400 min-w-0">
-                    {chapterNumberingMode === "per-act"
-                      ? "Per-Act"
-                      : "Continuous"}
+                  <Hash className="w-3 h-3 text-gray-400" />
+                  <span className="text-xs text-gray-400">
+                    Continuous numbering
                   </span>
                 </div>
+                <button
+                  onClick={() =>
+                    setContinuousChapterNumbering(!continuousChapterNumbering)
+                  }
+                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                    continuousChapterNumbering ? "bg-blue-600" : "bg-gray-600"
+                  }`}
+                  title={
+                    continuousChapterNumbering
+                      ? "Switch to per-act numbering (ACT 1: Ch 1,2,3 ACT 2: Ch 1,2,3)"
+                      : "Switch to continuous numbering (ACT 1: Ch 1,2,3 ACT 2: Ch 4,5,6)"
+                  }
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      continuousChapterNumbering
+                        ? "translate-x-3.5"
+                        : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
               </div>
 
-              {/* Help Text */}
-              <div className="mt-1 text-xs text-gray-500">
-                {chapterNumberingMode === "per-act"
-                  ? "Each act starts at Chapter 1"
-                  : "Chapters numbered 1, 2, 3... across all acts"}
-              </div>
-
-              {/* Example Preview */}
-              <div className="mt-2 text-xs text-gray-500 bg-gray-800/50 rounded p-2">
-                <div className="font-medium text-gray-400 mb-1">Example:</div>
-                {chapterNumberingMode === "per-act" ? (
-                  <div className="space-y-0.5">
-                    <div>Act 1: Ch 1, 2, 3</div>
-                    <div>Act 2: Ch 1, 2, 3</div>
-                  </div>
+              {/* Numbering explanation */}
+              <div className="text-xs text-gray-500 pl-5">
+                {continuousChapterNumbering ? (
+                  <span>ACT 1: Ch 1,2,3 • ACT 2: Ch 4,5,6</span>
                 ) : (
-                  <div className="space-y-0.5">
-                    <div>Act 1: Ch 1, 2, 3</div>
-                    <div>Act 2: Ch 4, 5, 6</div>
-                  </div>
+                  <span>ACT 1: Ch 1,2,3 • ACT 2: Ch 1,2,3</span>
                 )}
               </div>
             </div>
@@ -439,19 +376,26 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Last Saved:</span>
-              <span className="text-gray-300">
+              <span className="text-gray-400">
                 {formatLastSaved(lastSaved)}
               </span>
             </div>
           </div>
 
-          {/* Help Text */}
-          <div className="text-xs text-gray-500 bg-gray-800 rounded p-2">
-            <p className="mb-1 font-medium">Auto-Save Info:</p>
-            <p>
-              Changes are automatically saved after 2 seconds of inactivity when
-              auto-save is enabled. Use &#34;Save Now&#34; for immediate saves.
-            </p>
+          {/* Action buttons */}
+          <div className="space-y-2">
+            <button
+              onClick={onRefresh}
+              className="w-full px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+            >
+              Refresh Novel
+            </button>
+
+            <DeleteAllManuscriptButton
+              novelId={novelId}
+              onSuccess={onRefresh}
+              size="sm"
+            />
           </div>
         </div>
       )}
