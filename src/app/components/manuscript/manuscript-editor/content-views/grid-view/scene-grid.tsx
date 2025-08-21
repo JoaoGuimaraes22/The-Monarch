@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/grid-view/scene-grid.tsx
-// ✨ ENHANCED: Added act naming, chapter focus buttons, and improved titles
+// ✨ ENHANCED: Added act naming, chapter focus buttons, and dynamic chapter numbering
 
 import React from "react";
 import { Scene, NovelWithStructure, Chapter, Act } from "@/lib/novels";
@@ -8,6 +8,7 @@ import { EditableText } from "@/app/components/ui";
 import { AggregatedContent } from "@/app/components/manuscript/manuscript-editor/services/";
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
 import { Eye } from "lucide-react";
+import { useChapterNumbering } from "@/hooks/manuscript/useChapterNumbering"; // ✨ NEW
 
 interface SceneGridProps {
   aggregatedContent: AggregatedContent;
@@ -18,6 +19,7 @@ interface SceneGridProps {
   onChapterClick?: (chapter: Chapter) => void; // ✨ NEW: For focus button
   onActRename?: (actId: string, newTitle: string) => Promise<void>; // ✨ NEW: For act renaming
   novel?: NovelWithStructure | null | undefined;
+  continuousChapterNumbering?: boolean; // ✨ NEW: Chapter numbering mode
 }
 
 // ✨ Helper function to find chapter object from novel structure
@@ -69,7 +71,14 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
   onChapterClick, // ✨ NEW: Chapter focus handler
   onActRename, // ✨ NEW: Act rename handler
   novel,
+  continuousChapterNumbering = false, // ✨ NEW: Chapter numbering mode
 }) => {
+  // ✨ NEW: Use the chapter numbering hook
+  const chapterNumbering = useChapterNumbering(
+    novel,
+    continuousChapterNumbering
+  );
+
   if (!aggregatedContent || aggregatedContent.sections.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -98,9 +107,9 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
           {/* ✨ ENHANCED: Chapter header with ACT and CHAPTER info */}
           {onChapterRename && chapterInfo && actInfo ? (
             <div className="mb-2">
-              {/* ✨ Act and Chapter identifier line */}
+              {/* ✨ UPDATED: Use dynamic chapter numbering */}
               <div className="text-sm text-gray-400 mb-1">
-                ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order}
+                {chapterNumbering.formatActChapterDisplay(chapterInfo)}
               </div>
 
               <EditableText
@@ -116,7 +125,8 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
               {/* ✨ Show act and chapter info even when not editable */}
               {chapterInfo && actInfo && (
                 <div className="text-sm text-gray-400 mb-1">
-                  ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order}
+                  {/* ✨ UPDATED: Use dynamic chapter numbering */}
+                  {chapterNumbering.formatActChapterDisplay(chapterInfo)}
                 </div>
               )}
               <h2 className="text-xl text-white font-medium mb-2">
@@ -213,8 +223,12 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                     <div className="flex-1">
                       {onChapterRename && chapterInfo ? (
                         <div className="mb-1">
+                          {/* ✨ UPDATED: Use dynamic chapter numbering */}
                           <div className="text-sm text-gray-400 mb-1">
-                            CH{chapterInfo.order}
+                            {chapterNumbering.formatDisplay(
+                              chapterInfo,
+                              "long"
+                            )}
                           </div>
                           <EditableText
                             value={chapterInfo.title}
@@ -230,7 +244,11 @@ export const SceneGrid: React.FC<SceneGridProps> = ({
                         <div>
                           {chapterInfo && (
                             <div className="text-sm text-gray-400 mb-1">
-                              CH{chapterInfo.order}
+                              {/* ✨ UPDATED: Use dynamic chapter numbering */}
+                              {chapterNumbering.formatDisplay(
+                                chapterInfo,
+                                "long"
+                              )}
                             </div>
                           )}
                           <h2 className="text-xl text-white font-medium">

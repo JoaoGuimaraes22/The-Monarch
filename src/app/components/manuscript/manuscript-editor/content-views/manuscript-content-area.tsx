@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/content-views/manuscript-content-area.tsx
-// ✅ FINAL: Complete with breadcrumbs, focus buttons ONLY in act view, and Add Scene button
+// ✅ FINAL: Complete with breadcrumbs, focus buttons ONLY in act view, dynamic chapter numbering, and Add Scene button
 
 import React from "react";
 import { FileText, Plus } from "lucide-react";
@@ -12,6 +12,7 @@ import {
 import { ViewMode } from "@/app/components/manuscript/manuscript-editor/controls/";
 import { Scene, Chapter, Act, NovelWithStructure } from "@/lib/novels";
 import { EditableText } from "@/app/components/ui";
+import { useChapterNumbering } from "@/hooks/manuscript/useChapterNumbering"; // ✨ NEW
 
 export type ContentDisplayMode = "document" | "grid";
 
@@ -31,6 +32,7 @@ interface ManuscriptContentAreaProps {
   onIndividualSceneChange?: (sceneId: string, content: string) => void;
   marginLeft?: string;
   marginRight?: string;
+  continuousChapterNumbering?: boolean; // ✨ NEW: Chapter numbering mode
 }
 
 // ✨ Scene Editor Component for Document Views
@@ -125,13 +127,28 @@ const SceneEditor: React.FC<{
   );
 };
 
-// ✅ Chapter Header with conditional Focus button (only in act view)
+// ✅ Chapter Header with conditional Focus button and dynamic numbering
 const ChapterHeader: React.FC<{
   chapter: Chapter;
+  novel?: NovelWithStructure;
+  continuousChapterNumbering?: boolean;
   onChapterRename?: (chapterId: string, newTitle: string) => Promise<void>;
   onChapterClick?: (chapter: Chapter) => void;
   showWordCount?: boolean;
-}> = ({ chapter, onChapterRename, onChapterClick, showWordCount = true }) => {
+}> = ({
+  chapter,
+  novel,
+  continuousChapterNumbering = false,
+  onChapterRename,
+  onChapterClick,
+  showWordCount = true,
+}) => {
+  // ✨ NEW: Use the chapter numbering hook
+  const chapterNumbering = useChapterNumbering(
+    novel,
+    continuousChapterNumbering
+  );
+
   const totalWords = chapter.scenes.reduce(
     (sum, scene) => sum + scene.wordCount,
     0
@@ -140,9 +157,9 @@ const ChapterHeader: React.FC<{
   return (
     <div className="my-4 p-3 border border-yellow-600/40 rounded bg-gray-800/30">
       <div className="flex items-center space-x-3">
-        {/* Compact chapter order number */}
+        {/* ✨ UPDATED: Use dynamic chapter numbering */}
         <span className="text-sm font-medium text-gray-400 flex-shrink-0">
-          CH{chapter.order}
+          {chapterNumbering.formatDisplay(chapter)}
         </span>
 
         <div className="flex-1">
@@ -322,7 +339,14 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
   onIndividualSceneChange,
   marginLeft = "0",
   marginRight = "0",
+  continuousChapterNumbering = false, // ✨ NEW: Chapter numbering mode
 }) => {
+  // ✨ NEW: Use the chapter numbering hook
+  const chapterNumbering = useChapterNumbering(
+    novel,
+    continuousChapterNumbering
+  );
+
   const handleIndividualSceneChange = React.useCallback(
     (sceneId: string, content: string) => {
       if (onIndividualSceneChange) {
@@ -368,6 +392,7 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
           onChapterClick={onChapterClick} // ✨ NEW: Pass chapter focus handler
           onActRename={onActRename}
           novel={novel}
+          continuousChapterNumbering={continuousChapterNumbering} // ✨ NEW: Pass numbering mode
         />
       </div>
     );
@@ -388,10 +413,10 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         style={{ marginLeft, marginRight }}
       >
         <div className="p-6 h-full flex flex-col">
-          {/* ✅ Breadcrumb navigation */}
+          {/* ✅ Breadcrumb navigation with dynamic numbering */}
           {actInfo && chapterInfo && (
             <div className="text-xs text-gray-500 mb-3 border-b border-gray-700 pb-2">
-              ACT{actInfo.order} - {actInfo.title}, CH{chapterInfo.order} -{" "}
+              {chapterNumbering.formatActChapterDisplay(chapterInfo)} -{" "}
               {chapterInfo.title}
             </div>
           )}
@@ -441,11 +466,11 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
         <div className="p-4 space-y-6">
           {/* Chapter Header with Breadcrumb */}
           <div className="chapter-document-header border-b border-gray-600 pb-4">
-            {/* Breadcrumb navigation */}
-            {actInfo && (
+            {/* Breadcrumb navigation with dynamic numbering */}
+            {actInfo && chapterInfo && (
               <div className="text-sm text-gray-400 mb-2">
-                ACT{actInfo.order} - {actInfo.title} • Chapter{" "}
-                {chapterInfo?.order}
+                ACT{actInfo.order} - {actInfo.title} •{" "}
+                {chapterNumbering.formatDisplay(chapterInfo, "long")}
               </div>
             )}
 
@@ -627,15 +652,15 @@ export const ManuscriptContentArea: React.FC<ManuscriptContentAreaProps> = ({
 
             return (
               <React.Fragment key={chapter.id}>
-                {/* ✅ Custom Chapter Header with scroll ID */}
+                {/* ✅ Custom Chapter Header with scroll ID and dynamic numbering */}
                 <div
                   id={`chapter-${chapter.id}`}
                   className="my-4 p-3 border border-yellow-600/40 rounded bg-gray-800/30"
                 >
                   <div className="flex items-center space-x-3">
-                    {/* Compact chapter order number */}
+                    {/* ✨ UPDATED: Use dynamic chapter numbering */}
                     <span className="text-sm font-medium text-gray-400 flex-shrink-0">
-                      CH{chapter.order}
+                      {chapterNumbering.formatDisplay(chapter)}
                     </span>
 
                     <div className="flex-1">

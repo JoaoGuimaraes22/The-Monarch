@@ -13,6 +13,7 @@ export { useManuscriptSelection } from "./useManuscriptSelection";
 export { useManuscriptNavigation } from "./navigation/useManuscriptNavigation";
 export { useManuscriptUpdates } from "./useManuscriptUpdates";
 export { useManuscriptUtils } from "./useManuscriptUtils";
+export { useChapterNumbering } from "./useChapterNumbering";
 
 // ===== TYPE EXPORTS =====
 // Main hook types

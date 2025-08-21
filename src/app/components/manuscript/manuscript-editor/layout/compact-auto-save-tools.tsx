@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/layout/compact-auto-save-tools.tsx
-// ✨ ENHANCED: Now includes continuous chapter numbering toggle
+// ✨ ENHANCED: Now includes structure expand/collapse controls and chapter numbering toggle
 
 import React, { useState } from "react";
 import {
@@ -12,7 +12,7 @@ import {
   Upload,
   ChevronDown,
   ChevronUp,
-  Hash, // New icon for numbering
+  Hash,
 } from "lucide-react";
 import { DeleteAllManuscriptButton } from "./delete-all-button";
 import { NovelWithStructure, Scene, Chapter, Act } from "@/lib/novels";
@@ -42,7 +42,7 @@ interface CompactAutoSaveToolsProps {
   onCollapseAllChapters: () => void;
   getCurrentlySelectedAct: () => Act | null;
 
-  // ✨ NEW: Chapter numbering props
+  // Chapter numbering props
   continuousChapterNumbering: boolean;
   setContinuousChapterNumbering: (enabled: boolean) => void;
 }
@@ -72,7 +72,7 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
   onCollapseAllChapters,
   getCurrentlySelectedAct,
 
-  // ✨ NEW: Chapter numbering props
+  // Chapter numbering props
   continuousChapterNumbering,
   setContinuousChapterNumbering,
 }) => {
@@ -99,6 +99,50 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
     return date.toLocaleDateString();
+  };
+
+  // Generate preview text for chapter numbering
+  const getNumberingPreviewText = () => {
+    if (!novel.acts || novel.acts.length < 2) {
+      return continuousChapterNumbering ? "Ch 1,2,3..." : "Ch 1,2,3...";
+    }
+
+    const sortedActs = [...novel.acts].sort((a, b) => a.order - b.order);
+
+    if (!continuousChapterNumbering) {
+      // Show per-act numbering
+      const firstAct = sortedActs[0];
+      const secondAct = sortedActs[1];
+      const firstActChapters = Math.min(firstAct.chapters.length, 3);
+      const secondActChapters = Math.min(secondAct.chapters.length, 3);
+
+      const firstActText = Array.from(
+        { length: firstActChapters },
+        (_, i) => i + 1
+      ).join(",");
+      const secondActText = Array.from(
+        { length: secondActChapters },
+        (_, i) => i + 1
+      ).join(",");
+
+      return `ACT 1: Ch ${firstActText} • ACT 2: Ch ${secondActText}`;
+    } else {
+      // Show continuous numbering
+      const firstActChapters = Math.min(sortedActs[0].chapters.length, 3);
+      const secondActStart = firstActChapters + 1;
+      const secondActChapters = Math.min(sortedActs[1].chapters.length, 3);
+
+      const firstActText = Array.from(
+        { length: firstActChapters },
+        (_, i) => i + 1
+      ).join(",");
+      const secondActText = Array.from(
+        { length: secondActChapters },
+        (_, i) => secondActStart + i
+      ).join(",");
+
+      return `ACT 1: Ch ${firstActText} • ACT 2: Ch ${secondActText}`;
+    }
   };
 
   return (
@@ -278,7 +322,7 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
               </div>
             </div>
 
-            {/* ✨ NEW: Chapter Numbering Toggle */}
+            {/* Chapter Numbering Toggle */}
             <div className="space-y-2">
               <h5 className="text-xs text-gray-400 font-medium">
                 Chapter Numbering
@@ -315,11 +359,7 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
 
               {/* Numbering explanation */}
               <div className="text-xs text-gray-500 pl-5">
-                {continuousChapterNumbering ? (
-                  <span>ACT 1: Ch 1,2,3 • ACT 2: Ch 4,5,6</span>
-                ) : (
-                  <span>ACT 1: Ch 1,2,3 • ACT 2: Ch 1,2,3</span>
-                )}
+                {getNumberingPreviewText()}
               </div>
             </div>
 
@@ -394,7 +434,7 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
             <DeleteAllManuscriptButton
               novelId={novelId}
               onSuccess={onRefresh}
-              size="sm"
+              size="xs"
             />
           </div>
         </div>
