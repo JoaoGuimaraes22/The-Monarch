@@ -40,6 +40,10 @@ interface CompactAutoSaveToolsProps {
   onExpandAllChapters: () => void;
   onCollapseAllChapters: () => void;
   getCurrentlySelectedAct: () => Act | null;
+
+  // ✨ NEW: Chapter numbering props
+  chapterNumberingMode: "per-act" | "continuous";
+  onChapterNumberingModeChange: (mode: "per-act" | "continuous") => void;
 }
 
 export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
@@ -66,6 +70,10 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
   onExpandAllChapters,
   onCollapseAllChapters,
   getCurrentlySelectedAct,
+
+  // ✨ NEW: Chapter numbering props
+  chapterNumberingMode,
+  onChapterNumberingModeChange,
 }) => {
   const [isManualSaving, setIsManualSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -300,6 +308,81 @@ export const CompactAutoSaveTools: React.FC<CompactAutoSaveToolsProps> = ({
                 >
                   Collapse All
                 </button>
+              </div>
+            </div>
+
+            {/* ✨ NEW: Chapter Numbering Toggle */}
+            <div className="border-t border-gray-600 pt-2 mt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-300 font-medium">
+                  Chapter Numbering
+                </span>
+                <div className="flex items-center space-x-2">
+                  {/* Toggle Switch */}
+                  <button
+                    onClick={() =>
+                      onChapterNumberingModeChange(
+                        chapterNumberingMode === "per-act"
+                          ? "continuous"
+                          : "per-act"
+                      )
+                    }
+                    className={`
+          relative inline-flex h-5 w-9 items-center rounded-full transition-colors 
+          ${
+            chapterNumberingMode === "continuous"
+              ? "bg-blue-600"
+              : "bg-gray-600"
+          }
+        `}
+                    title={`Switch to ${
+                      chapterNumberingMode === "per-act"
+                        ? "continuous"
+                        : "per-act"
+                    } chapter numbering`}
+                  >
+                    <span
+                      className={`
+            inline-block h-3 w-3 transform rounded-full bg-white transition-transform
+            ${
+              chapterNumberingMode === "continuous"
+                ? "translate-x-5"
+                : "translate-x-1"
+            }
+          `}
+                    />
+                  </button>
+
+                  {/* Current Mode Label */}
+                  <span className="text-xs text-gray-400 min-w-0">
+                    {chapterNumberingMode === "per-act"
+                      ? "Per-Act"
+                      : "Continuous"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Help Text */}
+              <div className="mt-1 text-xs text-gray-500">
+                {chapterNumberingMode === "per-act"
+                  ? "Each act starts at Chapter 1"
+                  : "Chapters numbered 1, 2, 3... across all acts"}
+              </div>
+
+              {/* Example Preview */}
+              <div className="mt-2 text-xs text-gray-500 bg-gray-800/50 rounded p-2">
+                <div className="font-medium text-gray-400 mb-1">Example:</div>
+                {chapterNumberingMode === "per-act" ? (
+                  <div className="space-y-0.5">
+                    <div>Act 1: Ch 1, 2, 3</div>
+                    <div>Act 2: Ch 1, 2, 3</div>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    <div>Act 1: Ch 1, 2, 3</div>
+                    <div>Act 2: Ch 4, 5, 6</div>
+                  </div>
+                )}
               </div>
             </div>
 
