@@ -1,5 +1,5 @@
 // src/app/components/manuscript/manuscript-editor/scene-text-editor.tsx
-// ✨ ENHANCED: Added floating toolbox to the original working implementation
+// ✨ FIXED: Single toolbox button that changes appearance when toggled
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -259,9 +259,9 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
         <EditorContent editor={editor} />
       </div>
 
-      {/* ✨ NEW: Floating Toolbox - Bottom Right */}
+      {/* ✨ FIXED: Floating Toolbox - Bottom Right - Single Container */}
       {!readOnly && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
           {/* Expanded Toolbox */}
           {isToolboxOpen && (
             <div className="mb-3 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-3 animate-in slide-in-from-bottom-2 duration-200">
@@ -361,14 +361,25 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
             </div>
           )}
 
-          {/* Toggle Button */}
+          {/* ✨ FIXED: Single Toggle Button - Guaranteed single instance */}
           <button
+            key="toolbox-toggle" // React key to ensure single instance
             onClick={() => setIsToolboxOpen(!isToolboxOpen)}
-            className={`w-12 h-12 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
-              isToolboxOpen
-                ? "bg-blue-600 text-white rotate-45"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
-            }`}
+            className={`
+              w-12 h-12 rounded-full shadow-xl ring-2 
+              transition-all duration-300 ease-in-out
+              flex items-center justify-center
+              ${
+                isToolboxOpen
+                  ? "bg-blue-700 text-white ring-blue-500/30 transform rotate-45"
+                  : "bg-gray-700 text-gray-200 ring-gray-500/50 transform rotate-0"
+              }
+            `}
+            style={{
+              // Force position to prevent any duplication
+              position: "relative",
+              zIndex: 1000,
+            }}
             title={isToolboxOpen ? "Close toolbox" : "Open formatting tools"}
           >
             <Type className="w-5 h-5" />
@@ -376,7 +387,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
         </div>
       )}
 
-      {/* Original Styles */}
+      {/* Styles */}
       <style jsx global>{`
         .ProseMirror {
           height: 100%;
@@ -423,7 +434,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           text-decoration: line-through;
         }
 
-        /* NEW: Horizontal rule styling */
+        /* Horizontal rule styling */
         .editor-hr {
           border: none;
           border-top: 2px solid #4b5563;
@@ -431,7 +442,7 @@ export const SceneTextEditor: React.FC<SceneTextEditorProps> = ({
           width: 100%;
         }
 
-        /* NEW: Animation for floating toolbox */
+        /* Animation for floating toolbox */
         @keyframes slide-in-from-bottom {
           from {
             opacity: 0;
