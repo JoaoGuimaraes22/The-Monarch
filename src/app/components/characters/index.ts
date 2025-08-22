@@ -18,7 +18,7 @@ export { CharacterDetailHeader } from "./character-detail-content/character-glob
 export { CharacterDetailSidebar } from "./character-detail-content/character-global/character-detail-sidebar";
 export { CharacterProfileSection } from "./character-detail-content/character-profile/character-profile-section";
 export { CharacterStatesTimeline } from "./character-detail-content/character-state/character-states-timeline";
-export { CharacterRelationshipsSection } from "./character-detail-content/character-relationships-section";
+export { CharacterRelationshipsSection } from "./character-detail-content/character-relationships/character-relationships-section";
 export { CharacterManuscriptSection } from "./character-detail-content/character-manuscript-section";
 export { CharacterDetailLoadingState } from "./character-detail-content/character-global/character-detail-loading-state";
 export { CharacterDetailErrorState } from "./character-detail-content/character-global/character-detail-error-state";

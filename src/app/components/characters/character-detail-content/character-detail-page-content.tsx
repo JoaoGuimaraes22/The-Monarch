@@ -21,11 +21,12 @@ import {
   CharacterDetailSidebar,
   CharacterProfileSection,
   CharacterStatesTimeline,
-  CharacterRelationshipsSection,
   CharacterManuscriptSection,
   CharacterDetailLoadingState,
   CharacterDetailErrorState,
 } from "./index";
+
+import { CharacterRelationshipsSection } from "./character-relationships";
 import { CreateCharacterStateDialog } from "./character-state/create-character-state-dialog";
 import { EditCharacterDialog } from "./character-profile/edit-character-dialog";
 
@@ -313,10 +314,7 @@ export const CharacterDetailPageContent: React.FC<
           {activeTab === "relationships" && (
             <CharacterRelationshipsSection
               character={character}
-              onAddRelationship={() => {
-                // TODO: Open add relationship dialog
-                console.log("Add relationship");
-              }}
+              novelId={novelId}
             />
           )}
 

@@ -185,13 +185,34 @@ model CharacterRelationship {
   toCharacterId   String
   toCharacter     Character @relation("ToCharacter", fields: [toCharacterId], references: [id], onDelete: Cascade)
   
-  // Core relationship info
+  // STATIC foundation (never changes) - KEEP THESE
   baseType        String   // "family" | "romantic" | "professional" | "antagonistic" | "mentor_student" | "friendship"
   origin          String?  // "Childhood friends who became engaged"
   history         String?  // Background of the relationship
   fundamentalDynamic String? // Core pattern that doesn't change
   
-  // Current relationship state
+  
+  // NEW: Temporal evolution
+  relationshipStates RelationshipState[]
+  
+  // Meta - KEEP
+  writerNotes     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([fromCharacterId, toCharacterId])
+  @@map("character_relationships")
+}
+
+
+model RelationshipState {
+  id              String @id @default(cuid())
+  
+  relationshipId  String
+  relationship    CharacterRelationship @relation(fields: [relationshipId], references: [id], onDelete: Cascade)
+  
+  // EVOLVING relationship state (changes over time)
   currentType     String   // "ally" | "enemy" | "romantic" | "neutral" | "complicated" | "mentor" | "rival" | "family"
   subtype         String?  // "bitter enemies" | "secret lovers" | "estranged siblings"
   strength        Int @default(5) // 1-10 intensity
@@ -205,18 +226,25 @@ model CharacterRelationship {
   conflictLevel   Int @default(1)    // 1-10
   powerBalance    String @default("equal") // "equal" | "a_dominant" | "b_dominant" | "shifting"
   
-  // Secrets and knowledge
-  sharedSecrets   String @default("") // JSON array as string
+  // Temporal scope (same as CharacterState)
+  scopeType       String   // "novel" | "act" | "chapter" | "scene"
+  startActId      String?
+  startChapterId  String?
+  startSceneId    String?
+  endActId        String?
+  endChapterId    String?
+  endSceneId      String?
   
-  // Meta
-  writerNotes     String?
+  // Change tracking
+  changes         String?  // JSON as string: what changed and why
+  triggerSceneId  String? // Scene that caused this change
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
-  @@unique([fromCharacterId, toCharacterId])
-  @@map("character_relationships")
+  @@map("relationship_states")
 }
+
 
 model CharacterArc {
   id          String @id @default(cuid())
@@ -250,3 +278,4 @@ model CharacterArc {
   
   @@map("character_arcs")
 }
+

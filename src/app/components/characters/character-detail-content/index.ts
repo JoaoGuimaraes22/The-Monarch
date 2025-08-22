@@ -11,7 +11,7 @@ export { CharacterDetailSidebar } from "./character-global/character-detail-side
 // Content sections
 export { CharacterProfileSection } from "./character-profile/character-profile-section";
 export { CharacterStatesTimeline } from "./character-state/character-states-timeline";
-export { CharacterRelationshipsSection } from "./character-relationships-section";
+export { CharacterRelationshipsSection } from "./character-relationships/character-relationships-section";
 export { CharacterManuscriptSection } from "./character-manuscript-section";
 
 // Dialogs and forms
