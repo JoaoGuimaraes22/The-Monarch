@@ -1,5 +1,5 @@
 // app/components/ui/input.tsx
-// Updated Input component with onKeyDown support
+// Updated Input component with number support and enhanced features
 
 import React from "react";
 import { LucideIcon } from "lucide-react";
@@ -7,9 +7,9 @@ import { LucideIcon } from "lucide-react";
 interface InputProps {
   type?: "text" | "email" | "password" | "number" | "search" | "url";
   placeholder?: string;
-  value?: string;
+  value?: string | number; // ✅ UPDATED: Now accepts both string and number
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void; // ✅ ADD THIS
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   error?: boolean;
   icon?: LucideIcon;
@@ -17,9 +17,9 @@ interface InputProps {
   id?: string;
   name?: string;
   required?: boolean;
-  min?: string | number; // ✅ ADD THIS for number inputs
-  max?: string | number; // ✅ ADD THIS for number inputs
-  maxLength?: number; // ✅ ADD THIS for text inputs
+  min?: string | number;
+  max?: string | number;
+  maxLength?: number;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -27,14 +27,14 @@ export const Input: React.FC<InputProps> = ({
   placeholder,
   value,
   onChange,
-  onKeyDown, // ✅ ADD THIS
+  onKeyDown,
   disabled = false,
   error = false,
   icon: Icon,
   className = "",
-  min, // ✅ ADD THIS
-  max, // ✅ ADD THIS
-  maxLength, // ✅ ADD THIS
+  min,
+  max,
+  maxLength,
   ...props
 }) => {
   const baseStyles =
@@ -48,6 +48,9 @@ export const Input: React.FC<InputProps> = ({
     disabled ? disabledStyles : ""
   } ${Icon ? "pl-10" : "px-3"} py-2 text-white placeholder-gray-400`;
 
+  // Convert value to string for input element
+  const inputValue = value !== undefined && value !== null ? String(value) : "";
+
   return (
     <div className={`relative ${className}`}>
       {Icon && (
@@ -59,13 +62,13 @@ export const Input: React.FC<InputProps> = ({
         type={type}
         className={inputStyles}
         placeholder={placeholder}
-        value={value}
+        value={inputValue} // ✅ UPDATED: Convert to string
         onChange={onChange}
-        onKeyDown={onKeyDown} // ✅ ADD THIS
+        onKeyDown={onKeyDown}
         disabled={disabled}
-        min={min} // ✅ ADD THIS
-        max={max} // ✅ ADD THIS
-        maxLength={maxLength} // ✅ ADD THIS
+        min={min}
+        max={max}
+        maxLength={maxLength}
         {...props}
       />
     </div>
@@ -76,7 +79,7 @@ interface TextareaProps {
   placeholder?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void; // ✅ ADD THIS
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   rows?: number;
   disabled?: boolean;
   error?: boolean;
@@ -85,20 +88,20 @@ interface TextareaProps {
   name?: string;
   required?: boolean;
   resize?: boolean;
-  maxLength?: number; // ✅ ADD THIS
+  maxLength?: number;
 }
 
 export const Textarea: React.FC<TextareaProps> = ({
   placeholder,
   value,
   onChange,
-  onKeyDown, // ✅ ADD THIS
+  onKeyDown,
   rows = 4,
   disabled = false,
   error = false,
   className = "",
   resize = true,
-  maxLength, // ✅ ADD THIS
+  maxLength,
   ...props
 }) => {
   const baseStyles =
@@ -119,10 +122,10 @@ export const Textarea: React.FC<TextareaProps> = ({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      onKeyDown={onKeyDown} // ✅ ADD THIS
+      onKeyDown={onKeyDown}
       rows={rows}
       disabled={disabled}
-      maxLength={maxLength} // ✅ ADD THIS
+      maxLength={maxLength}
       {...props}
     />
   );
