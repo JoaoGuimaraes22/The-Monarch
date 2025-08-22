@@ -18,6 +18,7 @@ export { CharacterManuscriptSection } from "./character-manuscript-section";
 export { CreateCharacterStateDialog } from "./character-state/create-character-state-dialog";
 export { EditCharacterDialog } from "./character-profile/edit-character-dialog";
 export { EditCharacterStateDialog } from "./character-state/edit-character-state-dialog";
+export { CreateRelationshipDialog } from "./character-relationships/create-relationship-dialog";
 
 // State components
 export { CharacterDetailLoadingState } from "./character-global/character-detail-loading-state";

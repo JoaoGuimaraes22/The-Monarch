@@ -1,6 +1,12 @@
 // app/components/characters/character-detail-content/character-relationships/index.ts
 // Barrel exports for character relationships components
 
+// Main section component
+export { CharacterRelationshipsSection } from "./character-relationships-section";
+
+// Dialog components
+export { CreateRelationshipDialog } from "./create-relationship-dialog";
+
 // Main grid and card components
 export { RelationshipsGrid } from "./relationships-grid";
 export { RelationshipCard } from "./relationship-card";
@@ -12,8 +18,6 @@ export { RelationshipsHeader } from "./relationships-header";
 export { RelationshipsEmptyState } from "./relationships-empty-state";
 export { RelationshipsLoadingState } from "./relationships-loading-state";
 export { RelationshipsErrorState } from "./relationships-error-state";
-export { CharacterRelationshipsSection } from "./character-relationships-section";
-export { CreateRelationshipDialog } from "./create-relationship-dialog";
 
 /*
 ===== CHARACTER RELATIONSHIPS COMPONENTS =====

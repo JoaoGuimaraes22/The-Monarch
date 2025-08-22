@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import { useCharacterRelationships } from "@/hooks/characters";
 import type { Character } from "@/lib/characters/character-service";
+import type { RelationshipWithCharacters } from "@/lib/characters/relationship-service";
 import {
   RelationshipsHeader,
   RelationshipsGrid,
@@ -11,6 +12,8 @@ import {
   RelationshipsLoadingState,
   RelationshipsErrorState,
 } from "./index";
+import { CreateRelationshipDialog } from "./create-relationship-dialog";
+import { RelationshipDetailView } from "./relationship-detail-view";
 
 interface CharacterRelationshipsSectionProps {
   character: Character;
@@ -21,13 +24,14 @@ export const CharacterRelationshipsSection: React.FC<
   CharacterRelationshipsSectionProps
 > = ({ character, novelId }) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedRelationship, setSelectedRelationship] =
+    useState<RelationshipWithCharacters | null>(null);
 
   // Use the relationship hook
   const {
     relationships,
     isLoading,
     error,
-    createRelationship,
     deleteRelationship,
     refetch,
     isCreating,
@@ -37,17 +41,43 @@ export const CharacterRelationshipsSection: React.FC<
   // Handle add relationship
   const handleAddRelationship = () => {
     setShowCreateDialog(true);
-    // TODO: Open create relationship dialog
-    console.log("Open create relationship dialog");
   };
 
   // Handle view relationship details
   const handleViewDetails = (relationshipId: string) => {
-    // TODO: Navigate to relationship detail view
-    console.log("View relationship details:", relationshipId);
+    const relationship = relationships.find((rel) => rel.id === relationshipId);
+    if (relationship) {
+      setSelectedRelationship(relationship);
+    }
   };
 
-  // Handle delete relationship
+  // Handle back from detail view
+  const handleBackFromDetail = () => {
+    setSelectedRelationship(null);
+  };
+
+  // Handle edit relationship
+  const handleEditRelationship = () => {
+    // TODO: Open edit relationship dialog
+    console.log("Edit relationship:", selectedRelationship?.id);
+  };
+
+  // Handle delete relationship from detail view
+  const handleDeleteFromDetail = async () => {
+    if (
+      selectedRelationship &&
+      confirm(
+        "Are you sure you want to delete this relationship? This will also delete the reciprocal relationship."
+      )
+    ) {
+      const success = await deleteRelationship(selectedRelationship.id);
+      if (success) {
+        setSelectedRelationship(null); // Go back to list
+      }
+    }
+  };
+
+  // Handle delete relationship from grid
   const handleDeleteRelationship = async (relationshipId: string) => {
     if (
       confirm(
@@ -62,6 +92,25 @@ export const CharacterRelationshipsSection: React.FC<
   const handleRetry = () => {
     refetch();
   };
+
+  // Handle successful relationship creation
+  const handleCreateSuccess = () => {
+    refetch(); // Refresh the relationships list
+  };
+
+  // Show detail view if relationship selected
+  if (selectedRelationship) {
+    return (
+      <RelationshipDetailView
+        relationship={selectedRelationship}
+        novelId={novelId}
+        characterId={character.id}
+        onBack={handleBackFromDetail}
+        onEdit={handleEditRelationship}
+        onDelete={handleDeleteFromDetail}
+      />
+    );
+  }
 
   // Loading state
   if (isLoading) {
@@ -103,33 +152,14 @@ export const CharacterRelationshipsSection: React.FC<
         />
       )}
 
-      {/* TODO: Create Relationship Dialog */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-white mb-4">
-              Create Relationship
-            </h3>
-            <p className="text-gray-400 mb-4">
-              Create relationship dialog will be implemented next.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                className="px-4 py-2 text-gray-400 hover:text-white"
-                onClick={() => setShowCreateDialog(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                onClick={() => setShowCreateDialog(false)}
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create Relationship Dialog */}
+      <CreateRelationshipDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        character={character}
+        novelId={novelId}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   );
 };
