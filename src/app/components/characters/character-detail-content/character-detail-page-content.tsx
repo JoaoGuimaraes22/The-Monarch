@@ -4,9 +4,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Edit, Trash2, Plus } from "lucide-react";
-import { Button } from "@/app/components/ui";
 import { useRouter } from "next/navigation";
+import type {
+  Character,
+  CharacterState,
+} from "@/lib/characters/character-service";
 import {
   CharacterDetailHeader,
   CharacterDetailSidebar,
@@ -16,7 +18,7 @@ import {
   CharacterManuscriptSection,
   CharacterDetailLoadingState,
   CharacterDetailErrorState,
-} from "./";
+} from "./index";
 
 interface CharacterDetailPageContentProps {
   novelId: string;
@@ -27,8 +29,8 @@ export const CharacterDetailPageContent: React.FC<
   CharacterDetailPageContentProps
 > = ({ novelId, characterId }) => {
   const router = useRouter();
-  const [character, setCharacter] = useState<any>(null);
-  const [states, setStates] = useState<any[]>([]);
+  const [character, setCharacter] = useState<Character | null>(null);
+  const [states, setStates] = useState<CharacterState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<

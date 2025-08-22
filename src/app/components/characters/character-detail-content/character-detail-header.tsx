@@ -2,6 +2,7 @@
 // Header component for character detail page
 
 import React, { useState } from "react";
+import Image from "next/image";
 import {
   ArrowLeft,
   Edit,
@@ -50,11 +51,13 @@ export const CharacterDetailHeader: React.FC<CharacterDetailHeaderProps> = ({
 
           <div className="flex items-center space-x-4">
             {/* Character Avatar */}
-            <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
               {character.imageUrl ? (
-                <img
+                <Image
                   src={character.imageUrl}
                   alt={character.name}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-full object-cover"
                 />
               ) : (
@@ -100,7 +103,9 @@ export const CharacterDetailHeader: React.FC<CharacterDetailHeaderProps> = ({
               variant="outline"
               icon={MoreVertical}
               onClick={() => setShowMenu(!showMenu)}
-            />
+            >
+              More actions
+            </Button>
 
             {showMenu && (
               <div className="absolute right-0 top-12 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 min-w-[160px]">

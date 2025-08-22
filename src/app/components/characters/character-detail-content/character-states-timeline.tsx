@@ -1,13 +1,17 @@
-// app/components/characters/character-detail/character-states-timeline.tsx
+// app/components/characters/character-detail-content/character-states-timeline.tsx
 // Character states timeline section
 
 import React from "react";
-import { Plus, Clock, MapPin, Users, Crown, Sword } from "lucide-react";
+import { Plus, Clock, MapPin, Crown, Sword } from "lucide-react";
 import { Card, CardHeader, CardContent, Button } from "@/app/components/ui";
+import type {
+  Character,
+  CharacterState,
+} from "@/lib/characters/character-service";
 
 interface CharacterStatesTimelineProps {
-  character: any;
-  states: any[];
+  character: Character;
+  states: CharacterState[];
   onAddState: () => void;
 }
 
@@ -67,12 +71,12 @@ export const CharacterStatesTimeline: React.FC<
 
 // Individual state card component
 interface StateCardProps {
-  state: any;
+  state: CharacterState;
   isFirst: boolean;
   isLast: boolean;
 }
 
-const StateCard: React.FC<StateCardProps> = ({ state, isFirst, isLast }) => {
+const StateCard: React.FC<StateCardProps> = ({ state }) => {
   const parseArrayField = (field: string): string[] => {
     if (!field || field === "") return [];
     try {
@@ -97,26 +101,22 @@ const StateCard: React.FC<StateCardProps> = ({ state, isFirst, isLast }) => {
       {/* State content */}
       <div className="flex-1 ml-6">
         <Card>
-          <CardHeader
-            title={
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    {state.title || `Age ${state.age || "Unknown"}`}
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {state.scopeType} •{" "}
-                    {state.startActId
-                      ? `Act ${state.startActId}`
-                      : "Story-wide"}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Edit
-                </Button>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  {state.title || `Age ${state.age || "Unknown"}`}
+                </h3>
+                <p className="text-sm text-gray-400">
+                  {state.scopeType} •{" "}
+                  {state.startActId ? `Act ${state.startActId}` : "Story-wide"}
+                </p>
               </div>
-            }
-          />
+              <Button variant="outline" size="sm">
+                Edit
+              </Button>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-4">
             {/* Basic info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -2,15 +2,19 @@
 // Sidebar navigation for character detail sections
 
 import React from "react";
-import { User, Timeline, Users, FileText, Badge } from "lucide-react";
+import { User, Clock, Users, FileText } from "lucide-react";
+import type {
+  Character,
+  CharacterState,
+} from "@/lib/characters/character-service";
 
 interface CharacterDetailSidebarProps {
   activeTab: "profile" | "states" | "relationships" | "manuscript";
   onTabChange: (
     tab: "profile" | "states" | "relationships" | "manuscript"
   ) => void;
-  character: any;
-  states: any[];
+  character: Character;
+  states: CharacterState[];
 }
 
 export const CharacterDetailSidebar: React.FC<CharacterDetailSidebarProps> = ({
@@ -30,7 +34,7 @@ export const CharacterDetailSidebar: React.FC<CharacterDetailSidebarProps> = ({
     {
       id: "states" as const,
       label: "Character Evolution",
-      icon: Timeline,
+      icon: Clock,
       description: "Character states across story",
       count: states.length,
     },

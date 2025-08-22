@@ -1,21 +1,26 @@
-// app/components/characters/character-detail/character-relationships-section.tsx
+// app/components/characters/character-detail-content/character-relationships-section.tsx
 // Character relationships section
 
 import React from "react";
 import { Plus, Users } from "lucide-react";
 import { Card, CardContent, Button } from "@/app/components/ui";
+import type { Character } from "@/lib/characters/character-service";
 
-export const CharacterRelationshipsSection: React.FC<{
-  character: any;
+interface CharacterRelationshipsSectionProps {
+  character: Character;
   onAddRelationship: () => void;
-}> = ({ character, onAddRelationship }) => {
+}
+
+export const CharacterRelationshipsSection: React.FC<
+  CharacterRelationshipsSectionProps
+> = ({ character, onAddRelationship }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Relationships</h2>
           <p className="text-gray-400">
-            Manage {character.name}'s connections with other characters
+            Manage {character.name}&#39;s connections with other characters
           </p>
         </div>
         <Button variant="primary" icon={Plus} onClick={onAddRelationship}>
@@ -30,8 +35,8 @@ export const CharacterRelationshipsSection: React.FC<{
             No Relationships
           </h3>
           <p className="text-gray-400 mb-4">
-            Create relationships to track {character.name}'s connections with
-            other characters.
+            Create relationships to track {character.name}&#39;s connections
+            with other characters.
           </p>
           <Button variant="outline" icon={Plus} onClick={onAddRelationship}>
             Create First Relationship

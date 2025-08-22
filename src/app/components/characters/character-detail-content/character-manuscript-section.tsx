@@ -1,13 +1,18 @@
-// app/components/characters/character-detail/character-manuscript-section.tsx
+// app/components/characters/character-detail-content/character-manuscript-section.tsx
 // Character manuscript integration section
 
 import React from "react";
 import { Card, CardHeader, CardContent } from "@/app/components/ui";
+import type { Character } from "@/lib/characters/character-service";
 
-export const CharacterManuscriptSection: React.FC<{
-  character: any;
+interface CharacterManuscriptSectionProps {
+  character: Character;
   novelId: string;
-}> = ({ character, novelId }) => {
+}
+
+export const CharacterManuscriptSection: React.FC<
+  CharacterManuscriptSectionProps
+> = ({ character, novelId }) => {
   return (
     <div className="space-y-6">
       <div>
@@ -25,7 +30,7 @@ export const CharacterManuscriptSection: React.FC<{
           <CardContent className="text-center py-8">
             <div className="text-3xl font-bold text-white mb-2">0</div>
             <p className="text-gray-400">
-              Scenes from {character.name}'s perspective
+              Scenes from {character.name}&#39;s perspective
             </p>
           </CardContent>
         </Card>

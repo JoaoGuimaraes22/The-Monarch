@@ -1,13 +1,17 @@
-// app/components/characters/character-detail/character-detail-loading-state.tsx
+// app/components/characters/character-detail-content/character-detail-loading-state.tsx
 // Loading state for character detail page
 
 import React from "react";
-import { Users, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/app/components/ui";
 
-export const CharacterDetailLoadingState: React.FC<{ onBack: () => void }> = ({
-  onBack,
-}) => {
+interface CharacterDetailLoadingStateProps {
+  onBack: () => void;
+}
+
+export const CharacterDetailLoadingState: React.FC<
+  CharacterDetailLoadingStateProps
+> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="bg-black border-b border-gray-700 px-8 py-6">

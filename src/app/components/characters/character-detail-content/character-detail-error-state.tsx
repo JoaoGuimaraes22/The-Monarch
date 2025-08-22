@@ -1,14 +1,18 @@
-// app/components/characters/character-detail/character-detail-error-state.tsx
+// app/components/characters/character-detail-content/character-detail-error-state.tsx
 // Error state for character detail page
 
 import React from "react";
-import { Users, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/app/components/ui";
 
-export const CharacterDetailErrorState: React.FC<{
+interface CharacterDetailErrorStateProps {
   error: string;
   onBack: () => void;
-}> = ({ error, onBack }) => {
+}
+
+export const CharacterDetailErrorState: React.FC<
+  CharacterDetailErrorStateProps
+> = ({ error, onBack }) => {
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="bg-black border-b border-gray-700 px-8 py-6">
