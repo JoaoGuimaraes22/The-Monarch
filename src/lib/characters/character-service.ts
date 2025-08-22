@@ -320,7 +320,6 @@ export class CharacterService {
       novelId,
       name: {
         equals: name,
-        mode: "insensitive",
       },
     };
 
