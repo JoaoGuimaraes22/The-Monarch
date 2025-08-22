@@ -11,6 +11,8 @@ export { Logo } from "./logo";
 export { EditableText } from "./editable-text";
 export { DeleteConfirmationDialog } from "./delete-confirmation-dialog";
 export { CharacterAvatar } from "./character-avatar";
+export { Select } from "./select";
+export { ComboSelect } from "./combo-select";
 
 // New shared components
 export { CollapsibleSidebar } from "./collapsible-sidebar";

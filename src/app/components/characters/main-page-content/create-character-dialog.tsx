@@ -1,8 +1,14 @@
-// app/components/characters/create-character-dialog.tsx
-// Dialog for creating new characters
+// app/components/characters/main-page-content/create-character-dialog.tsx
+// Dialog for creating new characters with gender dropdown
 
 import React, { useState } from "react";
-import { Card, CardHeader, CardContent, Button } from "@/app/components/ui";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  Button,
+  Select,
+} from "@/app/components/ui";
 
 interface CreateCharacterDialogProps {
   onClose: () => void;
@@ -106,36 +112,29 @@ export const CreateCharacterDialog: React.FC<CreateCharacterDialogProps> = ({
             </div>
 
             {/* Species */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Species
-              </label>
-              <select
-                value={formData.species}
-                onChange={(e) => handleInputChange("species", e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
-              >
-                {speciesOptions.map((species) => (
-                  <option key={species} value={species}>
-                    {species}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Species"
+              value={formData.species}
+              onChange={(e) => handleInputChange("species", e.target.value)}
+            >
+              {speciesOptions.map((species) => (
+                <option key={species} value={species}>
+                  {species}
+                </option>
+              ))}
+            </Select>
 
-            {/* Gender */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Gender
-              </label>
-              <input
-                type="text"
-                value={formData.gender}
-                onChange={(e) => handleInputChange("gender", e.target.value)}
-                placeholder="e.g. Female, Male, Non-binary"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
-              />
-            </div>
+            {/* Gender - Now a dropdown */}
+            <Select
+              label="Gender"
+              value={formData.gender}
+              onChange={(e) => handleInputChange("gender", e.target.value)}
+            >
+              <option value="">Choose gender...</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </Select>
 
             {/* Birthplace */}
             <div>

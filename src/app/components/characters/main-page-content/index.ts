@@ -14,7 +14,6 @@ export { CharactersGrid } from "./characters-grid";
 export { CharacterCard } from "./character-card";
 
 // State components
-export { CharactersEmptyState } from "./characters-empty-state";
 export { CharactersLoadingState } from "./characters-loading-state";
 export { CharactersErrorState } from "./characters-error-state";
 

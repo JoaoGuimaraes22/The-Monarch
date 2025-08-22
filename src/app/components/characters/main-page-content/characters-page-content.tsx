@@ -1,18 +1,15 @@
 // app/components/characters/main-page-content/characters-page-content.tsx
-// Main characters page content component - FIXED with novelId
+// Main characters page content component - Updated to always show layout
 
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Users } from "lucide-react";
-import { Button } from "@/app/components/ui";
 import { useCharacters } from "@/hooks/characters/useCharacters";
 import {
   CharactersHeader,
   CharactersStatsBar,
   CharactersSearchBar,
   CharactersGrid,
-  CharactersEmptyState,
   CharactersLoadingState,
   CharactersErrorState,
   CreateCharacterDialog,
@@ -42,11 +39,13 @@ export const CharactersPageContent: React.FC<CharactersPageContentProps> = ({
     character.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle character creation
+  // Handle character creation - Updated to match dialog interface
   const handleCreateCharacter = async (data: {
     name: string;
     species?: string;
     gender?: string;
+    birthplace?: string;
+    writerNotes?: string;
   }) => {
     const result = await createCharacter(data);
     if (result) {
@@ -64,19 +63,13 @@ export const CharactersPageContent: React.FC<CharactersPageContentProps> = ({
     return <CharactersErrorState error={error} />;
   }
 
-  // Empty state (no characters and no search)
-  if (characters.length === 0 && !searchTerm) {
-    return (
-      <CharactersEmptyState onCreateClick={() => setShowCreateDialog(true)} />
-    );
-  }
-
+  // Always show the main layout - remove empty state condition
   return (
     <div className="p-8">
       {/* Header */}
       <CharactersHeader onCreateClick={() => setShowCreateDialog(true)} />
 
-      {/* Statistics */}
+      {/* Statistics - Only show if we have data */}
       {statistics && <CharactersStatsBar statistics={statistics} />}
 
       {/* Search and Filter */}
@@ -85,13 +78,15 @@ export const CharactersPageContent: React.FC<CharactersPageContentProps> = ({
         onSearchChange={setSearchTerm}
       />
 
-      {/* Characters Grid - FIX: Add novelId prop */}
+      {/* Characters Grid - Will handle empty state internally */}
       <CharactersGrid
         characters={filteredCharacters}
-        novelId={novelId} // ✅ ADD THIS LINE
+        novelId={novelId}
         searchTerm={searchTerm}
         onClearSearch={() => setSearchTerm("")}
-        onDelete={deleteCharacter} // ✅ RENAME: onDeleteCharacter → onDelete (to match interface)
+        onDelete={deleteCharacter}
+        showCreateButton={characters.length === 0} // New prop for empty state
+        onCreateClick={() => setShowCreateDialog(true)} // New prop for empty state
       />
 
       {/* Create Character Dialog */}

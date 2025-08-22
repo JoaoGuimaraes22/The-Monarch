@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-content/character-profile/edit-character-dialog.tsx
-// UPDATED: Dialog for editing character information with fixed layout and enhanced ArrayField
+// UPDATED: Dialog for editing character information with Select, ComboSelect, and enhanced ArrayField
 // Following your established patterns with improved UX
 
 import React, { useState } from "react";
@@ -10,6 +10,8 @@ import {
   Card,
   CardContent,
   ArrayField,
+  Select,
+  ComboSelect,
 } from "@/app/components/ui";
 import type {
   Character,
@@ -104,6 +106,196 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
   const [coreValues, setCoreValues] = useState<string[]>(
     initialNature.coreValues || []
   );
+
+  // Predefined options for combo selects
+  const speciesOptions = [
+    "Human",
+    "Elf",
+    "Dwarf",
+    "Halfling",
+    "Dragon",
+    "Fae",
+    "Orc",
+    "Vampire",
+    "Demon",
+    "Angel",
+    "Tiefling",
+    "Dragonborn",
+    "Gnome",
+    "Half-Elf",
+    "Half-Orc",
+  ];
+
+  const eyeColorOptions = [
+    "Brown",
+    "Blue",
+    "Green",
+    "Hazel",
+    "Grey",
+    "Amber",
+    "Black",
+    "Violet",
+    "Gold",
+    "Silver",
+    "Red",
+  ];
+
+  const hairColorOptions = [
+    "Black",
+    "Blonde",
+    "Brown",
+    "White",
+    "Grey",
+    "Red",
+    "Auburn",
+    "Strawberry Blonde",
+    "Platinum Blonde",
+    "Silver",
+    "Blue",
+    "Green",
+    "Purple",
+    "Pink",
+  ];
+
+  // ✨ NEW: Predefined options for ArrayField suggestions
+  const personalityTraitOptions = [
+    "Brave",
+    "Intelligent",
+    "Kind",
+    "Loyal",
+    "Stubborn",
+    "Curious",
+    "Ambitious",
+    "Compassionate",
+    "Impulsive",
+    "Cautious",
+    "Creative",
+    "Determined",
+    "Honest",
+    "Mysterious",
+    "Charming",
+    "Rebellious",
+    "Patient",
+    "Hot-tempered",
+    "Wise",
+    "Naive",
+    "Confident",
+    "Anxious",
+    "Optimistic",
+    "Pessimistic",
+    "Generous",
+    "Selfish",
+    "Humble",
+    "Arrogant",
+  ];
+
+  const fearOptions = [
+    "Death",
+    "Abandonment",
+    "Failure",
+    "Loss of control",
+    "Betrayal",
+    "Being alone",
+    "Heights",
+    "Dark magic",
+    "War",
+    "Losing loved ones",
+    "Being forgotten",
+    "Public speaking",
+    "Spiders",
+    "Fire",
+    "Water",
+    "Confined spaces",
+    "Being judged",
+    "Making mistakes",
+    "The unknown",
+    "Commitment",
+    "Change",
+    "Intimacy",
+    "Rejection",
+    "Responsibility",
+  ];
+
+  const coreValueOptions = [
+    "Justice",
+    "Freedom",
+    "Family",
+    "Honor",
+    "Knowledge",
+    "Power",
+    "Love",
+    "Truth",
+    "Loyalty",
+    "Courage",
+    "Wisdom",
+    "Compassion",
+    "Independence",
+    "Tradition",
+    "Progress",
+    "Peace",
+    "Order",
+    "Adventure",
+    "Revenge",
+    "Redemption",
+    "Duty",
+    "Creativity",
+    "Balance",
+    "Growth",
+    "Security",
+    "Achievement",
+  ];
+
+  const inspirationOptions = [
+    "Literary characters",
+    "Historical figures",
+    "Mythology",
+    "Personal experiences",
+    "Dreams",
+    "Art",
+    "Music",
+    "Nature",
+    "Other stories",
+    "Real people",
+    "Philosophy",
+    "Religion",
+    "Movies",
+    "TV shows",
+    "Games",
+    "Comics",
+    "Folklore",
+    "Travel",
+    "Science",
+    "Architecture",
+    "Poetry",
+  ];
+
+  const tagOptions = [
+    "Main Character",
+    "Secondary Character",
+    "Antagonist",
+    "Protagonist",
+    "Love Interest",
+    "Mentor",
+    "Comic Relief",
+    "Mysterious",
+    "Tragic",
+    "Hero",
+    "Villain",
+    "Anti-hero",
+    "Sidekick",
+    "Rival",
+    "Family",
+    "Friend",
+    "Enemy",
+    "Ally",
+    "Neutral",
+    "Complex",
+    "Evolving",
+    "Static",
+    "Dynamic",
+    "Relatable",
+    "Unique",
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,25 +397,31 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     required
                   />
 
-                  <Input
+                  {/* Species - ComboSelect with predefined options + custom */}
+                  <ComboSelect
                     label="Species"
                     value={formData.species}
-                    onChange={(e) =>
-                      setFormData({ ...formData, species: e.target.value })
+                    onChange={(value) =>
+                      setFormData({ ...formData, species: value })
                     }
-                    placeholder="Human, Elf, Dwarf, etc."
-                    maxLength={100}
+                    options={speciesOptions}
+                    placeholder="Choose or type species..."
+                    allowCustom={true}
                   />
 
-                  <Input
+                  {/* Gender - Regular Select with fixed options */}
+                  <Select
                     label="Gender"
                     value={formData.gender}
                     onChange={(e) =>
                       setFormData({ ...formData, gender: e.target.value })
                     }
-                    placeholder="Male, Female, Non-binary, etc."
-                    maxLength={50}
-                  />
+                  >
+                    <option value="">Choose gender...</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </Select>
 
                   <Input
                     label="Birthplace"
@@ -300,28 +498,34 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     placeholder="5'8, tall, short, etc."
                   />
 
-                  <Input
+                  {/* Eye Color - ComboSelect with predefined options + custom */}
+                  <ComboSelect
                     label="Eye Color"
                     value={appearanceData.eyeColor}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setAppearanceData({
                         ...appearanceData,
-                        eyeColor: e.target.value,
+                        eyeColor: value,
                       })
                     }
-                    placeholder="Blue, brown, green, etc."
+                    options={eyeColorOptions}
+                    placeholder="Choose or describe eye color..."
+                    allowCustom={true}
                   />
 
-                  <Input
+                  {/* Hair Color - ComboSelect with predefined options + custom */}
+                  <ComboSelect
                     label="Hair Color"
                     value={appearanceData.hairColor}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setAppearanceData({
                         ...appearanceData,
-                        hairColor: e.target.value,
+                        hairColor: value,
                       })
                     }
-                    placeholder="Blonde, brunette, red, etc."
+                    options={hairColorOptions}
+                    placeholder="Choose or describe hair color..."
+                    allowCustom={true}
                   />
 
                   <Input
@@ -338,7 +542,7 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                 </div>
               </div>
 
-              {/* Personality Arrays - UPDATED with enhanced ArrayField */}
+              {/* Personality Arrays - UPDATED with enhanced ArrayField + suggestions */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
                   Core Personality
@@ -351,6 +555,8 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     placeholder="Add a core personality trait"
                     maxItems={8}
                     continuousFocus={true}
+                    options={personalityTraitOptions}
+                    allowCustom={true}
                   />
 
                   <ArrayField
@@ -360,6 +566,8 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     placeholder="Add a deep fear"
                     maxItems={6}
                     continuousFocus={true}
+                    options={fearOptions}
+                    allowCustom={true}
                   />
 
                   <ArrayField
@@ -369,6 +577,8 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     placeholder="Add a core value"
                     maxItems={8}
                     continuousFocus={true}
+                    options={coreValueOptions}
+                    allowCustom={true}
                   />
 
                   <ArrayField
@@ -378,6 +588,8 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     placeholder="Add an inspiration"
                     maxItems={10}
                     continuousFocus={true}
+                    options={inspirationOptions}
+                    allowCustom={true}
                   />
                 </div>
               </div>
@@ -394,6 +606,8 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                   placeholder="Add a tag or category"
                   maxItems={15}
                   continuousFocus={true}
+                  options={tagOptions}
+                  allowCustom={true}
                 />
               </div>
 

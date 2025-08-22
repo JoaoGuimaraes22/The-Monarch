@@ -8,7 +8,6 @@ export { CharactersStatsBar } from "./main-page-content/characters-stats-bar";
 export { CharactersSearchBar } from "./main-page-content/characters-search-bar";
 export { CharactersGrid } from "./main-page-content/characters-grid";
 export { CharacterCard } from "./main-page-content/character-card";
-export { CharactersEmptyState } from "./main-page-content/characters-empty-state";
 export { CharactersLoadingState } from "./main-page-content/characters-loading-state";
 export { CharactersErrorState } from "./main-page-content/characters-error-state";
 export { CreateCharacterDialog } from "./main-page-content/create-character-dialog";
