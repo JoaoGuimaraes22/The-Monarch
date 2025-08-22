@@ -1,25 +1,28 @@
 // app/components/characters/index.ts
-// Barrel exports for character components
+// Main aggregator for all character components
 
-// Main page content
-export { CharactersPageContent } from "./characters-page-content";
+// ===== MAIN PAGE COMPONENTS =====
+export { CharactersPageContent } from "./main-page-content/characters-page-content";
+export { CharactersHeader } from "./main-page-content/characters-header";
+export { CharactersStatsBar } from "./main-page-content/characters-stats-bar";
+export { CharactersSearchBar } from "./main-page-content/characters-search-bar";
+export { CharactersGrid } from "./main-page-content/characters-grid";
+export { CharacterCard } from "./main-page-content/character-card";
+export { CharactersEmptyState } from "./main-page-content/characters-empty-state";
+export { CharactersLoadingState } from "./main-page-content/characters-loading-state";
+export { CharactersErrorState } from "./main-page-content/characters-error-state";
+export { CreateCharacterDialog } from "./main-page-content/create-character-dialog";
 
-// Header components
-export { CharactersHeader } from "./characters-header";
-export { CharactersStatsBar } from "./characters-stats-bar";
-export { CharactersSearchBar } from "./characters-search-bar";
+// ===== CHARACTER DETAIL COMPONENTS =====
+export { CharacterDetailPageContent } from "./character-detail-content/character-detail-page-content";
+export { CharacterDetailHeader } from "./character-detail-content/character-detail-header";
+export { CharacterDetailSidebar } from "./character-detail-content/character-detail-sidebar";
+export { CharacterProfileSection } from "./character-detail-content/character-profile-section";
+export { CharacterStatesTimeline } from "./character-detail-content/character-states-timeline";
+export { CharacterRelationshipsSection } from "./character-detail-content/character-relationships-section";
+export { CharacterManuscriptSection } from "./character-detail-content/character-manuscript-section";
+export { CharacterDetailLoadingState } from "./character-detail-content/character-detail-loading-state";
+export { CharacterDetailErrorState } from "./character-detail-content/character-detail-error-state";
 
-// Grid and cards
-export { CharactersGrid } from "./characters-grid";
-export { CharacterCard } from "./character-card";
-
-// State components
-export { CharactersEmptyState } from "./characters-empty-state";
-export { CharactersLoadingState } from "./characters-loading-state";
-export { CharactersErrorState } from "./characters-error-state";
-
-// Dialogs
-export { CreateCharacterDialog } from "./create-character-dialog";
-
-// Types
+// ===== TYPES =====
 export type { CharacterWithCurrentState } from "@/lib/characters/character-service";
