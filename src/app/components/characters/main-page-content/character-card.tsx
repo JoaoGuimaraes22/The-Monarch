@@ -1,11 +1,10 @@
 // app/components/characters/main-page-content/character-card.tsx
-// Individual character card component with navigation to detail page
+// Individual character card component with safe avatar handling
 
 import React, { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Edit, Eye, Trash2 } from "lucide-react";
-import { Card, CardContent } from "@/app/components/ui";
+import { Card, CardContent, CharacterAvatar } from "@/app/components/ui";
 import type { CharacterWithCurrentState } from "@/lib/characters/character-service";
 
 interface CharacterCardProps {
@@ -87,21 +86,11 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
       <CardContent className="p-6">
         {/* Character Avatar */}
         <div className="flex items-center space-x-4 mb-4">
-          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
-            {character.imageUrl ? (
-              <Image
-                src={character.imageUrl}
-                alt={character.name}
-                width={48}
-                height={48}
-                className="w-12 h-12 rounded-full object-cover"
-              />
-            ) : (
-              <span className="text-lg font-semibold text-gray-300">
-                {character.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
+          <CharacterAvatar
+            name={character.name}
+            imageUrl={character.imageUrl}
+            size="md"
+          />
 
           <div className="flex-1">
             <h3 className="font-semibold text-white text-lg">
