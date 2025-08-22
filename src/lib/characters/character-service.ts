@@ -103,12 +103,12 @@ export interface CreateCharacterStateOptions {
 
 // ===== UPDATE OPTIONS =====
 export interface UpdateCharacterStateOptions {
-  age?: number | null;
-  title?: string | null;
-  occupation?: string | null;
-  location?: string | null;
-  socialStatus?: string | null;
-  faction?: string | null;
+  age?: number;
+  title?: string;
+  occupation?: string;
+  location?: string;
+  socialStatus?: string;
+  faction?: string;
   currentTraits?: string[];
   activeFears?: string[];
   currentGoals?: string[];
@@ -116,17 +116,17 @@ export interface UpdateCharacterStateOptions {
   skills?: string[];
   knowledge?: string[];
   secrets?: string[];
-  currentAppearance?: object | null;
-  mentalState?: string | null;
+  currentAppearance?: object;
+  mentalState?: string;
   scopeType?: "novel" | "act" | "chapter" | "scene";
-  startActId?: string | null;
-  startChapterId?: string | null;
-  startSceneId?: string | null;
-  endActId?: string | null;
-  endChapterId?: string | null;
-  endSceneId?: string | null;
-  changes?: object | null;
-  triggerSceneId?: string | null;
+  startActId?: string;
+  startChapterId?: string;
+  startSceneId?: string;
+  endActId?: string;
+  endChapterId?: string;
+  endSceneId?: string;
+  changes?: string; // ✅ FIXED: Should be string, not object (API transforms it to object)
+  triggerSceneId?: string;
 }
 
 // ===== UTILITY FUNCTIONS =====

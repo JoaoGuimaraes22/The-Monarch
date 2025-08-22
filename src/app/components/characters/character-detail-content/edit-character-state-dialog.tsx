@@ -139,18 +139,108 @@ export const EditCharacterStateDialog: React.FC<
     setIsSubmitting(true);
 
     try {
-      const updates: UpdateCharacterStateOptions = {
-        ...formData,
-        age: formData.age ? Number(formData.age) : null,
-        currentTraits,
-        activeFears,
-        currentGoals,
-        motivations,
-        skills,
-        knowledge,
-        secrets,
-        changes: formData.changes ? { description: formData.changes } : null,
-      };
+      // ✅ FIXED: Build updates object with proper data types
+      const updates: UpdateCharacterStateOptions = {};
+
+      // Only include fields that have values (no null/empty values)
+      if (formData.age !== undefined && formData.age !== null) {
+        updates.age = Number(formData.age);
+      }
+
+      if (formData.title && formData.title.trim()) {
+        updates.title = formData.title.trim();
+      }
+
+      if (formData.occupation && formData.occupation.trim()) {
+        updates.occupation = formData.occupation.trim();
+      }
+
+      if (formData.location && formData.location.trim()) {
+        updates.location = formData.location.trim();
+      }
+
+      if (formData.socialStatus && formData.socialStatus.trim()) {
+        updates.socialStatus = formData.socialStatus.trim();
+      }
+
+      if (formData.faction && formData.faction.trim()) {
+        updates.faction = formData.faction.trim();
+      }
+
+      if (formData.mentalState && formData.mentalState.trim()) {
+        updates.mentalState = formData.mentalState.trim();
+      }
+
+      if (formData.scopeType) {
+        updates.scopeType = formData.scopeType;
+      }
+
+      // Handle ID fields (only include if not empty)
+      if (formData.startActId && formData.startActId.trim()) {
+        updates.startActId = formData.startActId.trim();
+      }
+
+      if (formData.startChapterId && formData.startChapterId.trim()) {
+        updates.startChapterId = formData.startChapterId.trim();
+      }
+
+      if (formData.startSceneId && formData.startSceneId.trim()) {
+        updates.startSceneId = formData.startSceneId.trim();
+      }
+
+      if (formData.endActId && formData.endActId.trim()) {
+        updates.endActId = formData.endActId.trim();
+      }
+
+      if (formData.endChapterId && formData.endChapterId.trim()) {
+        updates.endChapterId = formData.endChapterId.trim();
+      }
+
+      if (formData.endSceneId && formData.endSceneId.trim()) {
+        updates.endSceneId = formData.endSceneId.trim();
+      }
+
+      if (formData.triggerSceneId && formData.triggerSceneId.trim()) {
+        updates.triggerSceneId = formData.triggerSceneId.trim();
+      }
+
+      // Handle array fields (only include if not empty)
+      if (currentTraits.length > 0) {
+        updates.currentTraits = currentTraits;
+      }
+
+      if (activeFears.length > 0) {
+        updates.activeFears = activeFears;
+      }
+
+      if (currentGoals.length > 0) {
+        updates.currentGoals = currentGoals;
+      }
+
+      if (motivations.length > 0) {
+        updates.motivations = motivations;
+      }
+
+      if (skills.length > 0) {
+        updates.skills = skills;
+      }
+
+      if (knowledge.length > 0) {
+        updates.knowledge = knowledge;
+      }
+
+      if (secrets.length > 0) {
+        updates.secrets = secrets;
+      }
+
+      // Handle changes (send as string - API will transform to object)
+      if (formData.changes && formData.changes.trim()) {
+        updates.changes = formData.changes.trim();
+      }
+
+      console.log("Sending updates:", updates); // Debug log
+      console.log("Full form data:", formData); // Debug log
+      console.log("Current traits:", currentTraits); // Debug log
 
       const result = await onUpdate(state.id, updates);
       if (result) {
