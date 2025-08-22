@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-content/character-relationships/relationship-detail-view.tsx
-// Detailed view of a specific relationship with timeline
+// Detailed view of a specific relationship with timeline - Updated with Create State Dialog
 
 import React, { useState } from "react";
 import {
@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import { Button, Card, CardContent, Badge } from "@/app/components/ui";
 import { useRelationshipStates } from "@/hooks/characters";
-import type { RelationshipWithCharacters } from "@/lib/characters/relationship-service";
+import { CreateRelationshipStateDialog } from "./create-relationship-state-dialog";
+import type {
+  RelationshipWithCharacters,
+  RelationshipState,
+} from "@/lib/characters/relationship-service";
 
 interface RelationshipDetailViewProps {
   relationship: RelationshipWithCharacters;
@@ -27,7 +31,7 @@ interface RelationshipDetailViewProps {
   onDelete: () => void;
 }
 
-// Relationship type icons (same as create dialog)
+// Relationship type icons (consistent with create dialog)
 const getRelationshipIcon = (baseType: string) => {
   switch (baseType) {
     case "romantic":
@@ -85,6 +89,7 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
     createState,
     updateState,
     deleteState,
+    refetch,
     isCreating,
     isUpdating,
     isDeleting,
@@ -96,8 +101,11 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
   // Handle add state
   const handleAddState = () => {
     setShowAddStateDialog(true);
-    // TODO: Open create relationship state dialog
-    console.log("Add relationship state");
+  };
+
+  // Handle state created
+  const handleStateCreated = () => {
+    refetch(); // Refresh the states list
   };
 
   // Handle edit state
@@ -113,8 +121,8 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
     }
   };
 
-  // Get scope label for timeline
-  const getScopeLabel = (state: any) => {
+  // Get scope label for timeline - properly typed
+  const getScopeLabel = (state: RelationshipState) => {
     switch (state.scopeType) {
       case "novel":
         return "Throughout Novel";
@@ -488,33 +496,15 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
         )}
       </div>
 
-      {/* TODO: Add State Dialog */}
-      {showAddStateDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-white mb-4">
-              Add Relationship State
-            </h3>
-            <p className="text-gray-400 mb-4">
-              Create relationship state dialog will be implemented next.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddStateDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => setShowAddStateDialog(false)}
-              >
-                Create
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create Relationship State Dialog */}
+      <CreateRelationshipStateDialog
+        isOpen={showAddStateDialog}
+        onClose={() => setShowAddStateDialog(false)}
+        relationship={relationship}
+        novelId={novelId}
+        characterId={characterId}
+        onStateCreated={handleStateCreated}
+      />
     </div>
   );
 };

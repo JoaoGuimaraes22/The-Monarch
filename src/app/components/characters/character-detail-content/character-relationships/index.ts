@@ -6,6 +6,10 @@ export { CharacterRelationshipsSection } from "./character-relationships-section
 
 // Dialog components
 export { CreateRelationshipDialog } from "./create-relationship-dialog";
+export { CreateRelationshipStateDialog } from "./create-relationship-state-dialog";
+
+// Detail view
+export { RelationshipDetailView } from "./relationship-detail-view";
 
 // Main grid and card components
 export { RelationshipsGrid } from "./relationships-grid";
@@ -28,6 +32,11 @@ Following your established component patterns:
 - RelationshipsGrid: Container for relationship cards
 - RelationshipCard: Individual relationship display
 - RelationshipsHeader: Section header with actions
+- RelationshipDetailView: Full relationship detail with timeline
+
+✅ DIALOG COMPONENTS:
+- CreateRelationshipDialog: Create new relationships
+- CreateRelationshipStateDialog: Create relationship states (NEW)
 
 ✅ STATE COMPONENTS:
 - RelationshipsEmptyState: No relationships yet
@@ -44,6 +53,7 @@ Following your established component patterns:
 - Strength/Trust/Conflict metrics
 - View details and delete actions
 - Loading states for all operations
+- Professional form controls with sliders and selects
 
 ✅ TYPE SAFETY:
 - Full TypeScript coverage
@@ -56,8 +66,29 @@ Following your established component patterns:
 <RelationshipsHeader character={character} relationshipCount={relationships.length} />
 <RelationshipsGrid relationships={relationships} onViewDetails={handleView} />
 
+// Detail view with create state capability
+<RelationshipDetailView
+  relationship={relationship}
+  novelId={novelId}
+  characterId={characterId}
+  onBack={handleBack}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+/>
+
 // State-specific rendering
 {isLoading && <RelationshipsLoadingState character={character} />}
 {error && <RelationshipsErrorState character={character} error={error} />}
 {relationships.length === 0 && <RelationshipsEmptyState character={character} />}
+
+===== COMPLETE RELATIONSHIP STATE CREATION =====
+
+The CreateRelationshipStateDialog provides:
+- Professional form with current type selection
+- Dynamic sliders for strength, trust, and conflict levels
+- Power balance selection with smart defaults
+- Public vs private status fields
+- Story context with scope type selection
+- Full integration with useCreateRelationshipState hook
+- Proper validation and error handling
 */
