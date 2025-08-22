@@ -8,14 +8,16 @@
 
 ### IMPORTANT
 
-- Change tool compact box to smaller
+- Change tool compact box to smaller, add delete all
 - Change ACT sidebar sizing and such
 
 # Prompt helper
 
 ### API Creation and Database
 
-- Keep in mind for structure and alredy built utilites:
-  - standard api usage: /lib/api ; /lib ; example - / src/app/api/novels/[id]/import/route.ts ;
-  - for structure, hooks: like /hooks/manuscript ; for schema: /prisma/schema.db ;
-  - services structure example src/lib/doc-parse/
+- Keep in mind structure and already built utilites.
+- Following my Architecture Patterns:
+- Uses your established /lib/api middleware system
+- Follows your hook patterns like manuscript hooks
+- Integrates with your existing UI component library
+- Maintains your clean component organization

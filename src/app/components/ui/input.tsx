@@ -1,3 +1,6 @@
+// app/components/ui/input.tsx
+// Updated Input component with onKeyDown support
+
 import React from "react";
 import { LucideIcon } from "lucide-react";
 
@@ -6,6 +9,7 @@ interface InputProps {
   placeholder?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void; // ✅ ADD THIS
   disabled?: boolean;
   error?: boolean;
   icon?: LucideIcon;
@@ -13,6 +17,9 @@ interface InputProps {
   id?: string;
   name?: string;
   required?: boolean;
+  min?: string | number; // ✅ ADD THIS for number inputs
+  max?: string | number; // ✅ ADD THIS for number inputs
+  maxLength?: number; // ✅ ADD THIS for text inputs
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -20,10 +27,14 @@ export const Input: React.FC<InputProps> = ({
   placeholder,
   value,
   onChange,
+  onKeyDown, // ✅ ADD THIS
   disabled = false,
   error = false,
   icon: Icon,
   className = "",
+  min, // ✅ ADD THIS
+  max, // ✅ ADD THIS
+  maxLength, // ✅ ADD THIS
   ...props
 }) => {
   const baseStyles =
@@ -50,7 +61,11 @@ export const Input: React.FC<InputProps> = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyDown} // ✅ ADD THIS
         disabled={disabled}
+        min={min} // ✅ ADD THIS
+        max={max} // ✅ ADD THIS
+        maxLength={maxLength} // ✅ ADD THIS
         {...props}
       />
     </div>
@@ -61,6 +76,7 @@ interface TextareaProps {
   placeholder?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void; // ✅ ADD THIS
   rows?: number;
   disabled?: boolean;
   error?: boolean;
@@ -69,17 +85,20 @@ interface TextareaProps {
   name?: string;
   required?: boolean;
   resize?: boolean;
+  maxLength?: number; // ✅ ADD THIS
 }
 
 export const Textarea: React.FC<TextareaProps> = ({
   placeholder,
   value,
   onChange,
+  onKeyDown, // ✅ ADD THIS
   rows = 4,
   disabled = false,
   error = false,
   className = "",
   resize = true,
+  maxLength, // ✅ ADD THIS
   ...props
 }) => {
   const baseStyles =
@@ -100,8 +119,10 @@ export const Textarea: React.FC<TextareaProps> = ({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
+      onKeyDown={onKeyDown} // ✅ ADD THIS
       rows={rows}
       disabled={disabled}
+      maxLength={maxLength} // ✅ ADD THIS
       {...props}
     />
   );

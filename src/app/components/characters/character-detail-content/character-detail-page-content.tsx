@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-page-content.tsx
-// Main character detail page content
+// Main character detail page content with integrated state creation
 
 "use client";
 
@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import type {
   Character,
   CharacterState,
+  CreateCharacterStateOptions,
 } from "@/lib/characters/character-service";
 import {
   CharacterDetailHeader,
@@ -19,6 +20,7 @@ import {
   CharacterDetailLoadingState,
   CharacterDetailErrorState,
 } from "./index";
+import { CreateCharacterStateDialog } from "./create-character-state-dialog";
 
 interface CharacterDetailPageContentProps {
   novelId: string;
@@ -29,6 +31,8 @@ export const CharacterDetailPageContent: React.FC<
   CharacterDetailPageContentProps
 > = ({ novelId, characterId }) => {
   const router = useRouter();
+
+  // Main state
   const [character, setCharacter] = useState<Character | null>(null);
   const [states, setStates] = useState<CharacterState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +40,9 @@ export const CharacterDetailPageContent: React.FC<
   const [activeTab, setActiveTab] = useState<
     "profile" | "states" | "relationships" | "manuscript"
   >("profile");
+
+  // Dialog state
+  const [showCreateStateDialog, setShowCreateStateDialog] = useState(false);
 
   // Fetch character details
   useEffect(() => {
@@ -103,6 +110,59 @@ export const CharacterDetailPageContent: React.FC<
     }
   };
 
+  // Handle character state creation
+  const handleCreateState = async (
+    stateData: Omit<CreateCharacterStateOptions, "characterId">
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(
+        `/api/novels/${novelId}/characters/${characterId}/states`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...stateData,
+            characterId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create character state");
+      }
+
+      const data = await response.json();
+      const newState = data.data;
+
+      // Add new state to local state with proper sorting
+      setStates((prev) =>
+        [...prev, newState].sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )
+      );
+
+      // Switch to states tab to show the new state
+      setActiveTab("states");
+
+      return true;
+    } catch (err) {
+      console.error("Error creating character state:", err);
+      alert(
+        err instanceof Error ? err.message : "Failed to create character state"
+      );
+      return false;
+    }
+  };
+
+  // Handle add state button click
+  const handleAddState = () => {
+    setShowCreateStateDialog(true);
+  };
+
   // Loading state
   if (isLoading) {
     return <CharacterDetailLoadingState onBack={handleBack} />;
@@ -150,10 +210,7 @@ export const CharacterDetailPageContent: React.FC<
             <CharacterStatesTimeline
               character={character}
               states={states}
-              onAddState={() => {
-                // TODO: Open add state dialog
-                console.log("Add state");
-              }}
+              onAddState={handleAddState}
             />
           )}
 
@@ -175,6 +232,15 @@ export const CharacterDetailPageContent: React.FC<
           )}
         </div>
       </div>
+
+      {/* Create Character State Dialog */}
+      {showCreateStateDialog && character && (
+        <CreateCharacterStateDialog
+          character={character}
+          onClose={() => setShowCreateStateDialog(false)}
+          onCreate={handleCreateState}
+        />
+      )}
     </div>
   );
 };

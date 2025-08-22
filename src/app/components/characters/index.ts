@@ -23,6 +23,7 @@ export { CharacterRelationshipsSection } from "./character-detail-content/charac
 export { CharacterManuscriptSection } from "./character-detail-content/character-manuscript-section";
 export { CharacterDetailLoadingState } from "./character-detail-content/character-detail-loading-state";
 export { CharacterDetailErrorState } from "./character-detail-content/character-detail-error-state";
+export { CreateCharacterStateDialog } from "./character-detail-content/create-character-state-dialog";
 
 // ===== TYPES =====
 export type { CharacterWithCurrentState } from "@/lib/characters/character-service";

@@ -17,3 +17,4 @@ export { CharacterManuscriptSection } from "./character-manuscript-section";
 // State components
 export { CharacterDetailLoadingState } from "./character-detail-loading-state";
 export { CharacterDetailErrorState } from "./character-detail-error-state";
+export { CreateCharacterStateDialog } from "./create-character-state-dialog";
