@@ -6,6 +6,8 @@ export { useCharacters } from "./useCharacters";
 export {
   useCharacterStates,
   useCreateCharacterState,
+  useDeleteCharacterState,
+  useUpdateCharacterState,
 } from "./useCharacterStates";
 
 // ===== TYPE EXPORTS =====

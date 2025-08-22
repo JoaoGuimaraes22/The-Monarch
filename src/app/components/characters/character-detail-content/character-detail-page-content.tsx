@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-content/character-detail-page-content.tsx
-// Main character detail page content with full editing and state creation
+// Main character detail page content with full editing and state management
 
 "use client";
 
@@ -10,7 +10,12 @@ import type {
   CharacterState,
   CreateCharacterStateOptions,
   CreateCharacterOptions,
+  UpdateCharacterStateOptions,
 } from "@/lib/characters/character-service";
+import {
+  useUpdateCharacterState,
+  useDeleteCharacterState,
+} from "@/hooks/characters";
 import {
   CharacterDetailHeader,
   CharacterDetailSidebar,
@@ -33,6 +38,16 @@ export const CharacterDetailPageContent: React.FC<
   CharacterDetailPageContentProps
 > = ({ novelId, characterId }) => {
   const router = useRouter();
+
+  // State management hooks
+  const { updateState, isUpdating } = useUpdateCharacterState(
+    novelId,
+    characterId
+  );
+  const { deleteState, isDeleting } = useDeleteCharacterState(
+    novelId,
+    characterId
+  );
 
   // Main state
   const [character, setCharacter] = useState<Character | null>(null);
@@ -148,7 +163,7 @@ export const CharacterDetailPageContent: React.FC<
     }
   };
 
-  // Handle character state creation
+  // Handle creating character state
   const handleCreateState = async (
     stateData: Omit<CreateCharacterStateOptions, "characterId">
   ): Promise<boolean> => {
@@ -175,22 +190,59 @@ export const CharacterDetailPageContent: React.FC<
       const data = await response.json();
       const newState = data.data;
 
-      // Add new state to local state with proper sorting
-      setStates((prev) =>
-        [...prev, newState].sort(
-          (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        )
-      );
-
-      // Switch to states tab to show the new state
-      setActiveTab("states");
+      // Add to local state
+      setStates((prev) => [...prev, newState]);
 
       return true;
     } catch (err) {
       console.error("Error creating character state:", err);
       alert(
         err instanceof Error ? err.message : "Failed to create character state"
+      );
+      return false;
+    }
+  };
+
+  // Handle updating character state
+  const handleUpdateState = async (
+    stateId: string,
+    updates: UpdateCharacterStateOptions
+  ): Promise<CharacterState | null> => {
+    try {
+      const updatedState = await updateState(stateId, updates);
+
+      if (updatedState) {
+        // Update local state
+        setStates((prev) =>
+          prev.map((state) => (state.id === stateId ? updatedState : state))
+        );
+      }
+
+      return updatedState;
+    } catch (err) {
+      console.error("Error updating character state:", err);
+      alert(
+        err instanceof Error ? err.message : "Failed to update character state"
+      );
+      return null;
+    }
+  };
+
+  // Handle deleting character state
+  const handleDeleteState = async (stateId: string): Promise<boolean> => {
+    try {
+      const success = await deleteState(stateId);
+
+      if (success) {
+        // Remove from local state
+        setStates((prev) => prev.filter((state) => state.id !== stateId));
+      }
+
+      return success;
+    } catch (err) {
+      console.error("Error deleting character state:", err);
+      alert(
+        err instanceof Error ? err.message : "Failed to delete character state"
       );
       return false;
     }
@@ -251,6 +303,10 @@ export const CharacterDetailPageContent: React.FC<
               character={character}
               states={states}
               onAddState={handleAddState}
+              onUpdateState={handleUpdateState}
+              onDeleteState={handleDeleteState}
+              isUpdating={isUpdating}
+              isDeleting={isDeleting}
             />
           )}
 

@@ -24,6 +24,7 @@ export { CharacterManuscriptSection } from "./character-detail-content/character
 export { CharacterDetailLoadingState } from "./character-detail-content/character-detail-loading-state";
 export { CharacterDetailErrorState } from "./character-detail-content/character-detail-error-state";
 export { CreateCharacterStateDialog } from "./character-detail-content/create-character-state-dialog";
+export { EditCharacterStateDialog } from "./character-detail-content/edit-character-state-dialog"; // ✅ NEW: Add this export
 
 // ===== TYPES =====
 export type { CharacterWithCurrentState } from "@/lib/characters/character-service";

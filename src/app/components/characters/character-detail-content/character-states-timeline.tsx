@@ -1,23 +1,80 @@
 // app/components/characters/character-detail-content/character-states-timeline.tsx
-// Character states timeline section
+// Enhanced character states timeline with edit and delete functionality
 
-import React from "react";
-import { Plus, Clock, MapPin, Crown, Sword } from "lucide-react";
-import { Card, CardHeader, CardContent, Button } from "@/app/components/ui";
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Plus,
+  Clock,
+  MapPin,
+  Crown,
+  Sword,
+  Edit3,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  Button,
+  Badge,
+  DeleteConfirmationDialog,
+} from "@/app/components/ui";
+import { EditCharacterStateDialog } from "./edit-character-state-dialog";
 import type {
   Character,
   CharacterState,
+  UpdateCharacterStateOptions,
 } from "@/lib/characters/character-service";
 
 interface CharacterStatesTimelineProps {
   character: Character;
   states: CharacterState[];
   onAddState: () => void;
+  onUpdateState: (
+    stateId: string,
+    updates: UpdateCharacterStateOptions
+  ) => Promise<CharacterState | null>;
+  onDeleteState: (stateId: string) => Promise<boolean>;
+  isUpdating?: boolean;
+  isDeleting?: boolean;
 }
 
 export const CharacterStatesTimeline: React.FC<
   CharacterStatesTimelineProps
-> = ({ character, states, onAddState }) => {
+> = ({
+  character,
+  states,
+  onAddState,
+  onUpdateState,
+  onDeleteState,
+  isUpdating = false,
+  isDeleting = false,
+}) => {
+  const [editingState, setEditingState] = useState<CharacterState | null>(null);
+  const [deletingStateId, setDeletingStateId] = useState<string | null>(null);
+
+  // Handle edit state
+  const handleEditState = (state: CharacterState) => {
+    setEditingState(state);
+  };
+
+  // Handle delete state
+  const handleDeleteState = (stateId: string) => {
+    setDeletingStateId(stateId);
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!deletingStateId) return;
+
+    const success = await onDeleteState(deletingStateId);
+    if (success) {
+      setDeletingStateId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -60,23 +117,78 @@ export const CharacterStatesTimeline: React.FC<
                 state={state}
                 isFirst={index === 0}
                 isLast={index === states.length - 1}
+                onEdit={handleEditState}
+                onDelete={handleDeleteState}
+                isUpdating={isUpdating}
+                isDeleting={isDeleting}
               />
             ))}
           </div>
         </div>
       )}
+
+      {/* Edit State Dialog */}
+      <EditCharacterStateDialog
+        isOpen={!!editingState}
+        onClose={() => setEditingState(null)}
+        state={editingState}
+        onUpdate={onUpdateState}
+        isUpdating={isUpdating}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={!!deletingStateId}
+        onClose={() => setDeletingStateId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Character State"
+        message="Are you sure you want to delete this character state? This action cannot be undone."
+        isDeleting={isDeleting}
+      />
     </div>
   );
 };
 
-// Individual state card component
+// Individual state card component with actions
 interface StateCardProps {
   state: CharacterState;
   isFirst: boolean;
   isLast: boolean;
+  onEdit: (state: CharacterState) => void;
+  onDelete: (stateId: string) => void;
+  isUpdating: boolean;
+  isDeleting: boolean;
 }
 
-const StateCard: React.FC<StateCardProps> = ({ state }) => {
+const StateCard: React.FC<StateCardProps> = ({
+  state,
+  isFirst,
+  isLast,
+  onEdit,
+  onDelete,
+  isUpdating,
+  isDeleting,
+}) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
+
   const parseArrayField = (field: string): string[] => {
     if (!field || field === "") return [];
     try {
@@ -87,163 +199,207 @@ const StateCard: React.FC<StateCardProps> = ({ state }) => {
     }
   };
 
+  const getScopeLabel = (state: CharacterState): string => {
+    switch (state.scopeType) {
+      case "novel":
+        return "Throughout Novel";
+      case "act":
+        return `Act ${state.startActId || "?"}`;
+      case "chapter":
+        return `Chapter ${state.startChapterId || "?"}`;
+      case "scene":
+        return `Scene ${state.startSceneId || "?"}`;
+      default:
+        return "Unknown Scope";
+    }
+  };
+
   const currentTraits = parseArrayField(state.currentTraits);
   const currentGoals = parseArrayField(state.currentGoals);
   const skills = parseArrayField(state.skills);
 
   return (
-    <div className="relative flex">
-      {/* Timeline dot */}
-      <div className="relative z-10 flex items-center justify-center w-16 h-16 bg-gray-800 border-4 border-red-600 rounded-full">
-        <Crown className="w-6 h-6 text-red-400" />
+    <div className="relative flex items-start space-x-4">
+      {/* Timeline node */}
+      <div className="relative z-10 flex-shrink-0">
+        <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-gray-900"></div>
       </div>
 
       {/* State content */}
-      <div className="flex-1 ml-6">
-        <Card>
-          <CardHeader
-            title={state.title || `Age ${state.age || "Unknown"}`}
-            subtitle={`${state.scopeType} • ${
-              state.startActId ? `Act ${state.startActId}` : "Story-wide"
-            }`}
-            actions={
-              <Button variant="outline" size="sm">
-                Edit
-              </Button>
-            }
-          />
-          <CardContent className="space-y-4">
-            {/* Basic info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {state.age && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Age
-                  </label>
-                  <p className="text-sm text-white">{state.age}</p>
-                </div>
-              )}
-              {state.title && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Title
-                  </label>
-                  <p className="text-sm text-white">{state.title}</p>
-                </div>
-              )}
-              {state.occupation && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Occupation
-                  </label>
-                  <p className="text-sm text-white">{state.occupation}</p>
-                </div>
-              )}
-              {state.faction && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Faction
-                  </label>
-                  <p className="text-sm text-white">{state.faction}</p>
+      <Card className="flex-1">
+        {/* Custom header with actions */}
+        <div className="p-6 pb-3 border-b border-gray-700">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary" className="text-xs">
+                  {getScopeLabel(state)}
+                </Badge>
+                {state.age && (
+                  <Badge variant="default" className="text-xs">
+                    Age {state.age}
+                  </Badge>
+                )}
+              </div>
+              {(state.title || state.occupation) && (
+                <div className="flex items-center space-x-2">
+                  {state.title && (
+                    <span className="text-sm font-medium text-red-400">
+                      {state.title}
+                    </span>
+                  )}
+                  {state.occupation && (
+                    <span className="text-sm text-gray-300">
+                      {state.occupation}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Location */}
-            {state.location && (
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  <MapPin className="w-3 h-3 inline mr-1" />
-                  Location
-                </label>
-                <p className="text-sm text-white">{state.location}</p>
-              </div>
-            )}
+            {/* Actions dropdown - following your existing pattern */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                disabled={isUpdating || isDeleting}
+              >
+                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+              </button>
 
-            {/* Traits */}
-            {currentTraits.length > 0 && (
-              <div>
-                <label className="block text-xs text-gray-500 mb-2">
-                  Current Traits
-                </label>
-                <div className="flex flex-wrap gap-1">
-                  {currentTraits.map((trait: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-blue-900/30 text-blue-300 text-xs rounded"
-                    >
-                      {trait}
-                    </span>
-                  ))}
+              {showMenu && (
+                <div
+                  ref={menuRef}
+                  className="absolute right-0 top-full mt-1 w-48 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-10"
+                >
+                  <button
+                    onClick={() => {
+                      onEdit(state);
+                      setShowMenu(false);
+                    }}
+                    disabled={isUpdating || isDeleting}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-600 hover:text-white flex items-center disabled:opacity-50"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit State
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDelete(state.id);
+                      setShowMenu(false);
+                    }}
+                    disabled={isUpdating || isDeleting}
+                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete State
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
+        </div>
 
-            {/* Goals */}
-            {currentGoals.length > 0 && (
-              <div>
-                <label className="block text-xs text-gray-500 mb-2">
-                  Current Goals
-                </label>
-                <div className="flex flex-wrap gap-1">
-                  {currentGoals.map((goal: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-green-900/30 text-green-300 text-xs rounded"
-                    >
-                      {goal}
-                    </span>
-                  ))}
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Location and Status */}
+            <div className="space-y-2">
+              {state.location && (
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-300">
+                    {state.location}
+                  </span>
                 </div>
-              </div>
-            )}
-
-            {/* Skills */}
-            {skills.length > 0 && (
-              <div>
-                <label className="block text-xs text-gray-500 mb-2">
-                  <Sword className="w-3 h-3 inline mr-1" />
-                  Skills
-                </label>
-                <div className="flex flex-wrap gap-1">
-                  {skills.map((skill: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-amber-900/30 text-amber-300 text-xs rounded"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+              )}
+              {state.socialStatus && (
+                <div className="flex items-center space-x-2">
+                  <Crown className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-300">
+                    {state.socialStatus}
+                  </span>
                 </div>
-              </div>
-            )}
+              )}
+              {state.faction && (
+                <div className="flex items-center space-x-2">
+                  <Sword className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-300">{state.faction}</span>
+                </div>
+              )}
+            </div>
 
             {/* Mental State */}
             {state.mentalState && (
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Mental State
-                </label>
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-white">Mental State</h4>
                 <p className="text-sm text-gray-300">{state.mentalState}</p>
               </div>
             )}
+          </div>
 
-            {/* Changes/Notes */}
-            {state.changes && (
+          {/* Traits, Goals, and Skills */}
+          <div className="mt-4 space-y-3">
+            {currentTraits.length > 0 && (
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Changes
-                </label>
-                <p className="text-sm text-gray-300 whitespace-pre-wrap">
-                  {typeof state.changes === "string"
-                    ? state.changes
-                    : JSON.stringify(state.changes, null, 2)}
-                </p>
+                <h4 className="text-sm font-medium text-white mb-2">
+                  Current Traits
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {currentTraits.map((trait, index) => (
+                    <Badge key={index} variant="default" className="text-xs">
+                      {trait}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+
+            {currentGoals.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-2">
+                  Current Goals
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {currentGoals.map((goal, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {goal}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {skills.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-2">Skills</h4>
+                <div className="flex flex-wrap gap-1">
+                  {skills.map((skill, index) => (
+                    <Badge
+                      key={index}
+                      variant="default"
+                      className="text-xs bg-gray-800"
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Changes/Notes */}
+          {state.changes && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-white mb-2">Changes</h4>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                {typeof state.changes === "string"
+                  ? state.changes
+                  : JSON.stringify(state.changes, null, 2)}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

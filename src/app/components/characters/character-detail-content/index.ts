@@ -17,6 +17,7 @@ export { CharacterManuscriptSection } from "./character-manuscript-section";
 // Dialogs and forms
 export { CreateCharacterStateDialog } from "./create-character-state-dialog";
 export { EditCharacterDialog } from "./edit-character-dialog";
+export { EditCharacterStateDialog } from "./edit-character-state-dialog"; // ✅ NEW: Add this export
 
 // State components
 export { CharacterDetailLoadingState } from "./character-detail-loading-state";
