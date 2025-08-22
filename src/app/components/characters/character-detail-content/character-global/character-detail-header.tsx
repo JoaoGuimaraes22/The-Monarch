@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-content/character-detail-header.tsx
-// Header component for character detail page with safe avatar handling
+// Header component for character detail page with sticky positioning
 
 import React, { useState } from "react";
 import {
@@ -35,7 +35,7 @@ export const CharacterDetailHeader: React.FC<CharacterDetailHeaderProps> = ({
   const [showMenu, setShowMenu] = useState(false);
 
   return (
-    <div className="bg-black border-b border-gray-700 px-8 py-6">
+    <div className="sticky top-0 bg-black border-b border-gray-700 px-8 py-6 z-20">
       <div className="flex items-center justify-between">
         {/* Left side - Back button and character info */}
         <div className="flex items-center space-x-6">
