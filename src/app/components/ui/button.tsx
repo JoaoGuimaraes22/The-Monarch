@@ -1,11 +1,15 @@
+// app/components/ui/button.tsx
+// Updated Button component with loading support and enhanced features
+
 import React from "react";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Loader2 } from "lucide-react";
 
 interface ButtonProps {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg" | "xl";
   children: React.ReactNode;
   disabled?: boolean;
+  loading?: boolean; // ✨ NEW: Add loading support
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   icon?: LucideIcon;
   iconPosition?: "left" | "right";
@@ -18,12 +22,16 @@ export const Button: React.FC<ButtonProps> = ({
   size = "md",
   children,
   disabled = false,
+  loading = false, // ✨ NEW: Default to false
   onClick,
   icon: Icon,
   iconPosition = "left",
   className = "",
   type = "button",
 }) => {
+  // Button is disabled if explicitly disabled OR loading
+  const isDisabled = disabled || loading;
+
   // Base styles that all buttons share
   const baseStyles =
     "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -51,16 +59,29 @@ export const Button: React.FC<ButtonProps> = ({
 
   const combinedClassName = `${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`;
 
+  // ✨ NEW: Determine which icon to show
+  const DisplayIcon = loading ? Loader2 : Icon;
+  const iconClassName = loading ? "w-4 h-4 animate-spin" : "w-4 h-4";
+
   return (
     <button
       type={type}
       className={combinedClassName}
-      disabled={disabled}
+      disabled={isDisabled}
       onClick={onClick}
     >
-      {Icon && iconPosition === "left" && <Icon className="w-4 h-4 mr-2" />}
+      {/* Left icon (including loading spinner) */}
+      {DisplayIcon && iconPosition === "left" && (
+        <DisplayIcon className={`${iconClassName} mr-2`} />
+      )}
+
+      {/* Button text */}
       {children}
-      {Icon && iconPosition === "right" && <Icon className="w-4 h-4 ml-2" />}
+
+      {/* Right icon (including loading spinner) */}
+      {DisplayIcon && iconPosition === "right" && (
+        <DisplayIcon className={`${iconClassName} ml-2`} />
+      )}
     </button>
   );
 };

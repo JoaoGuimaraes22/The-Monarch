@@ -5,8 +5,8 @@
 export { CharacterDetailPageContent } from "./character-detail-page-content";
 
 // Header and navigation
-export { CharacterDetailHeader } from "./character-detail-header";
-export { CharacterDetailSidebar } from "./character-detail-sidebar";
+export { CharacterDetailHeader } from "./character-global/character-detail-header";
+export { CharacterDetailSidebar } from "./character-global/character-detail-sidebar";
 
 // Content sections
 export { CharacterProfileSection } from "./character-profile/character-profile-section";
@@ -20,5 +20,5 @@ export { EditCharacterDialog } from "./character-profile/edit-character-dialog";
 export { EditCharacterStateDialog } from "./character-state/edit-character-state-dialog";
 
 // State components
-export { CharacterDetailLoadingState } from "./character-detail-loading-state";
-export { CharacterDetailErrorState } from "./character-detail-error-state";
+export { CharacterDetailLoadingState } from "./character-global/character-detail-loading-state";
+export { CharacterDetailErrorState } from "./character-global/character-detail-error-state";

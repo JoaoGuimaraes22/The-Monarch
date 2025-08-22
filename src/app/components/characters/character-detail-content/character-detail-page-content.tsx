@@ -330,9 +330,10 @@ export const CharacterDetailPageContent: React.FC<
       </div>
 
       {/* Create Character State Dialog */}
-      {showCreateStateDialog && character && (
+      {showCreateStateDialog && (
         <CreateCharacterStateDialog
           character={character}
+          states={states} // ✨ NEW: Pass the states array
           onClose={() => setShowCreateStateDialog(false)}
           onCreate={handleCreateState}
         />

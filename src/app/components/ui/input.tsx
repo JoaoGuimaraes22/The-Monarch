@@ -1,11 +1,12 @@
 // app/components/ui/input.tsx
-// Updated Input component with number support and enhanced features
+// Updated Input component with label support, number support and enhanced features
 
 import React from "react";
 import { LucideIcon } from "lucide-react";
 
 interface InputProps {
   type?: "text" | "email" | "password" | "number" | "search" | "url";
+  label?: string; // ✨ NEW: Add label support
   placeholder?: string;
   value?: string | number; // ✅ UPDATED: Now accepts both string and number
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -24,6 +25,7 @@ interface InputProps {
 
 export const Input: React.FC<InputProps> = ({
   type = "text",
+  label,
   placeholder,
   value,
   onChange,
@@ -51,31 +53,50 @@ export const Input: React.FC<InputProps> = ({
   // Convert value to string for input element
   const inputValue = value !== undefined && value !== null ? String(value) : "";
 
+  // Generate unique ID for accessibility
+  const inputId =
+    props.id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+
   return (
-    <div className={`relative ${className}`}>
-      {Icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icon className="h-4 w-4 text-gray-400" />
-        </div>
+    <div className={`${className}`}>
+      {/* ✨ NEW: Optional label */}
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="block text-sm font-medium text-gray-400 mb-2"
+        >
+          {label}
+          {props.required && <span className="text-red-400 ml-1">*</span>}
+        </label>
       )}
-      <input
-        type={type}
-        className={inputStyles}
-        placeholder={placeholder}
-        value={inputValue} // ✅ UPDATED: Convert to string
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        disabled={disabled}
-        min={min}
-        max={max}
-        maxLength={maxLength}
-        {...props}
-      />
+
+      <div className="relative">
+        {Icon && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Icon className="h-4 w-4 text-gray-400" />
+          </div>
+        )}
+        <input
+          id={inputId}
+          type={type}
+          className={inputStyles}
+          placeholder={placeholder}
+          value={inputValue} // ✅ UPDATED: Convert to string
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          disabled={disabled}
+          min={min}
+          max={max}
+          maxLength={maxLength}
+          {...props}
+        />
+      </div>
     </div>
   );
 };
 
 interface TextareaProps {
+  label?: string; // ✨ NEW: Add label support
   placeholder?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -92,6 +113,7 @@ interface TextareaProps {
 }
 
 export const Textarea: React.FC<TextareaProps> = ({
+  label,
   placeholder,
   value,
   onChange,
@@ -116,17 +138,35 @@ export const Textarea: React.FC<TextareaProps> = ({
     disabled ? disabledStyles : ""
   } ${resizeStyles} text-white placeholder-gray-400`;
 
+  // Generate unique ID for accessibility
+  const textareaId =
+    props.id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+
   return (
-    <textarea
-      className={`${textareaStyles} ${className}`}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      rows={rows}
-      disabled={disabled}
-      maxLength={maxLength}
-      {...props}
-    />
+    <div className={className}>
+      {/* ✨ NEW: Optional label */}
+      {label && (
+        <label
+          htmlFor={textareaId}
+          className="block text-sm font-medium text-gray-400 mb-2"
+        >
+          {label}
+          {props.required && <span className="text-red-400 ml-1">*</span>}
+        </label>
+      )}
+
+      <textarea
+        id={textareaId}
+        className={textareaStyles}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        rows={rows}
+        disabled={disabled}
+        maxLength={maxLength}
+        {...props}
+      />
+    </div>
   );
 };

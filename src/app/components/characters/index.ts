@@ -15,14 +15,14 @@ export { CreateCharacterDialog } from "./main-page-content/create-character-dial
 
 // ===== CHARACTER DETAIL COMPONENTS =====
 export { CharacterDetailPageContent } from "./character-detail-content/character-detail-page-content";
-export { CharacterDetailHeader } from "./character-detail-content/character-detail-header";
-export { CharacterDetailSidebar } from "./character-detail-content/character-detail-sidebar";
+export { CharacterDetailHeader } from "./character-detail-content/character-global/character-detail-header";
+export { CharacterDetailSidebar } from "./character-detail-content/character-global/character-detail-sidebar";
 export { CharacterProfileSection } from "./character-detail-content/character-profile/character-profile-section";
 export { CharacterStatesTimeline } from "./character-detail-content/character-state/character-states-timeline";
 export { CharacterRelationshipsSection } from "./character-detail-content/character-relationships-section";
 export { CharacterManuscriptSection } from "./character-detail-content/character-manuscript-section";
-export { CharacterDetailLoadingState } from "./character-detail-content/character-detail-loading-state";
-export { CharacterDetailErrorState } from "./character-detail-content/character-detail-error-state";
+export { CharacterDetailLoadingState } from "./character-detail-content/character-global/character-detail-loading-state";
+export { CharacterDetailErrorState } from "./character-detail-content/character-global/character-detail-error-state";
 export { CreateCharacterStateDialog } from "./character-detail-content/character-state/create-character-state-dialog";
 export { EditCharacterStateDialog } from "./character-detail-content/character-state/edit-character-state-dialog"; // ✅ NEW: Add this export
 
