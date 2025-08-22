@@ -21,6 +21,7 @@ model Novel {
 
   // Relations
   acts        Act[]
+  characters  Character[] // ✨ NEW: Characters belong to novels
 
   @@map("novels")
 }
@@ -57,16 +58,16 @@ model Chapter {
 
 model Scene {
   id        String   @id @default(cuid())
-  title     String   @default("")          // ✨ NEW: Scene title field
+  title     String   @default("")          // ✨ EXISTING: Scene title field
   content   String   @default("")
   wordCount Int      @default(0)
   order     Int
   
   // Metadata
-  povCharacter String?
-  sceneType    String   @default("") // JSON array as string: action, dialogue, introspective
+  povCharacter String?                     // ✨ KEEP: Will link to Character later
+  sceneType    String   @default("")       // JSON array as string: action, dialogue, introspective
   notes        String   @default("")
-  status       String   @default("draft") // draft, review, complete
+  status       String   @default("draft")  // draft, review, complete
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -76,4 +77,176 @@ model Scene {
   chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@map("scenes")
+}
+
+// ===== NEW CHARACTER SYSTEM MODELS =====
+
+model Character {
+  id          String   @id @default(cuid())
+  
+  // Core identity (rarely changes)
+  name        String
+  species     String   @default("Human")
+  gender      String?
+  imageUrl    String?  // Character portrait
+  
+  // Origin & background (fixed)
+  birthplace  String?  // Will link to Location system later
+  family      String?  // JSON as string: parents, siblings, heritage
+  
+  // Base appearance (permanent features)
+  baseAppearance String? // JSON as string: height, eye color, hair color, permanent marks
+  
+  // Core personality (fundamental traits)
+  coreNature  String?  // JSON as string: core traits, deep fears, core values
+  
+  // Novel relationship
+  novelId     String
+  novel       Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  
+  // Character states (temporal evolution)
+  states      CharacterState[]
+  
+  // Relationships
+  relationshipsFrom CharacterRelationship[] @relation("FromCharacter")
+  relationshipsTo   CharacterRelationship[] @relation("ToCharacter")
+  
+  // Character arcs
+  characterArcs CharacterArc[]
+  
+  // Meta information
+  inspirations String   @default("")  // JSON array as string
+  writerNotes  String?
+  tags         String   @default("")  // JSON array as string
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([novelId, name]) // Unique character names per novel
+  @@map("characters")
+}
+
+model CharacterState {
+  id            String @id @default(cuid())
+  
+  characterId   String
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  
+  // Current circumstances
+  age           Int?
+  title         String?
+  occupation    String?
+  location      String?    // Will become locationId later
+  socialStatus  String?
+  faction       String?    // Will become factionId later
+  
+  // Evolving personality traits (JSON arrays as strings)
+  currentTraits String @default("")  // JSON array as string
+  activeFears   String @default("")  // JSON array as string
+  currentGoals  String @default("")  // JSON array as string
+  motivations   String @default("")  // JSON array as string
+  
+  // Knowledge & abilities (JSON arrays as strings)
+  skills        String @default("")  // JSON array as string
+  knowledge     String @default("")  // JSON array as string
+  secrets       String @default("")  // JSON array as string
+  
+  // Physical appearance changes
+  currentAppearance String? // JSON as string: clothing, scars, temporary marks
+  
+  // Mental/emotional state
+  mentalState   String?
+  
+  // Scope - where this state applies in the story
+  scopeType     String   // "novel" | "act" | "chapter" | "scene"
+  startActId    String?
+  startChapterId String?
+  startSceneId   String?
+  endActId       String?
+  endChapterId   String?
+  endSceneId     String?
+  
+  // Change tracking
+  changes       String?  // JSON as string: what changed and why
+  triggerSceneId String? // Scene that caused this change
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("character_states")
+}
+
+model CharacterRelationship {
+  id              String @id @default(cuid())
+  
+  fromCharacterId String
+  fromCharacter   Character @relation("FromCharacter", fields: [fromCharacterId], references: [id], onDelete: Cascade)
+  
+  toCharacterId   String
+  toCharacter     Character @relation("ToCharacter", fields: [toCharacterId], references: [id], onDelete: Cascade)
+  
+  // Core relationship info
+  baseType        String   // "family" | "romantic" | "professional" | "antagonistic" | "mentor_student" | "friendship"
+  origin          String?  // "Childhood friends who became engaged"
+  history         String?  // Background of the relationship
+  fundamentalDynamic String? // Core pattern that doesn't change
+  
+  // Current relationship state
+  currentType     String   // "ally" | "enemy" | "romantic" | "neutral" | "complicated" | "mentor" | "rival" | "family"
+  subtype         String?  // "bitter enemies" | "secret lovers" | "estranged siblings"
+  strength        Int @default(5) // 1-10 intensity
+  
+  // Status (public vs private)
+  publicStatus    String?  // How they appear in public
+  privateStatus   String?  // True nature of relationship
+  
+  // Emotional dynamics
+  trustLevel      Int @default(5)    // 1-10
+  conflictLevel   Int @default(1)    // 1-10
+  powerBalance    String @default("equal") // "equal" | "a_dominant" | "b_dominant" | "shifting"
+  
+  // Secrets and knowledge
+  sharedSecrets   String @default("") // JSON array as string
+  
+  // Meta
+  writerNotes     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([fromCharacterId, toCharacterId])
+  @@map("character_relationships")
+}
+
+model CharacterArc {
+  id          String @id @default(cuid())
+  
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  
+  // Arc definition
+  title       String   // "Lyra's Journey from Vengeance to Justice"
+  description String?  // Detailed arc description
+  archetype   String?  // "Hero's Journey" | "Redemption Arc" | "Fall from Grace"
+  
+  // Arc scope - can be novel-wide, act-specific, or chapter-specific
+  scopeType   String   // "novel" | "act" | "chapter"
+  targetId    String   // Novel, Act, or Chapter ID
+  
+  // Arc progression
+  startPoint  String?  // Character state at beginning
+  endPoint    String?  // Character state at end
+  keyMoments  String?  // JSON as string: array of {sceneId, description, type, notes}
+  
+  // Progress tracking
+  currentStage String?
+  completion   Int @default(0) // 0-100%
+  
+  // Meta
+  writerNotes String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("character_arcs")
 }
