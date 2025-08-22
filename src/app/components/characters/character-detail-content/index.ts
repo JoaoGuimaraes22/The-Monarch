@@ -9,15 +9,15 @@ export { CharacterDetailHeader } from "./character-detail-header";
 export { CharacterDetailSidebar } from "./character-detail-sidebar";
 
 // Content sections
-export { CharacterProfileSection } from "./character-profile-section";
-export { CharacterStatesTimeline } from "./character-states-timeline";
+export { CharacterProfileSection } from "./character-profile/character-profile-section";
+export { CharacterStatesTimeline } from "./character-state/character-states-timeline";
 export { CharacterRelationshipsSection } from "./character-relationships-section";
 export { CharacterManuscriptSection } from "./character-manuscript-section";
 
 // Dialogs and forms
-export { CreateCharacterStateDialog } from "./create-character-state-dialog";
-export { EditCharacterDialog } from "./edit-character-dialog";
-export { EditCharacterStateDialog } from "./edit-character-state-dialog"; // ✅ NEW: Add this export
+export { CreateCharacterStateDialog } from "./character-state/create-character-state-dialog";
+export { EditCharacterDialog } from "./character-profile/edit-character-dialog";
+export { EditCharacterStateDialog } from "./character-state/edit-character-state-dialog";
 
 // State components
 export { CharacterDetailLoadingState } from "./character-detail-loading-state";

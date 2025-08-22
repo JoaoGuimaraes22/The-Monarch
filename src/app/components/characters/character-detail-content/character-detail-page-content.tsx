@@ -26,8 +26,8 @@ import {
   CharacterDetailLoadingState,
   CharacterDetailErrorState,
 } from "./index";
-import { CreateCharacterStateDialog } from "./create-character-state-dialog";
-import { EditCharacterDialog } from "./edit-character-dialog";
+import { CreateCharacterStateDialog } from "./character-state/create-character-state-dialog";
+import { EditCharacterDialog } from "./character-profile/edit-character-dialog";
 
 interface CharacterDetailPageContentProps {
   novelId: string;
