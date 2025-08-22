@@ -16,6 +16,7 @@
 ### API Creation and Database
 
 - Keep in mind structure and already built utilites.
+- No using "any" types.
 - Following my Architecture Patterns:
 - Uses your established /lib/api middleware system
 - Follows your hook patterns like manuscript hooks

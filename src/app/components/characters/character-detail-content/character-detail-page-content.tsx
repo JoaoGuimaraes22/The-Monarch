@@ -1,5 +1,5 @@
-// app/components/characters/character-detail-page-content.tsx
-// Main character detail page content with integrated state creation
+// app/components/characters/character-detail-content/character-detail-page-content.tsx
+// Main character detail page content with full editing and state creation
 
 "use client";
 
@@ -9,6 +9,7 @@ import type {
   Character,
   CharacterState,
   CreateCharacterStateOptions,
+  CreateCharacterOptions,
 } from "@/lib/characters/character-service";
 import {
   CharacterDetailHeader,
@@ -21,6 +22,7 @@ import {
   CharacterDetailErrorState,
 } from "./index";
 import { CreateCharacterStateDialog } from "./create-character-state-dialog";
+import { EditCharacterDialog } from "./edit-character-dialog";
 
 interface CharacterDetailPageContentProps {
   novelId: string;
@@ -43,6 +45,7 @@ export const CharacterDetailPageContent: React.FC<
 
   // Dialog state
   const [showCreateStateDialog, setShowCreateStateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Fetch character details
   useEffect(() => {
@@ -110,6 +113,41 @@ export const CharacterDetailPageContent: React.FC<
     }
   };
 
+  // Handle character editing
+  const handleEditCharacter = async (
+    updates: Partial<CreateCharacterOptions>
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(
+        `/api/novels/${novelId}/characters/${characterId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updates),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update character");
+      }
+
+      const data = await response.json();
+      const updatedCharacter = data.data;
+
+      // Update local state
+      setCharacter(updatedCharacter);
+
+      return true;
+    } catch (err) {
+      console.error("Error updating character:", err);
+      alert(err instanceof Error ? err.message : "Failed to update character");
+      return false;
+    }
+  };
+
   // Handle character state creation
   const handleCreateState = async (
     stateData: Omit<CreateCharacterStateOptions, "characterId">
@@ -158,6 +196,11 @@ export const CharacterDetailPageContent: React.FC<
     }
   };
 
+  // Handle edit button click
+  const handleEdit = () => {
+    setShowEditDialog(true);
+  };
+
   // Handle add state button click
   const handleAddState = () => {
     setShowCreateStateDialog(true);
@@ -184,10 +227,7 @@ export const CharacterDetailPageContent: React.FC<
       <CharacterDetailHeader
         character={character}
         onBack={handleBack}
-        onEdit={() => {
-          // TODO: Open edit dialog
-          console.log("Edit character");
-        }}
+        onEdit={handleEdit}
         onDelete={handleDelete}
       />
 
@@ -239,6 +279,15 @@ export const CharacterDetailPageContent: React.FC<
           character={character}
           onClose={() => setShowCreateStateDialog(false)}
           onCreate={handleCreateState}
+        />
+      )}
+
+      {/* Edit Character Dialog */}
+      {showEditDialog && character && (
+        <EditCharacterDialog
+          character={character}
+          onClose={() => setShowEditDialog(false)}
+          onUpdate={handleEditCharacter}
         />
       )}
     </div>

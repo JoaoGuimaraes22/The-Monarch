@@ -14,7 +14,10 @@ export { CharacterStatesTimeline } from "./character-states-timeline";
 export { CharacterRelationshipsSection } from "./character-relationships-section";
 export { CharacterManuscriptSection } from "./character-manuscript-section";
 
+// Dialogs and forms
+export { CreateCharacterStateDialog } from "./create-character-state-dialog";
+export { EditCharacterDialog } from "./edit-character-dialog";
+
 // State components
 export { CharacterDetailLoadingState } from "./character-detail-loading-state";
 export { CharacterDetailErrorState } from "./character-detail-error-state";
-export { CreateCharacterStateDialog } from "./create-character-state-dialog";
