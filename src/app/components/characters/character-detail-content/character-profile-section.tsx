@@ -1,47 +1,55 @@
-// app/components/characters/character-detail/character-profile-section.tsx
+// app/components/characters/character-detail-content/character-profile-section.tsx
 // Character profile section showing basic information
 
 import React from "react";
-import { Edit, MapPin, Users as UsersIcon, BookOpen } from "lucide-react";
+import { Edit, MapPin, BookOpen } from "lucide-react";
 import { Card, CardHeader, CardContent, Button } from "@/app/components/ui";
+import type { Character } from "@/lib/characters/character-service";
+
+// Define proper types for JSON fields
+interface FamilyData {
+  parents?: string;
+  siblings?: string;
+  heritage?: string;
+}
+
+interface BaseAppearanceData {
+  height?: string;
+  eyeColor?: string;
+  hairColor?: string;
+  distinguishingMarks?: string;
+}
+
+interface CoreNatureData {
+  fundamentalTraits?: string[];
+  deepestFears?: string[];
+  coreValues?: string[];
+}
 
 interface CharacterProfileSectionProps {
-  character: {
-    id: string;
-    name: string;
-    species: string;
-    gender: string | null;
-    imageUrl: string | null;
-    birthplace: string | null;
-    family: string | null;
-    baseAppearance: string | null;
-    coreNature: string | null;
-    inspirations: string;
-    writerNotes: string | null;
-    tags: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+  character: Character;
 }
 
 export const CharacterProfileSection: React.FC<
   CharacterProfileSectionProps
 > = ({ character }) => {
-  // Parse JSON fields safely
-  const parseJsonField = (field: string | null): any => {
+  // Parse JSON fields safely with proper typing
+  const parseJsonField = <T,>(field: string | null): T | null => {
     if (!field || field === "") return null;
     try {
-      return JSON.parse(field);
+      return JSON.parse(field) as T;
     } catch {
       return null;
     }
   };
 
-  const family = parseJsonField(character.family);
-  const baseAppearance = parseJsonField(character.baseAppearance);
-  const coreNature = parseJsonField(character.coreNature);
-  const inspirations = parseJsonField(character.inspirations) || [];
-  const tags = parseJsonField(character.tags) || [];
+  const family = parseJsonField<FamilyData>(character.family);
+  const baseAppearance = parseJsonField<BaseAppearanceData>(
+    character.baseAppearance
+  );
+  const coreNature = parseJsonField<CoreNatureData>(character.coreNature);
+  const inspirations = parseJsonField<string[]>(character.inspirations) || [];
+  const tags = parseJsonField<string[]>(character.tags) || [];
 
   return (
     <div className="space-y-6">
@@ -64,6 +72,12 @@ export const CharacterProfileSection: React.FC<
           <CardHeader title="Basic Information" />
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Name
+                </label>
+                <p className="text-white">{character.name}</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">
                   Species
@@ -254,60 +268,39 @@ export const CharacterProfileSection: React.FC<
             </CardContent>
           </Card>
         )}
+
+        {/* Inspirations */}
+        {inspirations.length > 0 && (
+          <Card>
+            <CardHeader title="Inspirations" />
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {inspirations.map((inspiration: string, index: number) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-amber-900/30 text-amber-300 text-sm rounded-full flex items-center"
+                  >
+                    <BookOpen className="w-3 h-3 mr-1" />
+                    {inspiration}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Writer Notes */}
+        {character.writerNotes && (
+          <Card>
+            <CardHeader title="Writer Notes" />
+            <CardContent>
+              <p className="text-gray-300 whitespace-pre-wrap">
+                {character.writerNotes}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {/* Writer Notes */}
-      {character.writerNotes && (
-        <Card>
-          <CardHeader title="Writer Notes" />
-          <CardContent>
-            <p className="text-gray-300 whitespace-pre-wrap">
-              {character.writerNotes}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Inspirations */}
-      {inspirations.length > 0 && (
-        <Card>
-          <CardHeader title="Inspirations" />
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {inspirations.map((inspiration: string, index: number) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-purple-900/30 text-purple-300 text-sm rounded-full"
-                >
-                  <BookOpen className="w-3 h-3 inline mr-1" />
-                  {inspiration}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Metadata */}
-      <Card>
-        <CardHeader title="Metadata" />
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <label className="block text-gray-400 mb-1">Created</label>
-              <p className="text-gray-300">
-                {new Date(character.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-            <div>
-              <label className="block text-gray-400 mb-1">Last Updated</label>
-              <p className="text-gray-300">
-                {new Date(character.updatedAt).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

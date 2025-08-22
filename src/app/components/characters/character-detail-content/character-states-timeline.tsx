@@ -101,22 +101,17 @@ const StateCard: React.FC<StateCardProps> = ({ state }) => {
       {/* State content */}
       <div className="flex-1 ml-6">
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  {state.title || `Age ${state.age || "Unknown"}`}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {state.scopeType} •{" "}
-                  {state.startActId ? `Act ${state.startActId}` : "Story-wide"}
-                </p>
-              </div>
+          <CardHeader
+            title={state.title || `Age ${state.age || "Unknown"}`}
+            subtitle={`${state.scopeType} • ${
+              state.startActId ? `Act ${state.startActId}` : "Story-wide"
+            }`}
+            actions={
               <Button variant="outline" size="sm">
                 Edit
               </Button>
-            </div>
-          </CardHeader>
+            }
+          />
           <CardContent className="space-y-4">
             {/* Basic info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -172,7 +167,7 @@ const StateCard: React.FC<StateCardProps> = ({ state }) => {
                   Current Traits
                 </label>
                 <div className="flex flex-wrap gap-1">
-                  {currentTraits.map((trait, index) => (
+                  {currentTraits.map((trait: string, index: number) => (
                     <span
                       key={index}
                       className="px-2 py-1 bg-blue-900/30 text-blue-300 text-xs rounded"
@@ -191,7 +186,7 @@ const StateCard: React.FC<StateCardProps> = ({ state }) => {
                   Current Goals
                 </label>
                 <div className="flex flex-wrap gap-1">
-                  {currentGoals.map((goal, index) => (
+                  {currentGoals.map((goal: string, index: number) => (
                     <span
                       key={index}
                       className="px-2 py-1 bg-green-900/30 text-green-300 text-xs rounded"
@@ -207,15 +202,15 @@ const StateCard: React.FC<StateCardProps> = ({ state }) => {
             {skills.length > 0 && (
               <div>
                 <label className="block text-xs text-gray-500 mb-2">
+                  <Sword className="w-3 h-3 inline mr-1" />
                   Skills
                 </label>
                 <div className="flex flex-wrap gap-1">
-                  {skills.map((skill, index) => (
+                  {skills.map((skill: string, index: number) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-purple-900/30 text-purple-300 text-xs rounded"
+                      className="px-2 py-1 bg-amber-900/30 text-amber-300 text-xs rounded"
                     >
-                      <Sword className="w-3 h-3 inline mr-1" />
                       {skill}
                     </span>
                   ))}
@@ -223,13 +218,27 @@ const StateCard: React.FC<StateCardProps> = ({ state }) => {
               </div>
             )}
 
-            {/* Mental state */}
+            {/* Mental State */}
             {state.mentalState && (
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
                   Mental State
                 </label>
                 <p className="text-sm text-gray-300">{state.mentalState}</p>
+              </div>
+            )}
+
+            {/* Changes/Notes */}
+            {state.changes && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Changes
+                </label>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                  {typeof state.changes === "string"
+                    ? state.changes
+                    : JSON.stringify(state.changes, null, 2)}
+                </p>
               </div>
             )}
           </CardContent>
