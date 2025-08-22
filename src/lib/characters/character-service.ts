@@ -1,5 +1,5 @@
 // lib/characters/character-service.ts
-// Basic character service - Phase 1 implementation
+// Complete character service with state management
 
 import { prisma } from "@/lib/prisma";
 
@@ -99,6 +99,34 @@ export interface CreateCharacterStateOptions {
   endSceneId?: string;
   changes?: object;
   triggerSceneId?: string;
+}
+
+// ===== UPDATE OPTIONS =====
+export interface UpdateCharacterStateOptions {
+  age?: number | null;
+  title?: string | null;
+  occupation?: string | null;
+  location?: string | null;
+  socialStatus?: string | null;
+  faction?: string | null;
+  currentTraits?: string[];
+  activeFears?: string[];
+  currentGoals?: string[];
+  motivations?: string[];
+  skills?: string[];
+  knowledge?: string[];
+  secrets?: string[];
+  currentAppearance?: object | null;
+  mentalState?: string | null;
+  scopeType?: "novel" | "act" | "chapter" | "scene";
+  startActId?: string | null;
+  startChapterId?: string | null;
+  startSceneId?: string | null;
+  endActId?: string | null;
+  endChapterId?: string | null;
+  endSceneId?: string | null;
+  changes?: object | null;
+  triggerSceneId?: string | null;
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -305,6 +333,95 @@ export class CharacterService {
         { startSceneId: "asc" },
         { createdAt: "asc" },
       ],
+    });
+  }
+
+  /**
+   * Get a specific character state by ID
+   */
+  async getCharacterStateById(stateId: string): Promise<CharacterState | null> {
+    const state = await prisma.characterState.findUnique({
+      where: { id: stateId },
+    });
+
+    return state;
+  }
+
+  /**
+   * Update a character state
+   */
+  async updateCharacterState(
+    stateId: string,
+    options: Partial<CreateCharacterStateOptions>
+  ): Promise<CharacterState> {
+    // Build update data object
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+    // Handle simple fields
+    if (options.age !== undefined) updateData.age = options.age;
+    if (options.title !== undefined) updateData.title = options.title;
+    if (options.occupation !== undefined)
+      updateData.occupation = options.occupation;
+    if (options.location !== undefined) updateData.location = options.location;
+    if (options.socialStatus !== undefined)
+      updateData.socialStatus = options.socialStatus;
+    if (options.faction !== undefined) updateData.faction = options.faction;
+    if (options.mentalState !== undefined)
+      updateData.mentalState = options.mentalState;
+    if (options.scopeType !== undefined)
+      updateData.scopeType = options.scopeType;
+    if (options.startActId !== undefined)
+      updateData.startActId = options.startActId;
+    if (options.startChapterId !== undefined)
+      updateData.startChapterId = options.startChapterId;
+    if (options.startSceneId !== undefined)
+      updateData.startSceneId = options.startSceneId;
+    if (options.endActId !== undefined) updateData.endActId = options.endActId;
+    if (options.endChapterId !== undefined)
+      updateData.endChapterId = options.endChapterId;
+    if (options.endSceneId !== undefined)
+      updateData.endSceneId = options.endSceneId;
+    if (options.triggerSceneId !== undefined)
+      updateData.triggerSceneId = options.triggerSceneId;
+
+    // Handle JSON array fields with stringification
+    if (options.currentTraits !== undefined)
+      updateData.currentTraits = safeStringify(options.currentTraits);
+    if (options.activeFears !== undefined)
+      updateData.activeFears = safeStringify(options.activeFears);
+    if (options.currentGoals !== undefined)
+      updateData.currentGoals = safeStringify(options.currentGoals);
+    if (options.motivations !== undefined)
+      updateData.motivations = safeStringify(options.motivations);
+    if (options.skills !== undefined)
+      updateData.skills = safeStringify(options.skills);
+    if (options.knowledge !== undefined)
+      updateData.knowledge = safeStringify(options.knowledge);
+    if (options.secrets !== undefined)
+      updateData.secrets = safeStringify(options.secrets);
+
+    // Handle changes and currentAppearance objects
+    if (options.changes !== undefined) {
+      updateData.changes = safeStringify(options.changes);
+    }
+    if (options.currentAppearance !== undefined) {
+      updateData.currentAppearance = safeStringify(options.currentAppearance);
+    }
+
+    const state = await prisma.characterState.update({
+      where: { id: stateId },
+      data: updateData,
+    });
+
+    return state;
+  }
+
+  /**
+   * Delete a character state
+   */
+  async deleteCharacterState(stateId: string): Promise<void> {
+    await prisma.characterState.delete({
+      where: { id: stateId },
     });
   }
 

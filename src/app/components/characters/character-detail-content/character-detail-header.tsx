@@ -1,8 +1,7 @@
-// app/components/characters/character-detail/character-detail-header.tsx
-// Header component for character detail page
+// app/components/characters/character-detail-content/character-detail-header.tsx
+// Header component for character detail page with safe avatar handling
 
 import React, { useState } from "react";
-import Image from "next/image";
 import {
   ArrowLeft,
   Edit,
@@ -11,7 +10,7 @@ import {
   Copy,
   Download,
 } from "lucide-react";
-import { Button } from "@/app/components/ui";
+import { Button, CharacterAvatar } from "@/app/components/ui";
 
 interface CharacterDetailHeaderProps {
   character: {
@@ -50,22 +49,12 @@ export const CharacterDetailHeader: React.FC<CharacterDetailHeaderProps> = ({
           </Button>
 
           <div className="flex items-center space-x-4">
-            {/* Character Avatar */}
-            <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
-              {character.imageUrl ? (
-                <Image
-                  src={character.imageUrl}
-                  alt={character.name}
-                  width={64}
-                  height={64}
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-2xl font-semibold text-gray-300">
-                  {character.name.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
+            {/* Character Avatar - Using safe CharacterAvatar component */}
+            <CharacterAvatar
+              name={character.name}
+              imageUrl={character.imageUrl}
+              size="lg"
+            />
 
             {/* Character Basic Info */}
             <div>
@@ -94,7 +83,7 @@ export const CharacterDetailHeader: React.FC<CharacterDetailHeaderProps> = ({
         {/* Right side - Action buttons */}
         <div className="flex items-center space-x-3">
           <Button variant="outline" icon={Edit} onClick={onEdit}>
-            Edit Character
+            Edit Profile
           </Button>
 
           {/* More actions menu */}

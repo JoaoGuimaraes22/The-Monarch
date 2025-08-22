@@ -1,557 +1,404 @@
-// app/components/characters/character-detail-content/edit-character-dialog.tsx
-// Dialog for editing character information
+// app/components/characters/character-detail-content/character-states-timeline.tsx
+// Enhanced character states timeline with edit and delete functionality
 
-import React, { useState } from "react";
-import { X, Plus, Minus } from "lucide-react";
-import { Button, Input, Card, CardContent } from "@/app/components/ui";
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Plus,
+  Clock,
+  MapPin,
+  Crown,
+  Sword,
+  Edit3,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  Button,
+  Badge,
+  DeleteConfirmationDialog,
+} from "@/app/components/ui";
+import { EditCharacterStateDialog } from "./edit-character-state-dialog";
 import type {
   Character,
-  CreateCharacterOptions,
+  CharacterState,
+  UpdateCharacterStateOptions,
 } from "@/lib/characters/character-service";
 
-interface EditCharacterDialogProps {
+interface CharacterStatesTimelineProps {
   character: Character;
-  onClose: () => void;
-  onUpdate: (updates: Partial<CreateCharacterOptions>) => Promise<boolean>;
+  states: CharacterState[];
+  onAddState: () => void;
+  onUpdateState: (
+    stateId: string,
+    updates: UpdateCharacterStateOptions
+  ) => Promise<CharacterState | null>;
+  onDeleteState: (stateId: string) => Promise<boolean>;
+  isUpdating?: boolean;
+  isDeleting?: boolean;
 }
 
-export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
+export const CharacterStatesTimeline: React.FC<
+  CharacterStatesTimelineProps
+> = ({
   character,
-  onClose,
-  onUpdate,
+  states,
+  onAddState,
+  onUpdateState,
+  onDeleteState,
+  isUpdating = false,
+  isDeleting = false,
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingState, setEditingState] = useState<CharacterState | null>(null);
+  const [deletingStateId, setDeletingStateId] = useState<string | null>(null);
 
-  // Parse JSON fields safely for initial state
-  const parseJsonField = <T,>(field: string | null): T | null => {
-    if (!field || field === "") return null;
-    try {
-      return JSON.parse(field) as T;
-    } catch {
-      return null;
+  // Handle edit state
+  const handleEditState = (state: CharacterState) => {
+    setEditingState(state);
+  };
+
+  // Handle delete state
+  const handleDeleteState = (stateId: string) => {
+    setDeletingStateId(stateId);
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!deletingStateId) return;
+
+    const success = await onDeleteState(deletingStateId);
+    if (success) {
+      setDeletingStateId(null);
     }
-  };
-
-  // Initialize form data with current character values
-  const [formData, setFormData] = useState({
-    name: character.name,
-    species: character.species,
-    gender: character.gender || "",
-    imageUrl: character.imageUrl || "",
-    birthplace: character.birthplace || "",
-    writerNotes: character.writerNotes || "",
-  });
-
-  // Initialize complex fields
-  const [inspirations, setInspirations] = useState<string[]>(
-    parseJsonField<string[]>(character.inspirations) || []
-  );
-  const [tags, setTags] = useState<string[]>(
-    parseJsonField<string[]>(character.tags) || []
-  );
-
-  // Family data
-  const initialFamily =
-    parseJsonField<{
-      parents?: string;
-      siblings?: string;
-      heritage?: string;
-    }>(character.family) || {};
-
-  const [familyData, setFamilyData] = useState({
-    parents: initialFamily.parents || "",
-    siblings: initialFamily.siblings || "",
-    heritage: initialFamily.heritage || "",
-  });
-
-  // Base appearance data
-  const initialAppearance =
-    parseJsonField<{
-      height?: string;
-      eyeColor?: string;
-      hairColor?: string;
-      distinguishingMarks?: string;
-    }>(character.baseAppearance) || {};
-
-  const [appearanceData, setAppearanceData] = useState({
-    height: initialAppearance.height || "",
-    eyeColor: initialAppearance.eyeColor || "",
-    hairColor: initialAppearance.hairColor || "",
-    distinguishingMarks: initialAppearance.distinguishingMarks || "",
-  });
-
-  // Core nature data
-  const initialNature =
-    parseJsonField<{
-      fundamentalTraits?: string[];
-      deepestFears?: string[];
-      coreValues?: string[];
-    }>(character.coreNature) || {};
-
-  const [fundamentalTraits, setFundamentalTraits] = useState<string[]>(
-    initialNature.fundamentalTraits || []
-  );
-  const [deepestFears, setDeepestFears] = useState<string[]>(
-    initialNature.deepestFears || []
-  );
-  const [coreValues, setCoreValues] = useState<string[]>(
-    initialNature.coreValues || []
-  );
-
-  // Array helpers
-  const addArrayItem = (
-    array: string[],
-    setter: (items: string[]) => void,
-    newItem: string
-  ) => {
-    if (newItem.trim() && !array.includes(newItem.trim())) {
-      setter([...array, newItem.trim()]);
-    }
-  };
-
-  const removeArrayItem = (
-    array: string[],
-    setter: (items: string[]) => void,
-    index: number
-  ) => {
-    setter(array.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      // Build family object (only include non-empty fields)
-      const family: Record<string, string> = {};
-      if (familyData.parents.trim()) family.parents = familyData.parents.trim();
-      if (familyData.siblings.trim())
-        family.siblings = familyData.siblings.trim();
-      if (familyData.heritage.trim())
-        family.heritage = familyData.heritage.trim();
-
-      // Build appearance object (only include non-empty fields)
-      const baseAppearance: Record<string, string> = {};
-      if (appearanceData.height.trim())
-        baseAppearance.height = appearanceData.height.trim();
-      if (appearanceData.eyeColor.trim())
-        baseAppearance.eyeColor = appearanceData.eyeColor.trim();
-      if (appearanceData.hairColor.trim())
-        baseAppearance.hairColor = appearanceData.hairColor.trim();
-      if (appearanceData.distinguishingMarks.trim()) {
-        baseAppearance.distinguishingMarks =
-          appearanceData.distinguishingMarks.trim();
-      }
-
-      // Build core nature object (only include non-empty arrays)
-      const coreNature: Record<string, string[]> = {};
-      if (fundamentalTraits.length > 0)
-        coreNature.fundamentalTraits = fundamentalTraits;
-      if (deepestFears.length > 0) coreNature.deepestFears = deepestFears;
-      if (coreValues.length > 0) coreNature.coreValues = coreValues;
-
-      const updates: Partial<CreateCharacterOptions> = {
-        name: formData.name.trim(),
-        species: formData.species.trim(),
-        gender: formData.gender.trim() || null,
-        imageUrl: formData.imageUrl.trim() || null,
-        birthplace: formData.birthplace.trim() || null,
-        writerNotes: formData.writerNotes.trim() || null,
-        inspirations: inspirations.length > 0 ? inspirations : [],
-        tags: tags.length > 0 ? tags : [],
-        family: Object.keys(family).length > 0 ? family : null,
-        baseAppearance:
-          Object.keys(baseAppearance).length > 0 ? baseAppearance : null,
-        coreNature: Object.keys(coreNature).length > 0 ? coreNature : null,
-      };
-
-      const success = await onUpdate(updates);
-      if (success) {
-        onClose();
-      }
-    } catch (error) {
-      console.error("Error updating character:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Reusable array field component
-  const ArrayField = ({
-    label,
-    items,
-    setItems,
-    placeholder,
-    maxItems = 10,
-  }: {
-    label: string;
-    items: string[];
-    setItems: (items: string[]) => void;
-    placeholder: string;
-    maxItems?: number;
-  }) => {
-    const [newItem, setNewItem] = useState("");
-
-    return (
-      <div>
-        <label className="block text-sm font-medium text-gray-400 mb-2">
-          {label}{" "}
-          {items.length > 0 && (
-            <span className="text-gray-500">({items.length})</span>
-          )}
-        </label>
-        <div className="space-y-2">
-          {items.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <span className="flex-1 px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded border border-gray-600">
-                {item}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeArrayItem(items, setItems, index)}
-                className="p-1 text-red-400 hover:text-red-300 transition-colors"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-          {items.length < maxItems && (
-            <div className="flex items-center space-x-2">
-              <Input
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder={placeholder}
-                className="flex-1"
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addArrayItem(items, setItems, newItem);
-                    setNewItem("");
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  addArrayItem(items, setItems, newItem);
-                  setNewItem("");
-                }}
-                disabled={!newItem.trim()}
-                className="p-2 text-green-400 hover:text-green-300 disabled:text-gray-500 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <div>
-              <h2 className="text-xl font-bold text-white">Edit Character</h2>
-              <p className="text-sm text-gray-400">
-                Update {character.name}&#39;s information
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
-              disabled={isSubmitting}
-            >
-              <X className="w-5 h-5" />
-            </button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Character Evolution</h2>
+          <p className="text-gray-400">
+            Track how {character.name} changes throughout the story
+          </p>
+        </div>
+        <Button variant="primary" icon={Plus} onClick={onAddState}>
+          Add State
+        </Button>
+      </div>
+
+      {states.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Clock className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">
+              No Character States
+            </h3>
+            <p className="text-gray-400 mb-4">
+              Create character states to track how {character.name} evolves
+              throughout your story.
+            </p>
+            <Button variant="outline" icon={Plus} onClick={onAddState}>
+              Create First State
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="relative">
+          {/* Timeline line */}
+          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-700"></div>
+
+          <div className="space-y-6">
+            {states.map((state, index) => (
+              <StateCard
+                key={state.id}
+                state={state}
+                isFirst={index === 0}
+                isLast={index === states.length - 1}
+                onEdit={handleEditState}
+                onDelete={handleDeleteState}
+                isUpdating={isUpdating}
+                isDeleting={isDeleting}
+              />
+            ))}
           </div>
+        </div>
+      )}
 
-          <CardContent className="p-6 space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Name *
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Character name"
-                  maxLength={255}
-                  required
-                />
+      {/* Edit State Dialog */}
+      <EditCharacterStateDialog
+        isOpen={!!editingState}
+        onClose={() => setEditingState(null)}
+        state={editingState}
+        onUpdate={onUpdateState}
+        isUpdating={isUpdating}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={!!deletingStateId}
+        onClose={() => setDeletingStateId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Character State"
+        message="Are you sure you want to delete this character state? This action cannot be undone."
+        isDeleting={isDeleting}
+      />
+    </div>
+  );
+};
+
+// Individual state card component with actions
+interface StateCardProps {
+  state: CharacterState;
+  isFirst: boolean;
+  isLast: boolean;
+  onEdit: (state: CharacterState) => void;
+  onDelete: (stateId: string) => void;
+  isUpdating: boolean;
+  isDeleting: boolean;
+}
+
+const StateCard: React.FC<StateCardProps> = ({
+  state,
+  isFirst,
+  isLast,
+  onEdit,
+  onDelete,
+  isUpdating,
+  isDeleting,
+}) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
+
+  const parseArrayField = (field: string): string[] => {
+    if (!field || field === "") return [];
+    try {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const getScopeLabel = (state: CharacterState): string => {
+    switch (state.scopeType) {
+      case "novel":
+        return "Throughout Novel";
+      case "act":
+        return `Act ${state.startActId || "?"}`;
+      case "chapter":
+        return `Chapter ${state.startChapterId || "?"}`;
+      case "scene":
+        return `Scene ${state.startSceneId || "?"}`;
+      default:
+        return "Unknown Scope";
+    }
+  };
+
+  const currentTraits = parseArrayField(state.currentTraits);
+  const currentGoals = parseArrayField(state.currentGoals);
+  const skills = parseArrayField(state.skills);
+
+  return (
+    <div className="relative flex items-start space-x-4">
+      {/* Timeline node */}
+      <div className="relative z-10 flex-shrink-0">
+        <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-gray-900"></div>
+      </div>
+
+      {/* State content */}
+      <Card className="flex-1">
+        {/* Custom header with actions */}
+        <div className="p-6 pb-3 border-b border-gray-700">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary" className="text-xs">
+                  {getScopeLabel(state)}
+                </Badge>
+                {state.age && (
+                  <Badge variant="default" className="text-xs">
+                    Age {state.age}
+                  </Badge>
+                )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Species
-                </label>
-                <Input
-                  value={formData.species}
-                  onChange={(e) =>
-                    setFormData({ ...formData, species: e.target.value })
-                  }
-                  placeholder="Human, Elf, Dwarf, etc."
-                  maxLength={100}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Gender
-                </label>
-                <Input
-                  value={formData.gender}
-                  onChange={(e) =>
-                    setFormData({ ...formData, gender: e.target.value })
-                  }
-                  placeholder="Male, Female, Non-binary, etc."
-                  maxLength={50}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Birthplace
-                </label>
-                <Input
-                  value={formData.birthplace}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birthplace: e.target.value })
-                  }
-                  placeholder="Place of birth"
-                  maxLength={255}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Image URL
-                </label>
-                <Input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imageUrl: e.target.value })
-                  }
-                  placeholder="https://example.com/character-image.jpg"
-                />
-              </div>
-            </div>
-
-            {/* Family Information */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Family & Heritage
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Parents
-                  </label>
-                  <Input
-                    value={familyData.parents}
-                    onChange={(e) =>
-                      setFamilyData({ ...familyData, parents: e.target.value })
-                    }
-                    placeholder="Parent names and information"
-                  />
+              {(state.title || state.occupation) && (
+                <div className="flex items-center space-x-2">
+                  {state.title && (
+                    <span className="text-sm font-medium text-red-400">
+                      {state.title}
+                    </span>
+                  )}
+                  {state.occupation && (
+                    <span className="text-sm text-gray-300">
+                      {state.occupation}
+                    </span>
+                  )}
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Siblings
-                  </label>
-                  <Input
-                    value={familyData.siblings}
-                    onChange={(e) =>
-                      setFamilyData({ ...familyData, siblings: e.target.value })
-                    }
-                    placeholder="Sibling names and information"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Heritage
-                  </label>
-                  <Input
-                    value={familyData.heritage}
-                    onChange={(e) =>
-                      setFamilyData({ ...familyData, heritage: e.target.value })
-                    }
-                    placeholder="Cultural background, lineage, etc."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Physical Appearance */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Physical Appearance
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Height
-                  </label>
-                  <Input
-                    value={appearanceData.height}
-                    onChange={(e) =>
-                      setAppearanceData({
-                        ...appearanceData,
-                        height: e.target.value,
-                      })
-                    }
-                    placeholder="5'8\', tall, short, etc."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Eye Color
-                  </label>
-                  <Input
-                    value={appearanceData.eyeColor}
-                    onChange={(e) =>
-                      setAppearanceData({
-                        ...appearanceData,
-                        eyeColor: e.target.value,
-                      })
-                    }
-                    placeholder="Blue, brown, green, etc."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Hair Color
-                  </label>
-                  <Input
-                    value={appearanceData.hairColor}
-                    onChange={(e) =>
-                      setAppearanceData({
-                        ...appearanceData,
-                        hairColor: e.target.value,
-                      })
-                    }
-                    placeholder="Blonde, brunette, red, etc."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Distinguishing Marks
-                  </label>
-                  <Input
-                    value={appearanceData.distinguishingMarks}
-                    onChange={(e) =>
-                      setAppearanceData({
-                        ...appearanceData,
-                        distinguishingMarks: e.target.value,
-                      })
-                    }
-                    placeholder="Scars, tattoos, birthmarks, etc."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Personality Arrays */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ArrayField
-                label="Fundamental Traits"
-                items={fundamentalTraits}
-                setItems={setFundamentalTraits}
-                placeholder="Add a core personality trait"
-                maxItems={8}
-              />
-
-              <ArrayField
-                label="Deepest Fears"
-                items={deepestFears}
-                setItems={setDeepestFears}
-                placeholder="Add a deep fear"
-                maxItems={6}
-              />
-
-              <ArrayField
-                label="Core Values"
-                items={coreValues}
-                setItems={setCoreValues}
-                placeholder="Add a core value"
-                maxItems={8}
-              />
-
-              <div>
-                <ArrayField
-                  label="Inspirations"
-                  items={inspirations}
-                  setItems={setInspirations}
-                  placeholder="Add an inspiration"
-                  maxItems={10}
-                />
-              </div>
-            </div>
-
-            {/* Tags */}
-            <ArrayField
-              label="Tags"
-              items={tags}
-              setItems={setTags}
-              placeholder="Add a tag or category"
-              maxItems={15}
-            />
-
-            {/* Writer Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                Writer Notes
-              </label>
-              <textarea
-                value={formData.writerNotes}
-                onChange={(e) =>
-                  setFormData({ ...formData, writerNotes: e.target.value })
-                }
-                placeholder="Private notes about this character..."
-                className="w-full h-24 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                maxLength={2000}
-              />
-              {formData.writerNotes && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.writerNotes.length}/2000 characters
-                </p>
               )}
             </div>
-          </CardContent>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-700">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting || !formData.name.trim()}
-              className="min-w-[120px]"
-            >
-              {isSubmitting ? "Updating..." : "Update Character"}
-            </Button>
+            {/* Actions dropdown - following your existing pattern */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                disabled={isUpdating || isDeleting}
+              >
+                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+              </button>
+
+              {showMenu && (
+                <div
+                  ref={menuRef}
+                  className="absolute right-0 top-full mt-1 w-48 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-10"
+                >
+                  <button
+                    onClick={() => {
+                      onEdit(state);
+                      setShowMenu(false);
+                    }}
+                    disabled={isUpdating || isDeleting}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-600 hover:text-white flex items-center disabled:opacity-50"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit State
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDelete(state.id);
+                      setShowMenu(false);
+                    }}
+                    disabled={isUpdating || isDeleting}
+                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete State
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </form>
+        </div>
+
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Location and Status */}
+            <div className="space-y-2">
+              {state.location && (
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-300">
+                    {state.location}
+                  </span>
+                </div>
+              )}
+              {state.socialStatus && (
+                <div className="flex items-center space-x-2">
+                  <Crown className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-300">
+                    {state.socialStatus}
+                  </span>
+                </div>
+              )}
+              {state.faction && (
+                <div className="flex items-center space-x-2">
+                  <Sword className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-300">{state.faction}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Mental State */}
+            {state.mentalState && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-white">Mental State</h4>
+                <p className="text-sm text-gray-300">{state.mentalState}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Traits, Goals, and Skills */}
+          <div className="mt-4 space-y-3">
+            {currentTraits.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-2">
+                  Current Traits
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {currentTraits.map((trait, index) => (
+                    <Badge key={index} variant="default" className="text-xs">
+                      {trait}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentGoals.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-2">
+                  Current Goals
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {currentGoals.map((goal, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {goal}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {skills.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-white mb-2">Skills</h4>
+                <div className="flex flex-wrap gap-1">
+                  {skills.map((skill, index) => (
+                    <Badge
+                      key={index}
+                      variant="default"
+                      className="text-xs bg-gray-800"
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Changes/Notes */}
+          {state.changes && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-white mb-2">Changes</h4>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                {typeof state.changes === "string"
+                  ? state.changes
+                  : JSON.stringify(state.changes, null, 2)}
+              </p>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

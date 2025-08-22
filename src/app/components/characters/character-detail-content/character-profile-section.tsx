@@ -1,9 +1,9 @@
 // app/components/characters/character-detail-content/character-profile-section.tsx
-// Character profile section showing basic information
+// Character profile section showing basic information (without redundant edit button)
 
 import React from "react";
-import { Edit, MapPin, BookOpen } from "lucide-react";
-import { Card, CardHeader, CardContent, Button } from "@/app/components/ui";
+import { MapPin, BookOpen } from "lucide-react";
+import { Card, CardHeader, CardContent } from "@/app/components/ui";
 import type { Character } from "@/lib/characters/character-service";
 
 // Define proper types for JSON fields
@@ -53,17 +53,12 @@ export const CharacterProfileSection: React.FC<
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Character Profile</h2>
-          <p className="text-gray-400">
-            Complete character information and background
-          </p>
-        </div>
-        <Button variant="outline" icon={Edit}>
-          Edit Profile
-        </Button>
+      {/* Page Header - No edit button since header already has one */}
+      <div>
+        <h2 className="text-2xl font-bold text-white">Character Profile</h2>
+        <p className="text-gray-400">
+          Complete character information and background
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import type {
   CharacterState,
   CreateCharacterStateOptions,
+  UpdateCharacterStateOptions,
 } from "@/lib/characters/character-service";
 
 // ===== TYPES =====
@@ -18,6 +19,11 @@ export interface UseCharacterStatesReturn {
   createState: (
     options: CreateCharacterStateOptions
   ) => Promise<CharacterState | null>;
+  updateState: (
+    stateId: string,
+    updates: UpdateCharacterStateOptions
+  ) => Promise<CharacterState | null>;
+  deleteState: (stateId: string) => Promise<boolean>;
   updateStates: (newStates: CharacterState[]) => void;
   refreshStates: (novelId: string, characterId: string) => Promise<void>;
 
@@ -102,6 +108,132 @@ export function useCharacterStates(
     []
   );
 
+  // ===== UPDATE CHARACTER STATE =====
+  const updateState = useCallback(
+    async (
+      stateId: string,
+      updates: UpdateCharacterStateOptions
+    ): Promise<CharacterState | null> => {
+      try {
+        setError(null);
+        setIsLoading(true);
+
+        // Find the current state to get character info
+        const currentState = states.find((state) => state.id === stateId);
+        if (!currentState) {
+          throw new Error("State not found");
+        }
+
+        // Get character to find novelId
+        const character = await fetch(
+          `/api/novels/*/characters/${currentState.characterId}`
+        )
+          .then((res) => res.json())
+          .then((data) => data.data.character);
+
+        if (!character) {
+          throw new Error("Character not found");
+        }
+
+        const response = await fetch(
+          `/api/novels/${character.novelId}/characters/${currentState.characterId}/states/${stateId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updates),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || "Failed to update character state"
+          );
+        }
+
+        const data = await response.json();
+        const updatedState = data.data;
+
+        // Update local state
+        setStates((prev) =>
+          prev.map((state) => (state.id === stateId ? updatedState : state))
+        );
+
+        return updatedState;
+      } catch (err) {
+        console.error("Error updating character state:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to update character state"
+        );
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [states]
+  );
+
+  // ===== DELETE CHARACTER STATE =====
+  const deleteState = useCallback(
+    async (stateId: string): Promise<boolean> => {
+      try {
+        setError(null);
+        setIsLoading(true);
+
+        // Find the current state to get character info
+        const currentState = states.find((state) => state.id === stateId);
+        if (!currentState) {
+          throw new Error("State not found");
+        }
+
+        // Get character to find novelId
+        const character = await fetch(
+          `/api/novels/*/characters/${currentState.characterId}`
+        )
+          .then((res) => res.json())
+          .then((data) => data.data.character);
+
+        if (!character) {
+          throw new Error("Character not found");
+        }
+
+        const response = await fetch(
+          `/api/novels/${character.novelId}/characters/${currentState.characterId}/states/${stateId}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || "Failed to delete character state"
+          );
+        }
+
+        // Remove from local state
+        setStates((prev) => prev.filter((state) => state.id !== stateId));
+
+        return true;
+      } catch (err) {
+        console.error("Error deleting character state:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to delete character state"
+        );
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [states]
+  );
+
   // ===== UPDATE STATES =====
   const updateStates = useCallback((newStates: CharacterState[]) => {
     setStates(newStates);
@@ -109,10 +241,10 @@ export function useCharacterStates(
 
   // ===== REFRESH STATES =====
   const refreshStates = useCallback(
-    async (novelId: string, characterId: string) => {
+    async (novelId: string, characterId: string): Promise<void> => {
       try {
-        setIsLoading(true);
         setError(null);
+        setIsLoading(true);
 
         const response = await fetch(
           `/api/novels/${novelId}/characters/${characterId}/states`
@@ -126,9 +258,9 @@ export function useCharacterStates(
         }
 
         const data = await response.json();
-        setStates(data.data.states);
+        setStates(data.data.states || []);
       } catch (err) {
-        console.error("Error fetching character states:", err);
+        console.error("Error refreshing character states:", err);
         setError(
           err instanceof Error
             ? err.message
@@ -164,6 +296,8 @@ export function useCharacterStates(
 
     // Actions
     createState,
+    updateState,
+    deleteState,
     updateStates,
     refreshStates,
 
@@ -228,6 +362,112 @@ export function useCreateCharacterState(novelId: string, characterId: string) {
   return {
     createState,
     isCreating,
+    error,
+  };
+}
+
+// ===== SIMPLIFIED UPDATE STATE HOOK =====
+// Hook for updating a specific state (when you have novelId and characterId already)
+export function useUpdateCharacterState(novelId: string, characterId: string) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateState = useCallback(
+    async (
+      stateId: string,
+      updates: UpdateCharacterStateOptions
+    ): Promise<CharacterState | null> => {
+      try {
+        setError(null);
+        setIsUpdating(true);
+
+        const response = await fetch(
+          `/api/novels/${novelId}/characters/${characterId}/states/${stateId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updates),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || "Failed to update character state"
+          );
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (err) {
+        console.error("Error updating character state:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to update character state"
+        );
+        return null;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [novelId, characterId]
+  );
+
+  return {
+    updateState,
+    isUpdating,
+    error,
+  };
+}
+
+// ===== SIMPLIFIED DELETE STATE HOOK =====
+// Hook for deleting a specific state (when you have novelId and characterId already)
+export function useDeleteCharacterState(novelId: string, characterId: string) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteState = useCallback(
+    async (stateId: string): Promise<boolean> => {
+      try {
+        setError(null);
+        setIsDeleting(true);
+
+        const response = await fetch(
+          `/api/novels/${novelId}/characters/${characterId}/states/${stateId}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || "Failed to delete character state"
+          );
+        }
+
+        return true;
+      } catch (err) {
+        console.error("Error deleting character state:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to delete character state"
+        );
+        return false;
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [novelId, characterId]
+  );
+
+  return {
+    deleteState,
+    isDeleting,
     error,
   };
 }
