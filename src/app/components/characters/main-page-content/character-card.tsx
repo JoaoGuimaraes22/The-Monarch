@@ -1,24 +1,27 @@
-// app/components/characters/character-card.tsx
-// Individual character card component
+// app/components/characters/main-page-content/character-card.tsx
+// Individual character card component with navigation to detail page
 
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { MoreVertical, Edit, Eye, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/app/components/ui";
 import type { CharacterWithCurrentState } from "@/lib/characters/character-service";
 
 interface CharacterCardProps {
   character: CharacterWithCurrentState;
+  novelId: string; // Add novelId for navigation
   onDelete: (id: string) => Promise<boolean>;
   onEdit?: (character: CharacterWithCurrentState) => void;
-  onView?: (character: CharacterWithCurrentState) => void;
 }
 
 export const CharacterCard: React.FC<CharacterCardProps> = ({
   character,
+  novelId,
   onDelete,
   onEdit,
-  onView,
 }) => {
+  const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,22 +65,35 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   };
 
   const handleView = () => {
-    if (onView) {
-      onView(character);
-    }
+    router.push(`/novels/${novelId}/characters/${character.id}`);
     setShowMenu(false);
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent navigation if clicking on menu button or menu
+    if (
+      (e.target as HTMLElement).closest(".menu-button") ||
+      (e.target as HTMLElement).closest(".dropdown-menu")
+    ) {
+      return;
+    }
+
+    // Navigate to character detail page
+    router.push(`/novels/${novelId}/characters/${character.id}`);
+  };
+
   return (
-    <Card hover className="relative">
+    <Card hover className="relative cursor-pointer" onClick={handleCardClick}>
       <CardContent className="p-6">
         {/* Character Avatar */}
         <div className="flex items-center space-x-4 mb-4">
-          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
             {character.imageUrl ? (
-              <img
+              <Image
                 src={character.imageUrl}
                 alt={character.name}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
@@ -86,48 +102,61 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
               </span>
             )}
           </div>
+
           <div className="flex-1">
-            <h3 className="font-semibold text-white">{character.name}</h3>
+            <h3 className="font-semibold text-white text-lg">
+              {character.name}
+            </h3>
             <p className="text-sm text-gray-400">{character.species}</p>
           </div>
 
-          {/* Options Menu */}
-          <div className="relative" ref={menuRef}>
+          {/* Action Menu */}
+          <div className="relative menu-button">
             <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1 text-gray-400 hover:text-white rounded transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="p-2 hover:bg-gray-700 rounded-full transition-colors"
               disabled={isDeleting}
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4 text-gray-400" />
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-8 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 min-w-[140px]">
-                {onView && (
-                  <button
-                    onClick={handleView}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:text-white hover:bg-gray-700 flex items-center space-x-2"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View Details</span>
-                  </button>
-                )}
-                {onEdit && (
-                  <button
-                    onClick={handleEdit}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:text-white hover:bg-gray-700 flex items-center space-x-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span>Edit</span>
-                  </button>
-                )}
-                <hr className="border-gray-700" />
+              <div
+                ref={menuRef}
+                className="absolute right-0 top-full mt-1 w-48 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-10 dropdown-menu"
+              >
                 <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:text-red-300 hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleView();
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-600 hover:text-white flex items-center"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit();
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-600 hover:text-white flex items-center"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Character
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete();
+                  }}
+                  disabled={isDeleting}
+                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
                   <span>{isDeleting ? "Deleting..." : "Delete"}</span>
                 </button>
               </div>

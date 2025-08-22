@@ -4,7 +4,7 @@
 "use client";
 
 import React, { use } from "react";
-import { CharacterDetailPageContent } from "@/app/components/characters/";
+import { CharacterDetailPageContent } from "@/app/components/characters";
 
 interface CharacterDetailPageProps {
   params: Promise<{

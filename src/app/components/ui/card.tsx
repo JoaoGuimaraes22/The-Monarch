@@ -1,10 +1,13 @@
+// app/components/ui/card.tsx
+// Fixed Card component with proper mouse event handling
+
 import React from "react";
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void; // Fix: Accept mouse event
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -22,7 +25,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={`${baseStyles} ${hoverStyles} ${clickableStyles} ${className}`}
-      onClick={onClick}
+      onClick={onClick} // Now properly typed for mouse events
     >
       {children}
     </div>
