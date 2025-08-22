@@ -1,5 +1,5 @@
-// app/components/characters/characters-page-content.tsx
-// Main characters page content component
+// app/components/characters/main-page-content/characters-page-content.tsx
+// Main characters page content component - FIXED with novelId
 
 "use client";
 
@@ -85,12 +85,13 @@ export const CharactersPageContent: React.FC<CharactersPageContentProps> = ({
         onSearchChange={setSearchTerm}
       />
 
-      {/* Characters Grid */}
+      {/* Characters Grid - FIX: Add novelId prop */}
       <CharactersGrid
         characters={filteredCharacters}
+        novelId={novelId} // ✅ ADD THIS LINE
         searchTerm={searchTerm}
         onClearSearch={() => setSearchTerm("")}
-        onDeleteCharacter={deleteCharacter}
+        onDelete={deleteCharacter} // ✅ RENAME: onDeleteCharacter → onDelete (to match interface)
       />
 
       {/* Create Character Dialog */}
