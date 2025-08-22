@@ -1,9 +1,16 @@
-// app/components/characters/character-detail-content/edit-character-state-dialog.tsx
-// Dialog for editing character states - following your established patterns
+// app/components/characters/character-detail-content/character-state/edit-character-state-dialog.tsx
+// UPDATED: Dialog for editing character states with enhanced ArrayField and continuous focus
+// Following your established patterns with improved UX
 
 import React, { useState, useEffect } from "react";
-import { X, Plus, Minus } from "lucide-react";
-import { Button, Input, Card, CardContent } from "@/app/components/ui";
+import { X } from "lucide-react";
+import {
+  Button,
+  Input,
+  Card,
+  CardContent,
+  ArrayField,
+} from "@/app/components/ui";
 import type {
   CharacterState,
   UpdateCharacterStateOptions,
@@ -70,7 +77,7 @@ export const EditCharacterStateDialog: React.FC<
     triggerSceneId?: string;
   }>({});
 
-  // Array field state
+  // Array field state - Using enhanced ArrayField component
   const [currentTraits, setCurrentTraits] = useState<string[]>([]);
   const [activeFears, setActiveFears] = useState<string[]>([]);
   const [currentGoals, setCurrentGoals] = useState<string[]>([]);
@@ -112,25 +119,6 @@ export const EditCharacterStateDialog: React.FC<
     }
   }, [state]);
 
-  // Array helpers
-  const addArrayItem = (
-    items: string[],
-    setItems: (items: string[]) => void,
-    newItem: string
-  ) => {
-    if (newItem.trim() && !items.includes(newItem.trim())) {
-      setItems([...items, newItem.trim()]);
-    }
-  };
-
-  const removeArrayItem = (
-    items: string[],
-    setItems: (items: string[]) => void,
-    index: number
-  ) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,10 +127,10 @@ export const EditCharacterStateDialog: React.FC<
     setIsSubmitting(true);
 
     try {
-      // ✅ FIXED: Build updates object with proper data types
+      // Build updates object with proper data types
       const updates: UpdateCharacterStateOptions = {};
 
-      // Only include fields that have values (no null/empty values)
+      // Only include fields that have values
       if (formData.age !== undefined && formData.age !== null) {
         updates.age = Number(formData.age);
       }
@@ -171,40 +159,7 @@ export const EditCharacterStateDialog: React.FC<
         updates.mentalState = formData.mentalState.trim();
       }
 
-      if (formData.scopeType) {
-        updates.scopeType = formData.scopeType;
-      }
-
-      // Handle ID fields (only include if not empty)
-      if (formData.startActId && formData.startActId.trim()) {
-        updates.startActId = formData.startActId.trim();
-      }
-
-      if (formData.startChapterId && formData.startChapterId.trim()) {
-        updates.startChapterId = formData.startChapterId.trim();
-      }
-
-      if (formData.startSceneId && formData.startSceneId.trim()) {
-        updates.startSceneId = formData.startSceneId.trim();
-      }
-
-      if (formData.endActId && formData.endActId.trim()) {
-        updates.endActId = formData.endActId.trim();
-      }
-
-      if (formData.endChapterId && formData.endChapterId.trim()) {
-        updates.endChapterId = formData.endChapterId.trim();
-      }
-
-      if (formData.endSceneId && formData.endSceneId.trim()) {
-        updates.endSceneId = formData.endSceneId.trim();
-      }
-
-      if (formData.triggerSceneId && formData.triggerSceneId.trim()) {
-        updates.triggerSceneId = formData.triggerSceneId.trim();
-      }
-
-      // Handle array fields (only include if not empty)
+      // Array fields - only include if they have items
       if (currentTraits.length > 0) {
         updates.currentTraits = currentTraits;
       }
@@ -233,14 +188,10 @@ export const EditCharacterStateDialog: React.FC<
         updates.secrets = secrets;
       }
 
-      // Handle changes (send as string - API will transform to object)
+      // Handle changes
       if (formData.changes && formData.changes.trim()) {
         updates.changes = formData.changes.trim();
       }
-
-      console.log("Sending updates:", updates); // Debug log
-      console.log("Full form data:", formData); // Debug log
-      console.log("Current traits:", currentTraits); // Debug log
 
       const result = await onUpdate(state.id, updates);
       if (result) {
@@ -253,278 +204,184 @@ export const EditCharacterStateDialog: React.FC<
     }
   };
 
-  // Handle dialog close
-  const handleClose = () => {
-    onClose();
-  };
-
   if (!isOpen || !state) return null;
-
-  // Reusable array field component
-  const ArrayField = ({
-    label,
-    items,
-    setItems,
-    placeholder,
-    maxItems = 10,
-  }: {
-    label: string;
-    items: string[];
-    setItems: (items: string[]) => void;
-    placeholder: string;
-    maxItems?: number;
-  }) => {
-    const [newItem, setNewItem] = useState("");
-
-    return (
-      <div>
-        <label className="block text-sm font-medium text-gray-400 mb-2">
-          {label}{" "}
-          {items.length > 0 && (
-            <span className="text-gray-500">({items.length})</span>
-          )}
-        </label>
-        <div className="space-y-2">
-          {items.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <span className="flex-1 px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded border border-gray-600">
-                {item}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeArrayItem(items, setItems, index)}
-                className="p-1 text-red-400 hover:text-red-300 transition-colors"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-          {items.length < maxItems && (
-            <div className="flex items-center space-x-2">
-              <Input
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder={placeholder}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addArrayItem(items, setItems, newItem);
-                    setNewItem("");
-                  }
-                }}
-                className="flex-1"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  addArrayItem(items, setItems, newItem);
-                  setNewItem("");
-                }}
-                className="p-2 text-green-400 hover:text-green-300 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-gray-800 border-gray-700">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">Edit Character State</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-semibold text-white">
+              Edit Character State
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Update how your character has evolved
+            </p>
+          </div>
           <button
-            onClick={handleClose}
-            className="p-1 text-gray-400 hover:text-white transition-colors"
-            disabled={isSubmitting || isUpdating}
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="flex-1 overflow-y-auto">
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
-                  Basic Information
+                  Current Status
                 </h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Age
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="10000"
-                      value={formData.age || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          age: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
-                        })
-                      }
-                      placeholder="Character's age"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Title
-                    </label>
-                    <Input
-                      value={formData.title || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      placeholder="Lord, Captain, Doctor..."
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Occupation
-                    </label>
-                    <Input
-                      value={formData.occupation || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, occupation: e.target.value })
-                      }
-                      placeholder="Knight, Merchant, Scholar..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Location
-                    </label>
-                    <Input
-                      value={formData.location || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                      placeholder="Current location"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Social Status
-                    </label>
-                    <Input
-                      value={formData.socialStatus || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          socialStatus: e.target.value,
-                        })
-                      }
-                      placeholder="Noble, Commoner, Outcast..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Faction
-                    </label>
-                    <Input
-                      value={formData.faction || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, faction: e.target.value })
-                      }
-                      placeholder="House, Guild, Organization..."
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Mental State
-                  </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <Input
-                    value={formData.mentalState || ""}
+                    label="Age"
+                    type="number"
+                    value={formData.age || ""}
                     onChange={(e) =>
-                      setFormData({ ...formData, mentalState: e.target.value })
+                      setFormData({
+                        ...formData,
+                        age: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      })
                     }
-                    placeholder="Describe mental/emotional state..."
+                    placeholder="Character's current age"
+                  />
+                  <Input
+                    label="Title"
+                    value={formData.title || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                    placeholder="Lord, Captain, Dr., etc."
+                  />
+                  <Input
+                    label="Occupation"
+                    value={formData.occupation || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, occupation: e.target.value })
+                    }
+                    placeholder="Current job or role"
+                  />
+                  <Input
+                    label="Location"
+                    value={formData.location || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
+                    placeholder="Where they are currently"
+                  />
+                  <Input
+                    label="Social Status"
+                    value={formData.socialStatus || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, socialStatus: e.target.value })
+                    }
+                    placeholder="Noble, Commoner, Outcast..."
+                  />
+                  <Input
+                    label="Faction"
+                    value={formData.faction || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, faction: e.target.value })
+                    }
+                    placeholder="House, Guild, Organization..."
                   />
                 </div>
+
+                <Input
+                  label="Mental State"
+                  value={formData.mentalState || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mentalState: e.target.value })
+                  }
+                  placeholder="Describe mental/emotional state..."
+                />
               </div>
 
-              {/* Personality & Development */}
+              {/* Personality & Development - UPDATED with enhanced ArrayField */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
                   Personality & Development
                 </h3>
 
-                <ArrayField
-                  label="Current Traits"
-                  items={currentTraits}
-                  setItems={setCurrentTraits}
-                  placeholder="Add personality trait..."
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* ✨ ENHANCED: Using new ArrayField with continuous focus */}
+                  <ArrayField
+                    label="Current Traits"
+                    items={currentTraits}
+                    setItems={setCurrentTraits}
+                    placeholder="Add personality trait..."
+                    maxItems={8}
+                    continuousFocus={true} // Enable continuous focus feature
+                  />
 
-                <ArrayField
-                  label="Current Goals"
-                  items={currentGoals}
-                  setItems={setCurrentGoals}
-                  placeholder="Add current goal..."
-                />
+                  <ArrayField
+                    label="Current Goals"
+                    items={currentGoals}
+                    setItems={setCurrentGoals}
+                    placeholder="Add current goal..."
+                    maxItems={6}
+                    continuousFocus={true}
+                  />
 
-                <ArrayField
-                  label="Motivations"
-                  items={motivations}
-                  setItems={setMotivations}
-                  placeholder="Add motivation..."
-                />
+                  <ArrayField
+                    label="Motivations"
+                    items={motivations}
+                    setItems={setMotivations}
+                    placeholder="Add motivation..."
+                    maxItems={6}
+                    continuousFocus={true}
+                  />
 
-                <ArrayField
-                  label="Active Fears"
-                  items={activeFears}
-                  setItems={setActiveFears}
-                  placeholder="Add fear or concern..."
-                />
+                  <ArrayField
+                    label="Active Fears"
+                    items={activeFears}
+                    setItems={setActiveFears}
+                    placeholder="Add fear or concern..."
+                    maxItems={5}
+                    continuousFocus={true}
+                  />
+                </div>
               </div>
 
-              {/* Skills & Knowledge */}
+              {/* Skills & Knowledge - UPDATED with enhanced ArrayField */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
                   Skills & Knowledge
                 </h3>
 
-                <ArrayField
-                  label="Skills"
-                  items={skills}
-                  setItems={setSkills}
-                  placeholder="Add skill..."
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ArrayField
+                    label="Skills"
+                    items={skills}
+                    setItems={setSkills}
+                    placeholder="Add skill..."
+                    maxItems={10}
+                    continuousFocus={true}
+                  />
 
-                <ArrayField
-                  label="Knowledge"
-                  items={knowledge}
-                  setItems={setKnowledge}
-                  placeholder="Add knowledge area..."
-                />
+                  <ArrayField
+                    label="Knowledge"
+                    items={knowledge}
+                    setItems={setKnowledge}
+                    placeholder="Add knowledge area..."
+                    maxItems={8}
+                    continuousFocus={true}
+                  />
+                </div>
 
                 <ArrayField
                   label="Secrets"
                   items={secrets}
                   setItems={setSecrets}
                   placeholder="Add secret..."
+                  maxItems={5}
+                  continuousFocus={true}
                 />
               </div>
 
@@ -539,7 +396,7 @@ export const EditCharacterStateDialog: React.FC<
                     Scope Type
                   </label>
                   <select
-                    value={formData.scopeType || "novel"}
+                    value={formData.scopeType}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -550,7 +407,7 @@ export const EditCharacterStateDialog: React.FC<
                           | "scene",
                       })
                     }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-red-500 focus:outline-none"
+                    className="w-full px-3 py-2 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-red-500"
                   >
                     <option value="novel">Throughout Novel</option>
                     <option value="act">Specific Act</option>
@@ -559,39 +416,38 @@ export const EditCharacterStateDialog: React.FC<
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Changes & Notes
-                  </label>
-                  <Input
-                    value={formData.changes || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, changes: e.target.value })
-                    }
-                    placeholder="What changed and why..."
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-700">
-                <Button
-                  variant="ghost"
-                  onClick={handleClose}
-                  disabled={isSubmitting || isUpdating}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  type="submit"
-                  disabled={isSubmitting || isUpdating}
-                >
-                  {isSubmitting || isUpdating ? "Updating..." : "Update State"}
-                </Button>
+                <Input
+                  label="What Changed?"
+                  value={formData.changes || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, changes: e.target.value })
+                  }
+                  placeholder="Describe what changed about this character..."
+                />
               </div>
             </form>
           </CardContent>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-700 flex-shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="min-w-[120px]"
+          >
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
       </Card>
     </div>

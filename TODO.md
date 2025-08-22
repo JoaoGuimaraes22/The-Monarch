@@ -18,7 +18,7 @@
 - Keep in mind structure and already built utilites.
 - No using "any" types.
 - Following my Architecture Patterns:
-- Uses your established /lib/api middleware system
-- Follows your hook patterns like manuscript hooks
-- Integrates with your existing UI component library
-- Maintains your clean component organization
+- Uses established /lib/api middleware system
+- Follows hook patterns like manuscript hooks
+- Integrates with existing UI component library
+- Maintains clean component organization

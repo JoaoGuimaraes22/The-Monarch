@@ -1,9 +1,16 @@
-// app/components/characters/character-detail-content/edit-character-dialog.tsx
-// Dialog for editing character information
+// app/components/characters/character-detail-content/character-profile/edit-character-dialog.tsx
+// UPDATED: Dialog for editing character information with fixed layout and enhanced ArrayField
+// Following your established patterns with improved UX
 
 import React, { useState } from "react";
-import { X, Plus, Minus } from "lucide-react";
-import { Button, Input, Card, CardContent } from "@/app/components/ui";
+import { X } from "lucide-react";
+import {
+  Button,
+  Input,
+  Card,
+  CardContent,
+  ArrayField,
+} from "@/app/components/ui";
 import type {
   Character,
   CreateCharacterOptions,
@@ -98,25 +105,6 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
     initialNature.coreValues || []
   );
 
-  // Array helpers
-  const addArrayItem = (
-    array: string[],
-    setter: (items: string[]) => void,
-    newItem: string
-  ) => {
-    if (newItem.trim() && !array.includes(newItem.trim())) {
-      setter([...array, newItem.trim()]);
-    }
-  };
-
-  const removeArrayItem = (
-    array: string[],
-    setter: (items: string[]) => void,
-    index: number
-  ) => {
-    setter(array.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -176,165 +164,80 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
     }
   };
 
-  // Reusable array field component
-  const ArrayField = ({
-    label,
-    items,
-    setItems,
-    placeholder,
-    maxItems = 10,
-  }: {
-    label: string;
-    items: string[];
-    setItems: (items: string[]) => void;
-    placeholder: string;
-    maxItems?: number;
-  }) => {
-    const [newItem, setNewItem] = useState("");
-
-    return (
-      <div>
-        <label className="block text-sm font-medium text-gray-400 mb-2">
-          {label}{" "}
-          {items.length > 0 && (
-            <span className="text-gray-500">({items.length})</span>
-          )}
-        </label>
-        <div className="space-y-2">
-          {items.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <span className="flex-1 px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded border border-gray-600">
-                {item}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeArrayItem(items, setItems, index)}
-                className="p-1 text-red-400 hover:text-red-300 transition-colors"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-          {items.length < maxItems && (
-            <div className="flex items-center space-x-2">
-              <Input
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder={placeholder}
-                className="flex-1"
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addArrayItem(items, setItems, newItem);
-                    setNewItem("");
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  addArrayItem(items, setItems, newItem);
-                  setNewItem("");
-                }}
-                disabled={!newItem.trim()}
-                className="p-2 text-green-400 hover:text-green-300 disabled:text-gray-500 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <div>
-              <h2 className="text-xl font-bold text-white">Edit Character</h2>
-              <p className="text-sm text-gray-400">
-                Update {character.name}&#39;s information
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
-              disabled={isSubmitting}
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-gray-800 border-gray-700">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Edit Character</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Update {character.name}&#39;s information
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+            disabled={isSubmitting}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          <CardContent className="p-6 space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Name *
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Character name"
-                  maxLength={255}
-                  required
-                />
-              </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Name *"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder="Character name"
+                    maxLength={255}
+                    required
+                  />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Species
-                </label>
-                <Input
-                  value={formData.species}
-                  onChange={(e) =>
-                    setFormData({ ...formData, species: e.target.value })
-                  }
-                  placeholder="Human, Elf, Dwarf, etc."
-                  maxLength={100}
-                />
-              </div>
+                  <Input
+                    label="Species"
+                    value={formData.species}
+                    onChange={(e) =>
+                      setFormData({ ...formData, species: e.target.value })
+                    }
+                    placeholder="Human, Elf, Dwarf, etc."
+                    maxLength={100}
+                  />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Gender
-                </label>
-                <Input
-                  value={formData.gender}
-                  onChange={(e) =>
-                    setFormData({ ...formData, gender: e.target.value })
-                  }
-                  placeholder="Male, Female, Non-binary, etc."
-                  maxLength={50}
-                />
-              </div>
+                  <Input
+                    label="Gender"
+                    value={formData.gender}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gender: e.target.value })
+                    }
+                    placeholder="Male, Female, Non-binary, etc."
+                    maxLength={50}
+                  />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Birthplace
-                </label>
-                <Input
-                  value={formData.birthplace}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birthplace: e.target.value })
-                  }
-                  placeholder="Place of birth"
-                  maxLength={255}
-                />
-              </div>
+                  <Input
+                    label="Birthplace"
+                    value={formData.birthplace}
+                    onChange={(e) =>
+                      setFormData({ ...formData, birthplace: e.target.value })
+                    }
+                    placeholder="Place of birth"
+                    maxLength={255}
+                  />
+                </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Image URL
-                </label>
                 <Input
+                  label="Image URL"
                   type="url"
                   value={formData.imageUrl}
                   onChange={(e) =>
@@ -343,32 +246,24 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                   placeholder="https://example.com/character-image.jpg"
                 />
               </div>
-            </div>
 
-            {/* Family Information */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Family & Heritage
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Parents
-                  </label>
+              {/* Family Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
+                  Family & Heritage
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
+                    label="Parents"
                     value={familyData.parents}
                     onChange={(e) =>
                       setFamilyData({ ...familyData, parents: e.target.value })
                     }
                     placeholder="Parent names and information"
                   />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Siblings
-                  </label>
                   <Input
+                    label="Siblings"
                     value={familyData.siblings}
                     onChange={(e) =>
                       setFamilyData({ ...familyData, siblings: e.target.value })
@@ -377,32 +272,24 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Heritage
-                  </label>
-                  <Input
-                    value={familyData.heritage}
-                    onChange={(e) =>
-                      setFamilyData({ ...familyData, heritage: e.target.value })
-                    }
-                    placeholder="Cultural background, lineage, etc."
-                  />
-                </div>
+                <Input
+                  label="Heritage"
+                  value={familyData.heritage}
+                  onChange={(e) =>
+                    setFamilyData({ ...familyData, heritage: e.target.value })
+                  }
+                  placeholder="Cultural background, lineage, etc."
+                />
               </div>
-            </div>
 
-            {/* Physical Appearance */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Physical Appearance
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Height
-                  </label>
+              {/* Physical Appearance */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
+                  Physical Appearance
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
+                    label="Height"
                     value={appearanceData.height}
                     onChange={(e) =>
                       setAppearanceData({
@@ -410,15 +297,11 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                         height: e.target.value,
                       })
                     }
-                    placeholder="5'8\', tall, short, etc."
+                    placeholder="5'8, tall, short, etc."
                   />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Eye Color
-                  </label>
                   <Input
+                    label="Eye Color"
                     value={appearanceData.eyeColor}
                     onChange={(e) =>
                       setAppearanceData({
@@ -428,13 +311,9 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     }
                     placeholder="Blue, brown, green, etc."
                   />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Hair Color
-                  </label>
                   <Input
+                    label="Hair Color"
                     value={appearanceData.hairColor}
                     onChange={(e) =>
                       setAppearanceData({
@@ -444,13 +323,9 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                     }
                     placeholder="Blonde, brunette, red, etc."
                   />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
-                    Distinguishing Marks
-                  </label>
                   <Input
+                    label="Distinguishing Marks"
                     value={appearanceData.distinguishingMarks}
                     onChange={(e) =>
                       setAppearanceData({
@@ -462,96 +337,115 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Personality Arrays */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ArrayField
-                label="Fundamental Traits"
-                items={fundamentalTraits}
-                setItems={setFundamentalTraits}
-                placeholder="Add a core personality trait"
-                maxItems={8}
-              />
+              {/* Personality Arrays - UPDATED with enhanced ArrayField */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
+                  Core Personality
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ArrayField
+                    label="Fundamental Traits"
+                    items={fundamentalTraits}
+                    setItems={setFundamentalTraits}
+                    placeholder="Add a core personality trait"
+                    maxItems={8}
+                    continuousFocus={true}
+                  />
 
-              <ArrayField
-                label="Deepest Fears"
-                items={deepestFears}
-                setItems={setDeepestFears}
-                placeholder="Add a deep fear"
-                maxItems={6}
-              />
+                  <ArrayField
+                    label="Deepest Fears"
+                    items={deepestFears}
+                    setItems={setDeepestFears}
+                    placeholder="Add a deep fear"
+                    maxItems={6}
+                    continuousFocus={true}
+                  />
 
-              <ArrayField
-                label="Core Values"
-                items={coreValues}
-                setItems={setCoreValues}
-                placeholder="Add a core value"
-                maxItems={8}
-              />
+                  <ArrayField
+                    label="Core Values"
+                    items={coreValues}
+                    setItems={setCoreValues}
+                    placeholder="Add a core value"
+                    maxItems={8}
+                    continuousFocus={true}
+                  />
 
-              <div>
+                  <ArrayField
+                    label="Inspirations"
+                    items={inspirations}
+                    setItems={setInspirations}
+                    placeholder="Add an inspiration"
+                    maxItems={10}
+                    continuousFocus={true}
+                  />
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
+                  Organization
+                </h3>
                 <ArrayField
-                  label="Inspirations"
-                  items={inspirations}
-                  setItems={setInspirations}
-                  placeholder="Add an inspiration"
-                  maxItems={10}
+                  label="Tags"
+                  items={tags}
+                  setItems={setTags}
+                  placeholder="Add a tag or category"
+                  maxItems={15}
+                  continuousFocus={true}
                 />
               </div>
-            </div>
 
-            {/* Tags */}
-            <ArrayField
-              label="Tags"
-              items={tags}
-              setItems={setTags}
-              placeholder="Add a tag or category"
-              maxItems={15}
-            />
-
-            {/* Writer Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                Writer Notes
-              </label>
-              <textarea
-                value={formData.writerNotes}
-                onChange={(e) =>
-                  setFormData({ ...formData, writerNotes: e.target.value })
-                }
-                placeholder="Private notes about this character..."
-                className="w-full h-24 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                maxLength={2000}
-              />
-              {formData.writerNotes && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.writerNotes.length}/2000 characters
-                </p>
-              )}
-            </div>
+              {/* Writer Notes */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2">
+                  Notes
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Writer Notes
+                  </label>
+                  <textarea
+                    value={formData.writerNotes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, writerNotes: e.target.value })
+                    }
+                    placeholder="Private notes about this character..."
+                    className="w-full h-24 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                    maxLength={2000}
+                  />
+                  {formData.writerNotes && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.writerNotes.length}/2000 characters
+                    </p>
+                  )}
+                </div>
+              </div>
+            </form>
           </CardContent>
+        </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-700">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting || !formData.name.trim()}
-              className="min-w-[120px]"
-            >
-              {isSubmitting ? "Updating..." : "Update Character"}
-            </Button>
-          </div>
-        </form>
+        {/* Footer */}
+        <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-700 flex-shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !formData.name.trim()}
+            className="min-w-[120px]"
+          >
+            {isSubmitting ? "Updating..." : "Update Character"}
+          </Button>
+        </div>
       </Card>
     </div>
   );
