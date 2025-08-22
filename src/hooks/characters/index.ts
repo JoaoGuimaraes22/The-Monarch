@@ -6,8 +6,8 @@ export { useCharacters } from "./useCharacters";
 export {
   useCharacterStates,
   useCreateCharacterState,
-  useDeleteCharacterState,
-  useUpdateCharacterState,
+  useUpdateCharacterState, // ✅ NEW: Add this export
+  useDeleteCharacterState, // ✅ NEW: Add this export
 } from "./useCharacterStates";
 
 // ===== TYPE EXPORTS =====
@@ -22,6 +22,8 @@ Following your established patterns from manuscript hooks:
 - useCharacters: Complete character management for a novel
 - useCharacterStates: Character state management with CRUD operations
 - useCreateCharacterState: Simplified hook for character detail page
+- useUpdateCharacterState: Simplified hook for updating states
+- useDeleteCharacterState: Simplified hook for deleting states
 
 ✅ MODULAR DESIGN:
 - Each hook has a single responsibility
@@ -41,6 +43,8 @@ const { characters, createCharacter, deleteCharacter } = useCharacters(novelId);
 // Character detail page (full states management)
 const statesHook = useCharacterStates(initialStates);
 
-// Character detail page (simplified creation)
+// Character detail page (simplified hooks)
 const { createState, isCreating } = useCreateCharacterState(novelId, characterId);
+const { updateState, isUpdating } = useUpdateCharacterState(novelId, characterId);
+const { deleteState, isDeleting } = useDeleteCharacterState(novelId, characterId);
 */
