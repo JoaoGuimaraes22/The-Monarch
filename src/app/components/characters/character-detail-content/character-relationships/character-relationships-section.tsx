@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-content/character-relationships/character-relationships-section.tsx
-// Updated character relationships section with edit relationship support
+// Character relationships section with complete edit support - Clean rewrite
 
 import React, { useState } from "react";
 import { useCharacterRelationships } from "@/hooks/characters";
@@ -26,11 +26,12 @@ interface CharacterRelationshipsSectionProps {
 export const CharacterRelationshipsSection: React.FC<
   CharacterRelationshipsSectionProps
 > = ({ character, novelId }) => {
+  // Dialog and selection state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedRelationship, setSelectedRelationship] =
     useState<RelationshipWithCharacters | null>(null);
 
-  // Use the relationship hook
+  // Main relationships hook
   const {
     relationships,
     isLoading,
@@ -40,9 +41,10 @@ export const CharacterRelationshipsSection: React.FC<
     refetch,
     isCreating,
     isDeleting,
+    isUpdating,
   } = useCharacterRelationships(novelId, character.id);
 
-  // Handle add relationship
+  // Handle add new relationship
   const handleAddRelationship = () => {
     setShowCreateDialog(true);
   };
@@ -60,16 +62,25 @@ export const CharacterRelationshipsSection: React.FC<
     setSelectedRelationship(null);
   };
 
-  // Handle update relationship
+  // Handle relationship update with proper typing
   const handleUpdateRelationship = async (
     relationshipId: string,
     updates: UpdateRelationshipOptions
   ): Promise<boolean> => {
     try {
       const result = await updateRelationship(relationshipId, updates);
+
       if (result) {
-        // Refresh the selected relationship with updated data
-        setSelectedRelationship(result);
+        // Update the selected relationship if it's currently being viewed
+        if (
+          selectedRelationship &&
+          selectedRelationship.id === relationshipId
+        ) {
+          setSelectedRelationship({
+            ...selectedRelationship,
+            ...updates,
+          });
+        }
         return true;
       }
       return false;
@@ -81,12 +92,13 @@ export const CharacterRelationshipsSection: React.FC<
 
   // Handle delete relationship from detail view
   const handleDeleteFromDetail = async () => {
-    if (
-      selectedRelationship &&
-      confirm(
-        "Are you sure you want to delete this relationship? This will also delete the reciprocal relationship."
-      )
-    ) {
+    if (!selectedRelationship) return;
+
+    const confirmed = confirm(
+      "Are you sure you want to delete this relationship? This will also delete the reciprocal relationship."
+    );
+
+    if (confirmed) {
       const success = await deleteRelationship(selectedRelationship.id);
       if (success) {
         setSelectedRelationship(null); // Go back to list
@@ -96,23 +108,23 @@ export const CharacterRelationshipsSection: React.FC<
 
   // Handle delete relationship from grid
   const handleDeleteRelationship = async (relationshipId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this relationship? This will also delete the reciprocal relationship."
-      )
-    ) {
+    const confirmed = confirm(
+      "Are you sure you want to delete this relationship? This will also delete the reciprocal relationship."
+    );
+
+    if (confirmed) {
       await deleteRelationship(relationshipId);
     }
-  };
-
-  // Handle retry on error
-  const handleRetry = () => {
-    refetch();
   };
 
   // Handle successful relationship creation
   const handleCreateSuccess = () => {
     refetch(); // Refresh the relationships list
+  };
+
+  // Handle retry on error
+  const handleRetry = () => {
+    refetch();
   };
 
   // Show detail view if relationship selected
@@ -123,7 +135,7 @@ export const CharacterRelationshipsSection: React.FC<
         novelId={novelId}
         characterId={character.id}
         onBack={handleBackFromDetail}
-        onEdit={() => {}} // Not used anymore - edit is handled internally
+        onEdit={() => {}} // Not used - edit handled internally
         onDelete={handleDeleteFromDetail}
         onUpdate={handleUpdateRelationship}
       />
@@ -146,8 +158,10 @@ export const CharacterRelationshipsSection: React.FC<
     );
   }
 
+  // Main relationships view
   return (
     <div className="space-y-6">
+      {/* Header with stats and add button */}
       <RelationshipsHeader
         character={character}
         relationshipCount={relationships.length}
@@ -155,6 +169,7 @@ export const CharacterRelationshipsSection: React.FC<
         isCreating={isCreating}
       />
 
+      {/* Content - empty state or relationships grid */}
       {relationships.length === 0 ? (
         <RelationshipsEmptyState
           character={character}

@@ -1,5 +1,5 @@
 // app/components/characters/character-detail-content/character-relationships/relationship-detail-view.tsx
-// Detailed view of a specific relationship with timeline - Updated with Create State Dialog
+// Detailed view of a specific relationship with timeline - Complete rewrite
 
 import React, { useState } from "react";
 import {
@@ -93,6 +93,7 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
   onDelete,
   onUpdate,
 }) => {
+  // Dialog states
   const [showAddStateDialog, setShowAddStateDialog] = useState(false);
   const [showEditStateDialog, setShowEditStateDialog] = useState(false);
   const [showEditRelationshipDialog, setShowEditRelationshipDialog] =
@@ -101,12 +102,11 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
     null
   );
 
-  // Get relationship states
+  // Get relationship states hook
   const {
     states,
     isLoading: statesLoading,
     error: statesError,
-    createState,
     updateState,
     deleteState,
     refetch,
@@ -115,12 +115,18 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
     isDeleting,
   } = useRelationshipStates(novelId, characterId, relationship.id);
 
+  // Get icon and color for relationship type
   const RelationshipIcon = getRelationshipIcon(relationship.baseType);
   const iconColor = getRelationshipColor(relationship.baseType);
 
-  // Handle add state
+  // Handle add relationship state
   const handleAddState = () => {
     setShowAddStateDialog(true);
+  };
+
+  // Handle edit relationship base info
+  const handleEditRelationship = () => {
+    setShowEditRelationshipDialog(true);
   };
 
   // Handle state created
@@ -128,7 +134,7 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
     refetch(); // Refresh the states list
   };
 
-  // Handle edit state
+  // Handle edit relationship state
   const handleEditState = (stateId: string) => {
     const state = states.find((s) => s.id === stateId);
     if (state) {
@@ -143,7 +149,7 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
     setSelectedState(null);
   };
 
-  // Handle delete state
+  // Handle delete relationship state
   const handleDeleteState = async (stateId: string) => {
     if (confirm("Are you sure you want to delete this relationship state?")) {
       await deleteState(stateId);
@@ -420,9 +426,7 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
                             icon={Edit}
                             onClick={() => handleEditState(state.id)}
                             disabled={isUpdating}
-                          >
-                            Edit
-                          </Button>
+                          />
                           <Button
                             variant="ghost"
                             size="sm"
@@ -430,9 +434,7 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
                             onClick={() => handleDeleteState(state.id)}
                             disabled={isDeleting}
                             className="text-red-400 hover:text-red-300"
-                          >
-                            Delete
-                          </Button>
+                          />
                         </div>
                       </div>
 
