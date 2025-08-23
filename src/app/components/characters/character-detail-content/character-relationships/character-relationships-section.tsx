@@ -1,10 +1,13 @@
 // app/components/characters/character-detail-content/character-relationships/character-relationships-section.tsx
-// Updated character relationships section using modular components
+// Updated character relationships section with edit relationship support
 
 import React, { useState } from "react";
 import { useCharacterRelationships } from "@/hooks/characters";
 import type { Character } from "@/lib/characters/character-service";
-import type { RelationshipWithCharacters } from "@/lib/characters/relationship-service";
+import type {
+  RelationshipWithCharacters,
+  UpdateRelationshipOptions,
+} from "@/lib/characters/relationship-service";
 import {
   RelationshipsHeader,
   RelationshipsGrid,
@@ -32,6 +35,7 @@ export const CharacterRelationshipsSection: React.FC<
     relationships,
     isLoading,
     error,
+    updateRelationship,
     deleteRelationship,
     refetch,
     isCreating,
@@ -56,10 +60,23 @@ export const CharacterRelationshipsSection: React.FC<
     setSelectedRelationship(null);
   };
 
-  // Handle edit relationship
-  const handleEditRelationship = () => {
-    // TODO: Open edit relationship dialog
-    console.log("Edit relationship:", selectedRelationship?.id);
+  // Handle update relationship
+  const handleUpdateRelationship = async (
+    relationshipId: string,
+    updates: UpdateRelationshipOptions
+  ): Promise<boolean> => {
+    try {
+      const result = await updateRelationship(relationshipId, updates);
+      if (result) {
+        // Refresh the selected relationship with updated data
+        setSelectedRelationship(result);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error updating relationship:", error);
+      return false;
+    }
   };
 
   // Handle delete relationship from detail view
@@ -106,8 +123,9 @@ export const CharacterRelationshipsSection: React.FC<
         novelId={novelId}
         characterId={character.id}
         onBack={handleBackFromDetail}
-        onEdit={handleEditRelationship}
+        onEdit={() => {}} // Not used anymore - edit is handled internally
         onDelete={handleDeleteFromDetail}
+        onUpdate={handleUpdateRelationship}
       />
     );
   }

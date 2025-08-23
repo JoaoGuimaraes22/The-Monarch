@@ -14,12 +14,21 @@ import {
   Sword,
   Eye,
 } from "lucide-react";
-import { Button, Card, CardContent, Badge } from "@/app/components/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  Badge,
+  CharacterAvatar,
+} from "@/app/components/ui";
 import { useRelationshipStates } from "@/hooks/characters";
 import { CreateRelationshipStateDialog } from "./create-relationship-state-dialog";
+import { EditRelationshipStateDialog } from "./edit-relationship-state-dialog";
+import { EditRelationshipDialog } from "./edit-relationship-dialog";
 import type {
   RelationshipWithCharacters,
   RelationshipState,
+  UpdateRelationshipOptions,
 } from "@/lib/characters/relationship-service";
 
 interface RelationshipDetailViewProps {
@@ -29,6 +38,10 @@ interface RelationshipDetailViewProps {
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdate?: (
+    relationshipId: string,
+    updates: UpdateRelationshipOptions
+  ) => Promise<boolean>;
 }
 
 // Relationship type icons (consistent with create dialog)
@@ -78,8 +91,15 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
   onBack,
   onEdit,
   onDelete,
+  onUpdate,
 }) => {
   const [showAddStateDialog, setShowAddStateDialog] = useState(false);
+  const [showEditStateDialog, setShowEditStateDialog] = useState(false);
+  const [showEditRelationshipDialog, setShowEditRelationshipDialog] =
+    useState(false);
+  const [selectedState, setSelectedState] = useState<RelationshipState | null>(
+    null
+  );
 
   // Get relationship states
   const {
@@ -110,8 +130,17 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
 
   // Handle edit state
   const handleEditState = (stateId: string) => {
-    // TODO: Open edit relationship state dialog
-    console.log("Edit relationship state:", stateId);
+    const state = states.find((s) => s.id === stateId);
+    if (state) {
+      setSelectedState(state);
+      setShowEditStateDialog(true);
+    }
+  };
+
+  // Handle state updated
+  const handleStateUpdated = () => {
+    refetch(); // Refresh the states list
+    setSelectedState(null);
   };
 
   // Handle delete state
@@ -161,7 +190,11 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
         </div>
 
         <div className="flex items-center space-x-3">
-          <Button variant="outline" icon={Edit} onClick={onEdit}>
+          <Button
+            variant="outline"
+            icon={Edit}
+            onClick={handleEditRelationship}
+          >
             Edit Relationship
           </Button>
           <Button
@@ -181,19 +214,11 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                {relationship.fromCharacter.imageUrl ? (
-                  <img
-                    src={relationship.fromCharacter.imageUrl}
-                    alt={relationship.fromCharacter.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white font-medium text-lg">
-                    {relationship.fromCharacter.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <CharacterAvatar
+                name={relationship.fromCharacter.name}
+                imageUrl={relationship.fromCharacter.imageUrl}
+                size="md"
+              />
               <div>
                 <h3 className="text-lg font-medium text-white">
                   {relationship.fromCharacter.name}
@@ -219,19 +244,11 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center space-x-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                {relationship.toCharacter.imageUrl ? (
-                  <img
-                    src={relationship.toCharacter.imageUrl}
-                    alt={relationship.toCharacter.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white font-medium text-lg">
-                    {relationship.toCharacter.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <CharacterAvatar
+                name={relationship.toCharacter.name}
+                imageUrl={relationship.toCharacter.imageUrl}
+                size="md"
+              />
               <div>
                 <h3 className="text-lg font-medium text-white">
                   {relationship.toCharacter.name}
@@ -504,6 +521,24 @@ export const RelationshipDetailView: React.FC<RelationshipDetailViewProps> = ({
         novelId={novelId}
         characterId={characterId}
         onStateCreated={handleStateCreated}
+      />
+
+      {/* Edit Relationship State Dialog */}
+      <EditRelationshipStateDialog
+        isOpen={showEditStateDialog}
+        onClose={() => setShowEditStateDialog(false)}
+        relationship={relationship}
+        state={selectedState}
+        onUpdate={updateState}
+        isUpdating={isUpdating}
+      />
+
+      {/* Edit Relationship Dialog */}
+      <EditRelationshipDialog
+        isOpen={showEditRelationshipDialog}
+        onClose={() => setShowEditRelationshipDialog(false)}
+        relationship={relationship}
+        onUpdate={onUpdate || (() => Promise.resolve(false))}
       />
     </div>
   );

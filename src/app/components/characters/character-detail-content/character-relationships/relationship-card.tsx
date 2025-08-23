@@ -1,9 +1,15 @@
 // app/components/characters/character-detail-content/character-relationships/relationship-card.tsx
-// Individual relationship card component
+// Individual relationship card component - Updated with CharacterAvatar
 
 import React from "react";
 import { Heart, Users, UserCheck, Crown, Sword, Eye } from "lucide-react";
-import { Card, CardContent, Button, Badge } from "@/app/components/ui";
+import {
+  Card,
+  CardContent,
+  Button,
+  Badge,
+  CharacterAvatar,
+} from "@/app/components/ui";
 import type { RelationshipWithCurrentState } from "@/lib/characters/relationship-service";
 
 interface RelationshipCardProps {
@@ -89,19 +95,11 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-              {relationship.toCharacter.imageUrl ? (
-                <img
-                  src={relationship.toCharacter.imageUrl}
-                  alt={relationship.toCharacter.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-white font-medium">
-                  {relationship.toCharacter.name.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
+            <CharacterAvatar
+              name={relationship.toCharacter.name}
+              imageUrl={relationship.toCharacter.imageUrl}
+              size="sm"
+            />
             <div>
               <h3 className="font-medium text-white">
                 {relationship.toCharacter.name}

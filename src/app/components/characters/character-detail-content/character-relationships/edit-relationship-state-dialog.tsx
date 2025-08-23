@@ -1,7 +1,7 @@
-// app/components/characters/character-detail-content/character-relationships/create-relationship-state-dialog.tsx
-// Dialog for creating new relationship states following your established patterns
+// app/components/characters/character-detail-content/character-relationships/edit-relationship-state-dialog.tsx
+// Dialog for editing relationship states following your established patterns
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Users,
@@ -12,19 +12,22 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Button, Input, Card, CardContent, Select } from "@/app/components/ui";
-import { useCreateRelationshipState } from "@/hooks/characters";
 import type {
   RelationshipWithCharacters,
-  CreateRelationshipStateOptions,
+  RelationshipState,
+  UpdateRelationshipStateOptions,
 } from "@/lib/characters/relationship-service";
 
-interface CreateRelationshipStateDialogProps {
+interface EditRelationshipStateDialogProps {
   isOpen: boolean;
   onClose: () => void;
   relationship: RelationshipWithCharacters;
-  novelId: string;
-  characterId: string;
-  onStateCreated: () => void;
+  state: RelationshipState | null;
+  onUpdate: (
+    stateId: string,
+    updates: UpdateRelationshipStateOptions
+  ) => Promise<RelationshipState | null>;
+  isUpdating?: boolean;
 }
 
 // Current type options with descriptions
@@ -79,30 +82,19 @@ const CURRENT_TYPE_OPTIONS = [
   },
 ];
 
-// Power balance options (base options)
-const BASE_POWER_BALANCE_OPTIONS = [
-  {
-    value: "equal",
-    label: "Equal",
-    description: "Both have similar influence",
-  },
-  {
-    value: "shifting",
-    label: "Shifting",
-    description: "Power balance changes frequently",
-  },
-];
-
-export const CreateRelationshipStateDialog: React.FC<
-  CreateRelationshipStateDialogProps
+export const EditRelationshipStateDialog: React.FC<
+  EditRelationshipStateDialogProps
 > = ({
   isOpen,
   onClose,
   relationship,
-  novelId,
-  characterId,
-  onStateCreated,
+  state,
+  onUpdate,
+  isUpdating = false,
 }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form data state
   const [formData, setFormData] = useState<{
     currentType: string;
     subtype?: string;
@@ -130,8 +122,30 @@ export const CreateRelationshipStateDialog: React.FC<
     scopeType: "novel",
   });
 
-  const { createState, isCreating, error, clearError } =
-    useCreateRelationshipState(novelId, characterId, relationship.id);
+  // Initialize form data when state changes
+  useEffect(() => {
+    if (state) {
+      setFormData({
+        currentType: state.currentType || "",
+        subtype: state.subtype || "",
+        strength: state.strength || 5,
+        publicStatus: state.publicStatus || "",
+        privateStatus: state.privateStatus || "",
+        trustLevel: state.trustLevel || 5,
+        conflictLevel: state.conflictLevel || 1,
+        powerBalance: state.powerBalance || "equal",
+        scopeType: state.scopeType as "novel" | "act" | "chapter" | "scene",
+        startActId: state.startActId || "",
+        startChapterId: state.startChapterId || "",
+        startSceneId: state.startSceneId || "",
+        endActId: state.endActId || "",
+        endChapterId: state.endChapterId || "",
+        endSceneId: state.endSceneId || "",
+        changes: state.changes || "",
+        triggerSceneId: state.triggerSceneId || "",
+      });
+    }
+  }, [state]);
 
   // Get dynamic power balance options with proper typing
   const powerBalanceOptions = [
@@ -161,45 +175,96 @@ export const CreateRelationshipStateDialog: React.FC<
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.currentType) {
+    if (!state || !formData.currentType) {
       return;
     }
 
-    // Prepare the data for API
-    const stateData: Omit<CreateRelationshipStateOptions, "relationshipId"> = {
-      currentType: formData.currentType,
-      subtype: formData.subtype || undefined,
-      strength: formData.strength,
-      publicStatus: formData.publicStatus || undefined,
-      privateStatus: formData.privateStatus || undefined,
-      trustLevel: formData.trustLevel,
-      conflictLevel: formData.conflictLevel,
-      powerBalance: formData.powerBalance,
-      scopeType: formData.scopeType,
-      startActId: formData.startActId || null,
-      startChapterId: formData.startChapterId || null,
-      startSceneId: formData.startSceneId || null,
-      endActId: formData.endActId || null,
-      endChapterId: formData.endChapterId || null,
-      endSceneId: formData.endSceneId || null,
-      changes: formData.changes || undefined,
-      triggerSceneId: formData.triggerSceneId || null,
-    };
+    setIsSubmitting(true);
 
-    const result = await createState(stateData);
+    try {
+      // Build updates object with proper data types
+      const updates: UpdateRelationshipStateOptions = {};
 
-    if (result) {
-      // Reset form and close dialog
-      setFormData({
-        currentType: "",
-        strength: 5,
-        trustLevel: 5,
-        conflictLevel: 1,
-        powerBalance: "equal",
-        scopeType: "novel",
-      });
-      onStateCreated();
-      onClose();
+      // Only include fields that have values or have changed
+      if (formData.currentType && formData.currentType.trim()) {
+        updates.currentType = formData.currentType.trim();
+      }
+
+      if (formData.subtype !== undefined) {
+        updates.subtype = formData.subtype.trim() || undefined;
+      }
+
+      if (formData.strength !== undefined) {
+        updates.strength = Number(formData.strength);
+      }
+
+      if (formData.publicStatus !== undefined) {
+        updates.publicStatus = formData.publicStatus.trim() || undefined;
+      }
+
+      if (formData.privateStatus !== undefined) {
+        updates.privateStatus = formData.privateStatus.trim() || undefined;
+      }
+
+      if (formData.trustLevel !== undefined) {
+        updates.trustLevel = Number(formData.trustLevel);
+      }
+
+      if (formData.conflictLevel !== undefined) {
+        updates.conflictLevel = Number(formData.conflictLevel);
+      }
+
+      if (formData.powerBalance && formData.powerBalance.trim()) {
+        updates.powerBalance = formData.powerBalance.trim();
+      }
+
+      if (formData.scopeType) {
+        updates.scopeType = formData.scopeType;
+      }
+
+      // Scope-specific fields
+      if (formData.startActId !== undefined) {
+        updates.startActId = formData.startActId.trim() || null;
+      }
+
+      if (formData.startChapterId !== undefined) {
+        updates.startChapterId = formData.startChapterId.trim() || null;
+      }
+
+      if (formData.startSceneId !== undefined) {
+        updates.startSceneId = formData.startSceneId.trim() || null;
+      }
+
+      if (formData.endActId !== undefined) {
+        updates.endActId = formData.endActId.trim() || null;
+      }
+
+      if (formData.endChapterId !== undefined) {
+        updates.endChapterId = formData.endChapterId.trim() || null;
+      }
+
+      if (formData.endSceneId !== undefined) {
+        updates.endSceneId = formData.endSceneId.trim() || null;
+      }
+
+      // Handle changes
+      if (formData.changes !== undefined) {
+        updates.changes = formData.changes.trim() || undefined;
+      }
+
+      if (formData.triggerSceneId !== undefined) {
+        updates.triggerSceneId = formData.triggerSceneId.trim() || null;
+      }
+
+      const result = await onUpdate(state.id, updates);
+
+      if (result) {
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error updating relationship state:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -208,14 +273,7 @@ export const CreateRelationshipStateDialog: React.FC<
     (option) => option.value === formData.currentType
   );
 
-  // Clear error when dialog opens
-  React.useEffect(() => {
-    if (isOpen) {
-      clearError();
-    }
-  }, [isOpen, clearError]);
-
-  if (!isOpen) return null;
+  if (!isOpen || !state) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -224,11 +282,11 @@ export const CreateRelationshipStateDialog: React.FC<
         <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold text-white">
-              Add Relationship State
+              Edit Relationship State
             </h2>
             <p className="text-gray-400 text-sm">
-              Track how {relationship.fromCharacter.name} and{" "}
-              {relationship.toCharacter.name} evolve
+              Update how {relationship.fromCharacter.name} and{" "}
+              {relationship.toCharacter.name} relate
             </p>
           </div>
           <Button
@@ -236,19 +294,13 @@ export const CreateRelationshipStateDialog: React.FC<
             size="sm"
             icon={X}
             onClick={onClose}
-            disabled={isCreating}
+            disabled={isSubmitting}
           />
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           <CardContent className="p-6">
-            {error && (
-              <div className="mb-4 p-3 bg-red-900/20 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Current Relationship Type */}
               <div className="space-y-4">
@@ -269,11 +321,17 @@ export const CreateRelationshipStateDialog: React.FC<
                     <option value="">
                       Select current relationship type...
                     </option>
-                    {CURRENT_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
+                    {CURRENT_TYPE_OPTIONS.map(
+                      (option: {
+                        value: string;
+                        label: string;
+                        description: string;
+                      }) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      )
+                    )}
                   </Select>
                   {selectedCurrentType && (
                     <p className="mt-1 text-xs text-gray-400">
@@ -563,7 +621,7 @@ export const CreateRelationshipStateDialog: React.FC<
                   onChange={(e) =>
                     setFormData({ ...formData, changes: e.target.value })
                   }
-                  placeholder="Describe what triggered this relationship state..."
+                  placeholder="Describe what changed in this relationship..."
                 />
 
                 <Input
@@ -585,7 +643,7 @@ export const CreateRelationshipStateDialog: React.FC<
             type="button"
             variant="outline"
             onClick={onClose}
-            disabled={isCreating}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
@@ -593,10 +651,10 @@ export const CreateRelationshipStateDialog: React.FC<
             type="button"
             variant="primary"
             onClick={handleSubmit}
-            disabled={isCreating || !formData.currentType}
+            disabled={isSubmitting || !formData.currentType}
             className="min-w-[120px]"
           >
-            {isCreating ? "Creating..." : "Create State"}
+            {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </Card>

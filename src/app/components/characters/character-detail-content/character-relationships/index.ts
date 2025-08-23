@@ -6,7 +6,9 @@ export { CharacterRelationshipsSection } from "./character-relationships-section
 
 // Dialog components
 export { CreateRelationshipDialog } from "./create-relationship-dialog";
+export { EditRelationshipDialog } from "./edit-relationship-dialog";
 export { CreateRelationshipStateDialog } from "./create-relationship-state-dialog";
+export { EditRelationshipStateDialog } from "./edit-relationship-state-dialog";
 
 // Detail view
 export { RelationshipDetailView } from "./relationship-detail-view";
@@ -36,7 +38,9 @@ Following your established component patterns:
 
 ✅ DIALOG COMPONENTS:
 - CreateRelationshipDialog: Create new relationships
-- CreateRelationshipStateDialog: Create relationship states (NEW)
+- EditRelationshipDialog: Edit base relationship information (NEW)
+- CreateRelationshipStateDialog: Create relationship states
+- EditRelationshipStateDialog: Edit existing relationship states
 
 ✅ STATE COMPONENTS:
 - RelationshipsEmptyState: No relationships yet
@@ -81,14 +85,15 @@ Following your established component patterns:
 {error && <RelationshipsErrorState character={character} error={error} />}
 {relationships.length === 0 && <RelationshipsEmptyState character={character} />}
 
-===== COMPLETE RELATIONSHIP STATE CREATION =====
+===== COMPLETE RELATIONSHIP MANAGEMENT =====
 
-The CreateRelationshipStateDialog provides:
-- Professional form with current type selection
-- Dynamic sliders for strength, trust, and conflict levels
-- Power balance selection with smart defaults
-- Public vs private status fields
-- Story context with scope type selection
-- Full integration with useCreateRelationshipState hook
+The Edit Relationship Dialog provides:
+- Professional form for editing base relationship data
+- Relationship type selection with icons and descriptions
+- Character perspective editing (origin field)
+- History, fundamental dynamic, and writer notes
+- Pre-populated form with existing relationship data
+- Full integration with useCharacterRelationships hook
 - Proper validation and error handling
+- Consistent styling matching your design system
 */
