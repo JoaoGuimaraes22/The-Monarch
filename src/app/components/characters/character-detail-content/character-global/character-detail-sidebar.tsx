@@ -15,6 +15,7 @@ interface CharacterDetailSidebarProps {
   ) => void;
   character: Character;
   states: CharacterState[];
+  relationshipCount: number; // ✅ ADD THIS
 }
 
 export const CharacterDetailSidebar: React.FC<CharacterDetailSidebarProps> = ({
@@ -22,6 +23,7 @@ export const CharacterDetailSidebar: React.FC<CharacterDetailSidebarProps> = ({
   onTabChange,
   character,
   states,
+  relationshipCount, // ✅ ADD THIS
 }) => {
   const tabs = [
     {
@@ -43,7 +45,7 @@ export const CharacterDetailSidebar: React.FC<CharacterDetailSidebarProps> = ({
       label: "Relationships",
       icon: Users,
       description: "Connections with other characters",
-      count: 0, // TODO: Get actual relationship count
+      count: relationshipCount, // ✅ CHANGE FROM 0 TO relationshipCount
     },
     {
       id: "manuscript" as const,

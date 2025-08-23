@@ -15,6 +15,7 @@ import type {
 import {
   useUpdateCharacterState,
   useDeleteCharacterState,
+  useCharacterRelationships,
 } from "@/hooks/characters";
 import {
   CharacterDetailHeader,
@@ -62,6 +63,7 @@ export const CharacterDetailPageContent: React.FC<
   // Dialog state
   const [showCreateStateDialog, setShowCreateStateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const { relationships } = useCharacterRelationships(novelId, characterId);
 
   // Fetch character details
   useEffect(() => {
@@ -291,6 +293,7 @@ export const CharacterDetailPageContent: React.FC<
           onTabChange={setActiveTab}
           character={character}
           states={states}
+          relationshipCount={relationships.length} // ✅ ADD THIS PROP
         />
 
         {/* Main Content */}
