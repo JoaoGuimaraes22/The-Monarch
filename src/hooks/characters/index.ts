@@ -1,5 +1,5 @@
 // hooks/characters/index.ts
-// Barrel exports for character hooks - following your established patterns
+// Updated barrel exports for character hooks - adding POV hooks
 
 // ===== MAIN HOOKS =====
 export { useCharacters } from "./useCharacters";
@@ -9,6 +9,13 @@ export {
   useUpdateCharacterState,
   useDeleteCharacterState,
 } from "./useCharacterStates";
+
+// ===== POV HOOKS =====
+export {
+  usePOVAssignments,
+  useCharacterPOV,
+  useCreatePOVAssignment,
+} from "./pov";
 
 // ===== RELATIONSHIP HOOKS =====
 export {
@@ -20,6 +27,15 @@ export {
 
 // ===== TYPE EXPORTS =====
 export type { UseCharacterStatesReturn } from "./useCharacterStates";
+
+// POV hook types
+export type {
+  UsePOVAssignmentsReturn,
+  UseCharacterPOVReturn,
+  UseCreatePOVAssignmentReturn,
+} from "./pov";
+
+// Relationship hook types
 export type {
   UseCharacterRelationshipsReturn,
   UseRelationshipStatesReturn,
@@ -39,7 +55,12 @@ Following your established patterns from manuscript hooks:
 - useUpdateCharacterState: Simplified hook for updating states
 - useDeleteCharacterState: Simplified hook for deleting states
 
-✅ RELATIONSHIP HOOKS (New):
+✅ POV HOOKS (NEW):
+- usePOVAssignments: Complete POV management for a novel
+- useCharacterPOV: Character-specific POV queries and analysis
+- useCreatePOVAssignment: Simplified hook for POV creation dialogs
+
+✅ RELATIONSHIP HOOKS (Existing):
 - useCharacterRelationships: Complete relationship management for a character
 - useRelationshipStates: Relationship state management with CRUD operations
 - useCreateRelationship: Simplified hook for relationship creation dialogs
@@ -47,14 +68,14 @@ Following your established patterns from manuscript hooks:
 
 ✅ MODULAR DESIGN:
 - Each hook has a single responsibility
-- Clean separation between character and state management
-- Clean separation between characters and relationships
+- Clean separation between character, states, POV, and relationships
 - Type-safe interfaces throughout
 
 ✅ ESTABLISHED PATTERNS:
 - Similar to useManuscript* hook family
 - Consistent error handling and loading states
 - Optimistic updates for better UX
+- Parameter object patterns
 
 ===== USAGE PATTERNS =====
 
@@ -69,7 +90,16 @@ const { createState, isCreating } = useCreateCharacterState(novelId, characterId
 const { updateState, isUpdating } = useUpdateCharacterState(novelId, characterId);
 const { deleteState, isDeleting } = useDeleteCharacterState(novelId, characterId);
 
-// Character relationships (new)
+// Novel POV management (NEW)
+const { assignments, statistics, createAssignment } = usePOVAssignments(novelId);
+
+// Character POV analysis (NEW)
+const { hasPOV, isPOVCharacterForScope } = useCharacterPOV(characterId);
+
+// POV creation dialog (NEW)
+const { createAssignment, isCreating } = useCreatePOVAssignment(novelId);
+
+// Character relationships
 const relationshipsHook = useCharacterRelationships(novelId, characterId);
 const statesHook = useRelationshipStates(novelId, characterId, relationshipId);
 const { createRelationship, isCreating } = useCreateRelationship(novelId, characterId);

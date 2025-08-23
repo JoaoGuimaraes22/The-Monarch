@@ -22,6 +22,7 @@ model Novel {
   // Relations
   acts        Act[]
   characters  Character[] // ✨ NEW: Characters belong to novels
+  povAssignments POVAssignment[]  // ✨ NEW: Flexible POV assignments
 
   @@map("novels")
 }
@@ -113,6 +114,8 @@ model Character {
   
   // Character arcs
   characterArcs CharacterArc[]
+
+  povAssignments POVAssignment[] @relation("POVAssignments")
   
   // Meta information
   inspirations String   @default("")  // JSON array as string
@@ -124,6 +127,41 @@ model Character {
   
   @@unique([novelId, name]) // Unique character names per novel
   @@map("characters")
+}
+
+model POVAssignment {
+  id          String @id @default(cuid())
+  
+  // Novel context
+  novelId     String
+  novel       Novel  @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  
+  // Character assignment
+  characterId String
+  character   Character @relation("POVAssignments", fields: [characterId], references: [id], onDelete: Cascade)
+  
+  // Flexible scope - same pattern as CharacterState/RelationshipState
+  scopeType     String   // "novel" | "act" | "chapter" | "scene"
+  startActId    String?
+  startChapterId String?
+  startSceneId   String?
+  endActId       String?
+  endChapterId   String?
+  endSceneId     String?
+  
+  // POV metadata
+  povType       String @default("primary")    // "primary" | "secondary" | "shared"
+  importance    Int    @default(100)          // Weight/priority (100 = primary, 50 = secondary, etc.)
+  notes         String?                       // Writer notes about this POV assignment
+  
+  // Change tracking
+  assignedBy    String? // Scene/event that triggered this POV assignment
+  reason        String? // Why this character became POV here
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("pov_assignments")
 }
 
 model CharacterState {

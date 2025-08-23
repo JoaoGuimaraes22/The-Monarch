@@ -12,7 +12,7 @@ export { CharacterDetailSidebar } from "./character-global/character-detail-side
 export { CharacterProfileSection } from "./character-profile/character-profile-section";
 export { CharacterStatesTimeline } from "./character-state/character-states-timeline";
 export { CharacterRelationshipsSection } from "./character-relationships/character-relationships-section";
-export { CharacterManuscriptSection } from "./character-manuscript-section";
+export { CharacterManuscriptSection } from "./character-manuscript/character-manuscript-section";
 
 // Dialogs and forms
 export { CreateCharacterStateDialog } from "./character-state/create-character-state-dialog";

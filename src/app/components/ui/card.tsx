@@ -1,5 +1,5 @@
 // app/components/ui/card.tsx
-// Fixed Card component with proper mouse event handling
+// Enhanced Card component with CardHeader icon support while maintaining backwards compatibility
 
 import React from "react";
 
@@ -7,7 +7,7 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
-  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void; // Fix: Accept mouse event
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -25,18 +25,21 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={`${baseStyles} ${hoverStyles} ${clickableStyles} ${className}`}
-      onClick={onClick} // Now properly typed for mouse events
+      onClick={onClick}
     >
       {children}
     </div>
   );
 };
 
+// ✅ ENHANCED: CardHeader with optional icon support while remaining backwards compatible
 interface CardHeaderProps {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
   className?: string;
+  // ✨ NEW: Optional icon support
+  icon?: React.ReactNode;
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({
@@ -44,12 +47,20 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
   subtitle,
   actions,
   className = "",
+  icon, // ✨ NEW: Optional icon prop
 }) => (
   <div className={`p-6 border-b border-gray-700 ${className}`}>
     <div className="flex justify-between items-start">
-      <div>
-        <h3 className="text-lg font-semibold text-white">{title}</h3>
-        {subtitle && <p className="text-sm text-gray-300 mt-1">{subtitle}</p>}
+      <div className="flex items-center space-x-3">
+        {" "}
+        {/* ✨ NEW: Flex container for icon + text */}
+        {icon /* ✨ NEW: Optional icon display */ && (
+          <div className="flex-shrink-0">{icon}</div>
+        )}
+        <div>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          {subtitle && <p className="text-sm text-gray-300 mt-1">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div className="flex space-x-2">{actions}</div>}
     </div>

@@ -19,7 +19,7 @@ export { CharacterDetailSidebar } from "./character-detail-content/character-glo
 export { CharacterProfileSection } from "./character-detail-content/character-profile/character-profile-section";
 export { CharacterStatesTimeline } from "./character-detail-content/character-state/character-states-timeline";
 export { CharacterRelationshipsSection } from "./character-detail-content/character-relationships/character-relationships-section";
-export { CharacterManuscriptSection } from "./character-detail-content/character-manuscript-section";
+export { CharacterManuscriptSection } from "./character-detail-content/character-manuscript/character-manuscript-section";
 export { CharacterDetailLoadingState } from "./character-detail-content/character-global/character-detail-loading-state";
 export { CharacterDetailErrorState } from "./character-detail-content/character-global/character-detail-error-state";
 export { CreateCharacterStateDialog } from "./character-detail-content/character-state/create-character-state-dialog";
