@@ -1,8 +1,15 @@
 // app/components/characters/character-detail-content/character-manuscript/character-manuscript-section.tsx
-// Enhanced character manuscript integration section with POV assignments
+// Enhanced character manuscript integration section with POV assignments and character mentions
 
 import React, { useState } from "react";
-import { Crown, Plus, Eye, Search, BarChart3 } from "lucide-react";
+import {
+  Crown,
+  Plus,
+  Eye,
+  Search,
+  BarChart3,
+  MessageSquare,
+} from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -10,9 +17,11 @@ import {
   Button,
   Badge,
 } from "@/app/components/ui";
-import { useCharacterPOV } from "@/hooks/characters";
+import { useCharacterPOV, useCharacterMentions } from "@/hooks/characters";
 import { POVAssignmentCard } from "./pov-assignment-card";
 import { CreatePOVAssignmentDialog } from "./create-pov-assignment-dialog";
+import { CharacterMentionsList } from "./character-mentions-list";
+import { CharacterMentionAnalyticsChart } from "./character-mention-analytics-chart";
 import type { Character } from "@/lib/characters/character-service";
 
 interface CharacterManuscriptSectionProps {
@@ -23,11 +32,15 @@ interface CharacterManuscriptSectionProps {
 export const CharacterManuscriptSection: React.FC<
   CharacterManuscriptSectionProps
 > = ({ character, novelId }) => {
+  const [showCreatePOV, setShowCreatePOV] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
+
+  // POV data
   const {
     assignments,
     hasPOV,
-    isLoading,
-    error,
+    isLoading: povLoading,
+    error: povError,
     getPrimaryPOVAssignments,
     getSecondaryPOVAssignments,
     getNovelWidePOV,
@@ -35,18 +48,40 @@ export const CharacterManuscriptSection: React.FC<
     refreshAssignments,
   } = useCharacterPOV(character.id, novelId);
 
-  const [showCreatePOV, setShowCreatePOV] = useState(false);
+  // Mentions data
+  const {
+    mentions,
+    analytics,
+    isLoading: mentionsLoading,
+    error: mentionsError,
+  } = useCharacterMentions(character.id, novelId, {
+    contextLength: 50,
+    fullContextLength: 200,
+    minConfidence: 0.7,
+    includePronounMatches: true,
+  });
 
   const primaryAssignments = getPrimaryPOVAssignments();
   const secondaryAssignments = getSecondaryPOVAssignments();
   const novelWidePOV = getNovelWidePOV();
   const totalImportance = getPOVImportanceTotal();
 
-  const handleCreateSuccess = () => {
+  const handleCreatePOVSuccess = () => {
     refreshAssignments();
   };
 
-  if (isLoading) {
+  const handleNavigateToMention = (sceneId: string, position: number) => {
+    // Navigate to manuscript editor with specific scene and position
+    window.open(
+      `/novels/${novelId}/manuscript?scene=${sceneId}&position=${position}`,
+      "_blank"
+    );
+  };
+
+  const isLoading = povLoading || mentionsLoading;
+  const hasError = povError || mentionsError;
+
+  if (isLoading && !assignments.length && !mentions.length) {
     return (
       <div className="space-y-6">
         <div>
@@ -71,7 +106,7 @@ export const CharacterManuscriptSection: React.FC<
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <div className="space-y-6">
         <div>
@@ -82,9 +117,11 @@ export const CharacterManuscriptSection: React.FC<
         </div>
         <Card className="border-red-700">
           <CardContent className="p-6 text-center">
-            <p className="text-red-400">{error}</p>
+            <p className="text-red-400">{povError || mentionsError}</p>
             <Button
-              onClick={refreshAssignments}
+              onClick={() => {
+                refreshAssignments();
+              }}
               className="mt-4"
               variant="secondary"
             >
@@ -110,84 +147,136 @@ export const CharacterManuscriptSection: React.FC<
         </div>
       </div>
 
-      {/* POV Management Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-            <Crown className="w-5 h-5 text-yellow-500" />
-            <span>POV Assignments</span>
-            {hasPOV && (
-              <Badge
-                variant="default"
-                className="bg-yellow-500/20 text-yellow-400"
-              >
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader
+            title="POV Assignments"
+            icon={<Crown className="w-5 h-5 text-yellow-500" />}
+          />
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="text-3xl font-bold text-yellow-500 mb-2">
                 {assignments.length}
-              </Badge>
-            )}
-          </h3>
-          <Button
-            onClick={() => setShowCreatePOV(true)}
-            size="sm"
-            className="bg-red-600 hover:bg-red-700"
-            icon={Plus}
-          >
-            Assign POV
-          </Button>
-        </div>
+              </div>
+              <p className="text-gray-400 text-sm">
+                {totalImportance > 0 && `${totalImportance}% importance`}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* POV Status Summary */}
-        {hasPOV && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <Card className="border-yellow-500/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-400 mb-1">
-                  {primaryAssignments.length}
-                </div>
-                <p className="text-xs text-gray-400">Primary POV</p>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader
+            title="Mentions"
+            icon={<MessageSquare className="w-5 h-5 text-blue-500" />}
+          />
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="text-3xl font-bold text-blue-500 mb-2">
+                {analytics?.totalMentions || 0}
+              </div>
+              <p className="text-gray-400 text-sm">
+                {analytics?.totalScenes
+                  ? `in ${analytics.totalScenes} scenes`
+                  : "No mentions yet"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className="border-blue-500/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-400 mb-1">
-                  {secondaryAssignments.length}
-                </div>
-                <p className="text-xs text-gray-400">Secondary POV</p>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardHeader
+            title="Screen Time"
+            icon={<BarChart3 className="w-5 h-5 text-green-500" />}
+          />
+          <CardContent>
+            <div className="text-center py-4">
+              <div className="text-3xl font-bold text-green-500 mb-2">
+                {analytics?.povScenes || 0}
+              </div>
+              <p className="text-gray-400 text-sm">POV scenes</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card className="border-purple-500/30">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-purple-400 mb-1">
-                  {totalImportance}
-                </div>
-                <p className="text-xs text-gray-400">Total Importance</p>
-              </CardContent>
-            </Card>
+      {/* POV Management Section */}
+      <Card>
+        <CardHeader
+          title="POV Assignments"
+          icon={<Crown className="w-5 h-5 text-yellow-500" />}
+        />
+        <CardContent>
+          {/* Header Actions */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              {hasPOV && (
+                <Badge className="bg-yellow-500/20 text-yellow-400">
+                  {assignments.length} assignments
+                </Badge>
+              )}
+            </div>
+            <Button
+              onClick={() => setShowCreatePOV(true)}
+              size="sm"
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Assign POV
+            </Button>
           </div>
-        )}
 
-        {/* POV Assignments List */}
-        {assignments.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {assignments.map((assignment) => (
-              <POVAssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                onEdit={() => {
-                  // TODO: Implement edit dialog
-                  console.log("Edit assignment", assignment.id);
-                }}
-                onDelete={() => {
-                  // TODO: Implement delete functionality
-                  console.log("Delete assignment", assignment.id);
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="text-center py-12">
+          {/* POV Status Summary */}
+          {hasPOV && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card className="border-yellow-500/30">
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-yellow-400 mb-1">
+                    {primaryAssignments.length}
+                  </div>
+                  <p className="text-xs text-gray-400">Primary POV</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-blue-500/30">
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-400 mb-1">
+                    {secondaryAssignments.length}
+                  </div>
+                  <p className="text-xs text-gray-400">Secondary POV</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-purple-500/30">
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-400 mb-1">
+                    {totalImportance}
+                  </div>
+                  <p className="text-xs text-gray-400">Total Importance</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* POV Assignments List */}
+          {assignments.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {assignments.map((assignment) => (
+                <POVAssignmentCard
+                  key={assignment.id}
+                  assignment={assignment}
+                  onEdit={() => {
+                    console.log("Edit assignment", assignment.id);
+                  }}
+                  onDelete={() => {
+                    console.log("Delete assignment", assignment.id);
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
               <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Crown className="w-6 h-6 text-gray-400" />
               </div>
@@ -201,78 +290,96 @@ export const CharacterManuscriptSection: React.FC<
               <Button
                 onClick={() => setShowCreatePOV(true)}
                 variant="secondary"
-                icon={Plus}
               >
+                <Plus className="w-4 h-4 mr-2" />
                 Create First POV Assignment
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Character Appearances Analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader
-            title="POV Scenes"
-            icon={<Crown className="w-5 h-5 text-yellow-500" />}
-          />
-          <CardContent className="text-center py-8">
-            <div className="text-3xl font-bold text-yellow-500 mb-2">
-              {hasPOV ? "TBD" : "0"}
             </div>
-            <p className="text-gray-400">
-              Scenes from {character.name}&#39;s perspective
-            </p>
-            {hasPOV && (
-              <p className="text-xs text-gray-500 mt-2">
-                Based on POV assignments above
-              </p>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader
-            title="Character Mentions"
-            icon={<Eye className="w-5 h-5 text-blue-500" />}
-          />
-          <CardContent className="text-center py-8">
-            <div className="text-3xl font-bold text-white mb-2">0</div>
-            <p className="text-gray-400">
-              Times {character.name} appears in text
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Coming soon: Smart mention detection
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Character Mentions Section (Future) */}
+      {/* Character Mentions Section */}
       <Card>
         <CardHeader
-          title="Story Appearances"
-          icon={<Search className="w-5 h-5 text-green-500" />}
+          title="Character Mentions"
+          icon={<MessageSquare className="w-5 h-5 text-blue-500" />}
         />
-        <CardContent className="text-center py-12">
-          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Eye className="w-6 h-6 text-gray-400" />
+        <CardContent>
+          {/* Header Actions */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              {analytics && (
+                <Badge className="bg-blue-500/20 text-blue-400">
+                  {analytics.totalMentions} found
+                </Badge>
+              )}
+            </div>
+            <Button
+              onClick={() => setShowMentions(!showMentions)}
+              size="sm"
+              variant="ghost"
+              className="text-blue-400 hover:text-blue-300"
+            >
+              <Eye className="w-4 h-4 mr-1" />
+              {showMentions ? "Hide" : "Show"} Mentions
+            </Button>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">
-            Character Mention Detection
-          </h3>
-          <p className="text-gray-400 mb-4">
-            Smart text analysis will find where {character.name} appears in your
-            manuscript, showing context snippets and enabling navigation to
-            exact locations.
-          </p>
-          <div className="flex items-center justify-center space-x-4">
-            <Badge variant="outline" className="text-gray-500">
-              <BarChart3 className="w-3 h-3 mr-1" />
-              Coming Soon
-            </Badge>
-          </div>
+
+          {!showMentions ? (
+            <div className="text-center py-8">
+              {analytics ? (
+                <div>
+                  <p className="text-gray-400 mb-4">
+                    {analytics.totalMentions} mentions found across{" "}
+                    {analytics.totalScenes} scenes
+                  </p>
+                  <Button
+                    onClick={() => setShowMentions(true)}
+                    variant="secondary"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    View All Mentions
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-gray-400 mb-4">
+                    Smart text analysis will find where {character.name} appears
+                    in your manuscript
+                  </p>
+                  <Button
+                    onClick={() => setShowMentions(true)}
+                    variant="secondary"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Scan for Mentions
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Mentions List - Takes up 2 columns */}
+              <div className="lg:col-span-2">
+                <CharacterMentionsList
+                  character={character}
+                  novelId={novelId}
+                  onNavigateToMention={handleNavigateToMention}
+                />
+              </div>
+
+              {/* Analytics Chart - Takes up 1 column */}
+              <div>
+                {analytics && (
+                  <CharacterMentionAnalyticsChart
+                    analytics={analytics}
+                    isLoading={mentionsLoading}
+                  />
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -282,7 +389,7 @@ export const CharacterManuscriptSection: React.FC<
         onClose={() => setShowCreatePOV(false)}
         character={character}
         novelId={novelId}
-        onSuccess={handleCreateSuccess}
+        onSuccess={handleCreatePOVSuccess}
       />
     </div>
   );

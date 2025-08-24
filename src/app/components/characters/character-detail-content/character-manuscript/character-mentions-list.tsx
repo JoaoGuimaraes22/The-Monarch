@@ -212,7 +212,7 @@ export const CharacterMentionsList: React.FC<CharacterMentionsListProps> = ({
 
             {currentSearchTerm && (
               <p className="text-sm text-gray-400">
-                Showing results for "{currentSearchTerm}"
+                Showing results for &#34;{currentSearchTerm}&#34;
               </p>
             )}
           </div>
@@ -245,7 +245,7 @@ export const CharacterMentionsList: React.FC<CharacterMentionsListProps> = ({
                     type="number"
                     min="0.1"
                     max="1.0"
-                    step="0.1"
+                    // step="0.1"
                     value={analysisOptions.minConfidence}
                     onChange={(e) =>
                       handleAnalysisOptionsChange({
