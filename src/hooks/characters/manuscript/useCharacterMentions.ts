@@ -1,7 +1,7 @@
 // hooks/characters/manuscript/useCharacterMentions.ts
-// Hook for character mention detection following established patterns
+// Fixed hook for character mention detection - eliminates excessive API calls
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type {
   CharacterAppearance,
   CharacterManuscriptAnalytics,
@@ -64,21 +64,36 @@ export function useCharacterMentions(
   const [pagination, setPagination] =
     useState<UseCharacterMentionsReturn["pagination"]>(null);
 
+  // ✅ FIX 1: Memoize options to prevent recreation
+  const stableOptions = useMemo(
+    () => options,
+    [
+      options.contextLength,
+      options.fullContextLength,
+      options.minConfidence,
+      options.includePronounMatches,
+      options.caseSensitive,
+    ]
+  );
+
   // ===== BUILD QUERY PARAMS =====
   const buildQueryParams = useCallback(
     (additionalParams: Record<string, unknown> = {}) => {
       const params = new URLSearchParams();
 
       // Add analysis options
-      if (options.contextLength)
-        params.set("contextLength", options.contextLength.toString());
-      if (options.fullContextLength)
-        params.set("fullContextLength", options.fullContextLength.toString());
-      if (options.minConfidence)
-        params.set("minConfidence", options.minConfidence.toString());
-      if (options.includePronounMatches)
+      if (stableOptions.contextLength)
+        params.set("contextLength", stableOptions.contextLength.toString());
+      if (stableOptions.fullContextLength)
+        params.set(
+          "fullContextLength",
+          stableOptions.fullContextLength.toString()
+        );
+      if (stableOptions.minConfidence)
+        params.set("minConfidence", stableOptions.minConfidence.toString());
+      if (stableOptions.includePronounMatches)
         params.set("includePronounMatches", "true");
-      if (options.caseSensitive) params.set("caseSensitive", "true");
+      if (stableOptions.caseSensitive) params.set("caseSensitive", "true");
 
       // Add additional params
       Object.entries(additionalParams).forEach(([key, value]) => {
@@ -89,7 +104,7 @@ export function useCharacterMentions(
 
       return params.toString();
     },
-    [options]
+    [stableOptions] // ✅ Now depends on memoized options
   );
 
   // ===== LOAD MENTIONS =====
@@ -206,13 +221,22 @@ export function useCharacterMentions(
     loadMentions(1); // Reset to page 1
   }, [loadMentions]);
 
-  // ===== INITIAL LOAD =====
+  // ✅ FIX 2: Remove function dependencies from useEffect
+  // Only trigger on characterId/novelId changes
   useEffect(() => {
     if (characterId && novelId) {
+      // Reset state when switching characters
+      setMentions([]);
+      setAnalytics(null);
+      setError(null);
+      setSearchTerm("");
+      setPagination(null);
+
+      // Load initial data
       loadMentions(1);
       analyzeMentions();
     }
-  }, [characterId, novelId, loadMentions, analyzeMentions]);
+  }, [characterId, novelId]); // ✅ Only depend on IDs, not functions
 
   return {
     // State

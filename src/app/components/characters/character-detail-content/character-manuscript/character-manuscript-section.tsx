@@ -1,7 +1,7 @@
 // app/components/characters/character-detail-content/character-manuscript/character-manuscript-section.tsx
-// Enhanced character manuscript integration section with POV assignments and character mentions
+// Fixed character manuscript integration section - eliminates excessive API calls
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Crown,
   Plus,
@@ -20,7 +20,7 @@ import {
 import { useCharacterPOV, useCharacterMentions } from "@/hooks/characters";
 import { POVAssignmentCard } from "./pov-assignment-card";
 import { CreatePOVAssignmentDialog } from "./create-pov-assignment-dialog";
-import { CharacterMentionsList } from "./character-mentions-list";
+import { CharacterMentionsListDisplay } from "./character-mentions-list-display";
 import { CharacterMentionAnalyticsChart } from "./character-mention-analytics-chart";
 import type { Character } from "@/lib/characters/character-service";
 
@@ -48,18 +48,32 @@ export const CharacterManuscriptSection: React.FC<
     refreshAssignments,
   } = useCharacterPOV(character.id, novelId);
 
-  // Mentions data
+  // ✅ FIX 3: Memoize options to prevent recreation on every render
+  const mentionOptions = useMemo(
+    () => ({
+      contextLength: 50,
+      fullContextLength: 200,
+      minConfidence: 0.7,
+      includePronounMatches: true,
+    }),
+    []
+  );
+
+  // ✅ FIX 4: Only use the hook ONCE at the top level
   const {
     mentions,
     analytics,
     isLoading: mentionsLoading,
+    isAnalyzing,
     error: mentionsError,
-  } = useCharacterMentions(character.id, novelId, {
-    contextLength: 50,
-    fullContextLength: 200,
-    minConfidence: 0.7,
-    includePronounMatches: true,
-  });
+    pagination,
+    loadMentions,
+    analyzeMentions,
+    searchMentions,
+    clearSearch,
+    searchTerm,
+    isSearching,
+  } = useCharacterMentions(character.id, novelId, mentionOptions);
 
   const primaryAssignments = getPrimaryPOVAssignments();
   const secondaryAssignments = getSecondaryPOVAssignments();
@@ -121,6 +135,9 @@ export const CharacterManuscriptSection: React.FC<
             <Button
               onClick={() => {
                 refreshAssignments();
+                // Refresh mentions by reloading
+                loadMentions(1);
+                analyzeMentions();
               }}
               className="mt-4"
               variant="secondary"
@@ -314,16 +331,33 @@ export const CharacterManuscriptSection: React.FC<
                   {analytics.totalMentions} found
                 </Badge>
               )}
+              {isAnalyzing && (
+                <Badge variant="outline" className="text-gray-400">
+                  Analyzing...
+                </Badge>
+              )}
             </div>
-            <Button
-              onClick={() => setShowMentions(!showMentions)}
-              size="sm"
-              variant="ghost"
-              className="text-blue-400 hover:text-blue-300"
-            >
-              <Eye className="w-4 h-4 mr-1" />
-              {showMentions ? "Hide" : "Show"} Mentions
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={analyzeMentions}
+                size="sm"
+                variant="ghost"
+                disabled={isAnalyzing}
+                className="text-green-400 hover:text-green-300"
+              >
+                <BarChart3 className="w-4 h-4 mr-1" />
+                {isAnalyzing ? "Analyzing..." : "Refresh Analytics"}
+              </Button>
+              <Button
+                onClick={() => setShowMentions(!showMentions)}
+                size="sm"
+                variant="ghost"
+                className="text-blue-400 hover:text-blue-300"
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                {showMentions ? "Hide" : "Show"} Mentions
+              </Button>
+            </div>
           </div>
 
           {!showMentions ? (
@@ -362,10 +396,19 @@ export const CharacterManuscriptSection: React.FC<
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Mentions List - Takes up 2 columns */}
               <div className="lg:col-span-2">
-                <CharacterMentionsList
+                {/* ✅ FIX 5: Pass data as props instead of using hook again */}
+                <CharacterMentionsListDisplay
                   character={character}
-                  novelId={novelId}
+                  mentions={mentions}
+                  isLoading={mentionsLoading}
+                  isSearching={isSearching}
+                  error={mentionsError}
+                  pagination={pagination}
+                  searchTerm={searchTerm}
                   onNavigateToMention={handleNavigateToMention}
+                  onLoadMentions={loadMentions}
+                  onSearchMentions={searchMentions}
+                  onClearSearch={clearSearch}
                 />
               </div>
 
@@ -374,7 +417,7 @@ export const CharacterManuscriptSection: React.FC<
                 {analytics && (
                   <CharacterMentionAnalyticsChart
                     analytics={analytics}
-                    isLoading={mentionsLoading}
+                    isLoading={isAnalyzing}
                   />
                 )}
               </div>
