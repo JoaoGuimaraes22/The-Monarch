@@ -1,13 +1,15 @@
 // app/components/characters/main-page-content/create-character-dialog.tsx
-// Dialog for creating new characters with gender dropdown
+// Updated dialog for creating new characters with titles support
 
 import React, { useState } from "react";
+import { Crown } from "lucide-react";
 import {
   Card,
   CardHeader,
   CardContent,
   Button,
   Select,
+  ArrayField,
 } from "@/app/components/ui";
 
 interface CreateCharacterDialogProps {
@@ -17,6 +19,7 @@ interface CreateCharacterDialogProps {
     species?: string;
     gender?: string;
     birthplace?: string;
+    titles?: string[]; // ✅ NEW: Add titles support
     writerNotes?: string;
   }) => Promise<void>;
 }
@@ -32,8 +35,65 @@ export const CreateCharacterDialog: React.FC<CreateCharacterDialogProps> = ({
     birthplace: "",
     writerNotes: "",
   });
+
+  // ✅ NEW: Add titles state
+  const [titles, setTitles] = useState<string[]>([]);
+
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ NEW: Predefined title options for suggestions
+  const titleOptions = [
+    "The Ghost",
+    "The Shadow",
+    "The Blade",
+    "The Wolf",
+    "The Dragon",
+    "The Phoenix",
+    "The Raven",
+    "The Storm",
+    "The Iron",
+    "The Swift",
+    "The Wise",
+    "The Bold",
+    "The Silent",
+    "The Dark",
+    "The Bright",
+    "Lord",
+    "Lady",
+    "Sir",
+    "Dame",
+    "King",
+    "Queen",
+    "Prince",
+    "Princess",
+    "Duke",
+    "Duchess",
+    "Count",
+    "Countess",
+    "Captain",
+    "Commander",
+    "General",
+    "Admiral",
+    "Master",
+    "Mistress",
+    "Champion",
+    "Defender",
+    "Protector",
+    "Guardian",
+    "Knight",
+    "Warrior",
+    "Scholar",
+    "Sage",
+    "Elder",
+    "Artificer",
+    "Paladin",
+    "Ranger",
+    "Bard",
+    "Merchant",
+    "Smith",
+    "Healer",
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +111,7 @@ export const CreateCharacterDialog: React.FC<CreateCharacterDialogProps> = ({
         species: formData.species || undefined,
         gender: formData.gender || undefined,
         birthplace: formData.birthplace || undefined,
+        titles: titles.length > 0 ? titles : undefined, // ✅ NEW: Include titles
         writerNotes: formData.writerNotes || undefined,
       });
     } catch (err) {
@@ -82,13 +143,13 @@ export const CreateCharacterDialog: React.FC<CreateCharacterDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <CardHeader
           title="Create Character"
           subtitle="Add a new character to your story"
         />
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error Display */}
             {error && (
               <div className="p-3 bg-red-900/20 border border-red-700 rounded-lg">
@@ -109,6 +170,44 @@ export const CreateCharacterDialog: React.FC<CreateCharacterDialogProps> = ({
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
                 required
               />
+            </div>
+
+            {/* ✅ NEW: Character Titles Section */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-300 flex items-center">
+                <Crown className="w-4 h-4 mr-2 text-yellow-500" />
+                Titles & Epithets
+              </h4>
+              <div className="bg-gray-750 p-3 rounded-lg border border-gray-600">
+                <ArrayField
+                  label=""
+                  items={titles}
+                  setItems={setTitles}
+                  placeholder="Add a title (Lord, Captain, The Ghost, etc.)"
+                  maxItems={5}
+                  continuousFocus={true}
+                  options={titleOptions}
+                  allowCustom={true}
+                />
+
+                {/* Helpful examples */}
+                <div className="mt-2 p-2 bg-gray-700 rounded border border-gray-600">
+                  <p className="text-xs text-gray-400 mb-1">
+                    Popular Examples:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="px-2 py-1 bg-yellow-900/30 text-yellow-400 text-xs rounded">
+                      The Ghost
+                    </span>
+                    <span className="px-2 py-1 bg-purple-900/30 text-purple-400 text-xs rounded">
+                      Lord Commander
+                    </span>
+                    <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded">
+                      Captain
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Species */}

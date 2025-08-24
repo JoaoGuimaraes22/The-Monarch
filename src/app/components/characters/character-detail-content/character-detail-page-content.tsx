@@ -11,7 +11,7 @@ import type {
   CreateCharacterStateOptions,
   CreateCharacterOptions,
   UpdateCharacterStateOptions,
-} from "@/lib/characters/character-service";
+} from "@/lib/characters/";
 import {
   useUpdateCharacterState,
   useDeleteCharacterState,

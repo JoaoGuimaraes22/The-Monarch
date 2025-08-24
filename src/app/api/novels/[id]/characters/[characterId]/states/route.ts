@@ -1,8 +1,9 @@
 // app/api/novels/[id]/characters/[characterId]/states/route.ts
-// Updated to use separated character state service
+// Updated to use separated character state service with proper type handling
 
 import { NextRequest } from "next/server";
 import { characterStateService } from "@/lib/characters/character-state-service";
+import type { CreateCharacterStateOptions } from "@/lib/characters/character-state-service";
 import {
   withValidation,
   withRateLimit,
@@ -45,6 +46,9 @@ const CharacterParamsSchema = z.object({
   characterId: z.string().min(1, "Invalid character ID"),
 });
 
+// ===== TYPE FOR VALIDATED DATA =====
+type ValidatedCreateStateData = z.infer<typeof CreateCharacterStateSchema>;
+
 // ===== GET /api/novels/[id]/characters/[characterId]/states - Get character states =====
 export const GET = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
@@ -83,15 +87,40 @@ export const POST = composeMiddleware(
   try {
     const params = await context.params;
     const { characterId } = params as { id: string; characterId: string };
-    const stateData = validatedData as z.infer<
-      typeof CreateCharacterStateSchema
-    >;
+
+    // ✅ PROPERLY TYPED: Cast to the validated schema type
+    const stateData = validatedData as ValidatedCreateStateData;
+
+    // ✅ TYPE-SAFE CONVERSION: Transform validated data to service interface
+    const serviceData: CreateCharacterStateOptions = {
+      characterId,
+      age: stateData.age,
+      title: stateData.title,
+      occupation: stateData.occupation,
+      location: stateData.location,
+      socialStatus: stateData.socialStatus,
+      faction: stateData.faction,
+      currentTraits: stateData.currentTraits,
+      activeFears: stateData.activeFears,
+      currentGoals: stateData.currentGoals,
+      motivations: stateData.motivations,
+      skills: stateData.skills,
+      knowledge: stateData.knowledge,
+      secrets: stateData.secrets,
+      mentalState: stateData.mentalState,
+      scopeType: stateData.scopeType,
+      startActId: stateData.startActId,
+      startChapterId: stateData.startChapterId,
+      startSceneId: stateData.startSceneId,
+      endActId: stateData.endActId,
+      endChapterId: stateData.endChapterId,
+      endSceneId: stateData.endSceneId,
+      changes: stateData.changes,
+      triggerSceneId: stateData.triggerSceneId,
+    };
 
     // ✅ USE SEPARATED SERVICE: characterStateService
-    const state = await characterStateService.createCharacterState({
-      characterId,
-      ...stateData,
-    });
+    const state = await characterStateService.createCharacterState(serviceData);
 
     return createSuccessResponse(
       { state },
@@ -106,7 +135,10 @@ export const POST = composeMiddleware(
 // ===== Additional utility endpoints =====
 
 // GET most recent state
-export async function getMostRecentState(req: NextRequest, context: any) {
+export async function getMostRecentState(
+  req: NextRequest,
+  context: { params: Promise<Record<string, string>>; requestId: string }
+) {
   try {
     const params = await context.params;
     const { characterId } = params as { characterId: string };

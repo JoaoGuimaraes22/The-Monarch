@@ -24,14 +24,14 @@ export interface CreateCharacterStateOptions {
   currentAppearance?: object | null;
   mentalState?: string;
   scopeType: "novel" | "act" | "chapter" | "scene";
-  startActId?: string;
-  startChapterId?: string;
-  startSceneId?: string;
-  endActId?: string;
-  endChapterId?: string;
-  endSceneId?: string;
+  startActId?: string | null;
+  startChapterId?: string | null;
+  startSceneId?: string | null;
+  endActId?: string | null;
+  endChapterId?: string | null;
+  endSceneId?: string | null;
   changes?: object | null;
-  triggerSceneId?: string;
+  triggerSceneId?: string | null;
 }
 
 export interface UpdateCharacterStateOptions {
@@ -51,14 +51,14 @@ export interface UpdateCharacterStateOptions {
   currentAppearance?: object | null;
   mentalState?: string;
   scopeType?: "novel" | "act" | "chapter" | "scene";
-  startActId?: string;
-  startChapterId?: string;
-  startSceneId?: string;
-  endActId?: string;
-  endChapterId?: string;
-  endSceneId?: string;
+  startActId?: string | null;
+  startChapterId?: string | null;
+  startSceneId?: string | null;
+  endActId?: string | null;
+  endChapterId?: string | null;
+  endSceneId?: string | null;
   changes?: string; // ✅ FIXED: Should be string, not object (API transforms it to object)
-  triggerSceneId?: string;
+  triggerSceneId?: string | null;
 }
 
 // ===== UTILITY FUNCTIONS =====
