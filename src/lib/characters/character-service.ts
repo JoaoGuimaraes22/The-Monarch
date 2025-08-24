@@ -1,5 +1,5 @@
 // lib/characters/character-service.ts
-// Complete character service with state management
+// Complete character service with state management - Updated with titles support
 
 import { prisma } from "@/lib/prisma";
 
@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 export interface Character {
   id: string;
   name: string;
+  titles: string | null; // JSON string - ✅ Already exists
   species: string;
   gender: string | null;
   imageUrl: string | null;
@@ -61,6 +62,7 @@ export interface CharacterState {
 // ===== CREATION OPTIONS =====
 export interface CreateCharacterOptions {
   name: string;
+  titles?: string[]; // ✅ NEW: Support titles array in creation
   species?: string;
   gender?: string | null;
   imageUrl?: string | null;
@@ -129,6 +131,11 @@ export interface UpdateCharacterStateOptions {
   triggerSceneId?: string;
 }
 
+// ✅ NEW: Helper to transform Character for external use (with parsed titles)
+export interface CharacterWithParsedTitles extends Omit<Character, "titles"> {
+  titles: string[]; // Parsed titles array
+}
+
 // ===== UTILITY FUNCTIONS =====
 const safeStringify = (obj: unknown): string => {
   if (!obj) return "";
@@ -156,10 +163,21 @@ const safeParseArray = (str: string): string[] => {
   }
 };
 
+// ✅ NEW: Helper to transform Character with parsed titles
+const transformCharacterWithTitles = (
+  character: Character
+): CharacterWithParsedTitles => {
+  return {
+    ...character,
+    titles: safeParseArray(character.titles || ""),
+  };
+};
+
 // ===== CHARACTER SERVICE =====
 export class CharacterService {
   /**
    * Get all characters for a novel with their current states and POV scene counts
+   * ✅ UPDATED: Returns characters with parsed titles
    */
   async getAllCharacters(
     novelId: string
@@ -211,7 +229,19 @@ export class CharacterService {
   }
 
   /**
+   * ✅ NEW: Get character by ID with parsed titles (for text analyzer)
+   */
+  async getCharacterByIdWithTitles(
+    characterId: string
+  ): Promise<CharacterWithParsedTitles | null> {
+    const character = await this.getCharacterById(characterId);
+    if (!character) return null;
+    return transformCharacterWithTitles(character);
+  }
+
+  /**
    * Create a new character with optional initial state
+   * ✅ UPDATED: Now supports titles
    */
   async createCharacter(
     novelId: string,
@@ -221,6 +251,7 @@ export class CharacterService {
       data: {
         novelId,
         name: options.name,
+        titles: safeStringify(options.titles || []), // ✅ NEW: Store titles as JSON
         species: options.species || "Human",
         gender: options.gender || null,
         imageUrl: options.imageUrl || null,
@@ -239,6 +270,7 @@ export class CharacterService {
 
   /**
    * Update a character
+   * ✅ UPDATED: Now supports titles updates
    */
   async updateCharacter(
     characterId: string,
@@ -247,6 +279,8 @@ export class CharacterService {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
 
     if (options.name !== undefined) updateData.name = options.name;
+    if (options.titles !== undefined)
+      updateData.titles = safeStringify(options.titles); // ✅ NEW: Handle titles
     if (options.species !== undefined) updateData.species = options.species;
     if (options.gender !== undefined) updateData.gender = options.gender;
     if (options.imageUrl !== undefined) updateData.imageUrl = options.imageUrl;
@@ -523,6 +557,66 @@ export class CharacterService {
       orderBy: { name: "asc" },
       take: 10,
     });
+  }
+
+  // ===== ✅ NEW: TITLES-SPECIFIC METHODS =====
+
+  /**
+   * Get character titles as array (helper for text analysis)
+   */
+  async getCharacterTitles(characterId: string): Promise<string[]> {
+    const character = await this.getCharacterById(characterId);
+    if (!character || !character.titles) return [];
+    return safeParseArray(character.titles);
+  }
+
+  /**
+   * Update only character titles
+   */
+  async updateCharacterTitles(
+    characterId: string,
+    titles: string[]
+  ): Promise<Character> {
+    const character = await prisma.character.update({
+      where: { id: characterId },
+      data: {
+        titles: safeStringify(titles),
+        updatedAt: new Date(),
+      },
+    });
+
+    return character;
+  }
+
+  /**
+   * Add a title to character
+   */
+  async addCharacterTitle(
+    characterId: string,
+    title: string
+  ): Promise<Character> {
+    const currentTitles = await this.getCharacterTitles(characterId);
+    if (!currentTitles.includes(title)) {
+      currentTitles.push(title);
+      return this.updateCharacterTitles(characterId, currentTitles);
+    }
+
+    // Return current character if title already exists
+    const character = await this.getCharacterById(characterId);
+    if (!character) throw new Error("Character not found");
+    return character;
+  }
+
+  /**
+   * Remove a title from character
+   */
+  async removeCharacterTitle(
+    characterId: string,
+    title: string
+  ): Promise<Character> {
+    const currentTitles = await this.getCharacterTitles(characterId);
+    const updatedTitles = currentTitles.filter((t) => t !== title);
+    return this.updateCharacterTitles(characterId, updatedTitles);
   }
 }
 

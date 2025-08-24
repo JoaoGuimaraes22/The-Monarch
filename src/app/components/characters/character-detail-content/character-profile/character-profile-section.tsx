@@ -1,8 +1,8 @@
 // app/components/characters/character-detail-content/character-profile-section.tsx
-// Character profile section showing basic information (without redundant edit button)
+// Character profile section showing basic information (updated with titles support)
 
 import React from "react";
-import { MapPin, BookOpen } from "lucide-react";
+import { MapPin, BookOpen, Crown } from "lucide-react";
 import { Card, CardHeader, CardContent } from "@/app/components/ui";
 import type { Character } from "@/lib/characters/character-service";
 
@@ -51,6 +51,9 @@ export const CharacterProfileSection: React.FC<
   const inspirations = parseJsonField<string[]>(character.inspirations) || [];
   const tags = parseJsonField<string[]>(character.tags) || [];
 
+  // ✅ NEW: Parse character titles
+  const titles = parseJsonField<string[]>(character.titles) || [];
+
   return (
     <div className="space-y-6">
       {/* Page Header - No edit button since header already has one */}
@@ -96,6 +99,31 @@ export const CharacterProfileSection: React.FC<
                   Birthplace
                 </label>
                 <p className="text-white">{character.birthplace}</p>
+              </div>
+            )}
+
+            {/* ✅ NEW: Display Character Titles */}
+            {titles.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  <Crown className="w-4 h-4 inline mr-1" />
+                  Titles & Epithets
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {titles.map((title: string, index: number) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-yellow-900/30 text-yellow-300 text-sm rounded-full flex items-center border border-yellow-500/20"
+                    >
+                      <Crown className="w-3 h-3 mr-1" />
+                      {title}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  These titles are used for smart mention detection in your
+                  manuscript.
+                </p>
               </div>
             )}
 

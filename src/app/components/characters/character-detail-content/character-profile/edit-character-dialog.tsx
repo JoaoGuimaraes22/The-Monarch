@@ -1,9 +1,9 @@
 // app/components/characters/character-detail-content/character-profile/edit-character-dialog.tsx
-// UPDATED: Dialog for editing character information with Select, ComboSelect, and enhanced ArrayField
+// UPDATED: Dialog for editing character information with titles support
 // Following your established patterns with improved UX
 
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, Crown } from "lucide-react";
 import {
   Button,
   Input,
@@ -57,6 +57,11 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
   );
   const [tags, setTags] = useState<string[]>(
     parseJsonField<string[]>(character.tags) || []
+  );
+
+  // ✅ NEW: Initialize character titles
+  const [titles, setTitles] = useState<string[]>(
+    parseJsonField<string[]>(character.titles) || []
   );
 
   // Family data
@@ -157,7 +162,94 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
     "Pink",
   ];
 
-  // ✨ NEW: Predefined options for ArrayField suggestions
+  // ✅ NEW: Predefined title options for suggestions
+  const titleOptions = [
+    "The Ghost",
+    "The Shadow",
+    "The Blade",
+    "The Wolf",
+    "The Dragon",
+    "The Phoenix",
+    "The Raven",
+    "The Storm",
+    "The Iron",
+    "The Swift",
+    "The Wise",
+    "The Bold",
+    "The Silent",
+    "The Dark",
+    "The Bright",
+    "Lord",
+    "Lady",
+    "Sir",
+    "Dame",
+    "King",
+    "Queen",
+    "Prince",
+    "Princess",
+    "Duke",
+    "Duchess",
+    "Count",
+    "Countess",
+    "Captain",
+    "Commander",
+    "General",
+    "Admiral",
+    "Master",
+    "Mistress",
+    "Champion",
+    "Defender",
+    "Protector",
+    "Guardian",
+    "Slayer",
+    "Hunter",
+    "Seeker",
+    "Bearer",
+    "Keeper",
+    "Warden",
+    "Elder",
+    "Sage",
+    "Oracle",
+    "Prophet",
+    "Herald",
+    "Emissary",
+    "Ambassador",
+    "Scholar",
+    "Artificer",
+    "Enchanter",
+    "Summoner",
+    "Necromancer",
+    "Paladin",
+    "Templar",
+    "Crusader",
+    "Knight",
+    "Warrior",
+    "Assassin",
+    "Rogue",
+    "Thief",
+    "Spy",
+    "Scout",
+    "Ranger",
+    "Druid",
+    "Shaman",
+    "Priest",
+    "Monk",
+    "Bard",
+    "Minstrel",
+    "Merchant",
+    "Trader",
+    "Smith",
+    "Artisan",
+    "Healer",
+    "Herbalist",
+    "Alchemist",
+    "Inventor",
+    "Engineer",
+    "Architect",
+    "Builder",
+  ];
+
+  // ✨ Predefined options for ArrayField suggestions
   const personalityTraitOptions = [
     "Brave",
     "Intelligent",
@@ -337,6 +429,7 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
         imageUrl: formData.imageUrl.trim() || null,
         birthplace: formData.birthplace.trim() || null,
         writerNotes: formData.writerNotes.trim() || null,
+        titles: titles.length > 0 ? titles : [], // ✅ NEW: Include titles
         inspirations: inspirations.length > 0 ? inspirations : [],
         tags: tags.length > 0 ? tags : [],
         family: Object.keys(family).length > 0 ? family : null,
@@ -443,6 +536,51 @@ export const EditCharacterDialog: React.FC<EditCharacterDialogProps> = ({
                   }
                   placeholder="https://example.com/character-image.jpg"
                 />
+              </div>
+
+              {/* ✅ NEW: Character Titles Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-white border-b border-gray-700 pb-2 flex items-center">
+                  <Crown className="w-5 h-5 mr-2 text-yellow-500" />
+                  Titles & Epithets
+                </h3>
+                <div className="bg-gray-750 p-4 rounded-lg">
+                  <ArrayField
+                    label="Character Titles"
+                    items={titles}
+                    setItems={setTitles}
+                    placeholder="Add a title or epithet"
+                    maxItems={10}
+                    continuousFocus={true}
+                    options={titleOptions}
+                    allowCustom={true}
+                  />
+
+                  {/* Example titles display */}
+                  <div className="mt-3 p-3 bg-gray-700 rounded border border-gray-600">
+                    <p className="text-xs font-medium text-gray-300 mb-2">
+                      Popular Examples:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-1 bg-yellow-900/30 text-yellow-300 text-xs rounded flex items-center">
+                        <Crown className="w-3 h-3 mr-1" />
+                        The Ghost
+                      </span>
+                      <span className="px-2 py-1 bg-purple-900/30 text-purple-300 text-xs rounded flex items-center">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Champion of the Collegium
+                      </span>
+                      <span className="px-2 py-1 bg-blue-900/30 text-blue-300 text-xs rounded flex items-center">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Lord Commander
+                      </span>
+                      <span className="px-2 py-1 bg-red-900/30 text-red-300 text-xs rounded flex items-center">
+                        <Crown className="w-3 h-3 mr-1" />
+                        The Shadowblade
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Family Information */}

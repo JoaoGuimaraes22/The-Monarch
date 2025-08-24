@@ -1,5 +1,5 @@
 // lib/characters/character-manuscript-service.ts
-// Service for character-manuscript integration and mention detection
+// Updated service with titles support from character profile
 
 import { prisma } from "@/lib/prisma";
 import {
@@ -7,7 +7,7 @@ import {
   CharacterMention,
   TextAnalysisOptions,
 } from "./character-text-analyzer";
-import type { Character } from "./character-service";
+import { characterService } from "./character-service";
 
 // ===== INTERFACES =====
 export interface CharacterAppearance {
@@ -62,44 +62,49 @@ export interface SceneCharacterMentions {
 // ===== CHARACTER MANUSCRIPT SERVICE =====
 export class CharacterManuscriptService {
   /**
-   * Get all appearances of a character in the manuscript
+   * ✅ UPDATED: Get all appearances of a character in the manuscript
+   * Now uses character with parsed titles for better accuracy
    */
   async getCharacterAppearances(
     characterId: string,
     options: TextAnalysisOptions = {}
   ): Promise<CharacterAppearance[]> {
-    // Get character data
-    const character = await prisma.character.findUnique({
-      where: { id: characterId },
+    // ✅ NEW: Get character with parsed titles for text analysis
+    const character = await characterService.getCharacterByIdWithTitles(
+      characterId
+    );
+    if (!character) {
+      throw new Error("Character not found");
+    }
+
+    // Get novel structure
+    const novel = await prisma.novel.findUnique({
+      where: { id: character.novelId },
       include: {
-        novel: {
+        acts: {
           include: {
-            acts: {
+            chapters: {
               include: {
-                chapters: {
-                  include: {
-                    scenes: {
-                      orderBy: { order: "asc" },
-                    },
-                  },
+                scenes: {
                   orderBy: { order: "asc" },
                 },
               },
               orderBy: { order: "asc" },
             },
           },
+          orderBy: { order: "asc" },
         },
       },
     });
 
-    if (!character) {
-      throw new Error("Character not found");
+    if (!novel) {
+      throw new Error("Novel not found");
     }
 
     const appearances: CharacterAppearance[] = [];
 
-    // Analyze each scene for character mentions
-    for (const act of character.novel.acts) {
+    // ✅ IMPROVED: Analyze each scene with character titles
+    for (const act of novel.acts) {
       for (const chapter of act.chapters) {
         for (const scene of chapter.scenes) {
           if (!scene.content || scene.content.trim() === "") {
@@ -108,7 +113,7 @@ export class CharacterManuscriptService {
 
           const mentions = CharacterTextAnalyzer.findCharacterMentions(
             scene.content,
-            character,
+            character, // Now includes parsed titles
             scene.id,
             options
           );
@@ -140,7 +145,8 @@ export class CharacterManuscriptService {
   }
 
   /**
-   * Get manuscript analytics for a character
+   * ✅ UPDATED: Get manuscript analytics for a character
+   * Enhanced with better title-based detection
    */
   async getCharacterManuscriptAnalytics(
     characterId: string,
@@ -150,16 +156,13 @@ export class CharacterManuscriptService {
       characterId,
       options
     );
-    const character = await prisma.character.findUnique({
-      where: { id: characterId },
-      select: { name: true },
-    });
+    const character = await characterService.getCharacterById(characterId);
 
     if (!character) {
       throw new Error("Character not found");
     }
 
-    // Calculate analytics
+    // Calculate totals
     const totalMentions = appearances.reduce(
       (sum, app) => sum + app.totalMentions,
       0
@@ -172,25 +175,41 @@ export class CharacterManuscriptService {
     });
 
     // Find first and last appearances
-    const firstAppearance = appearances[0];
-    const lastAppearance = appearances[appearances.length - 1];
+    let firstAppearance;
+    let lastAppearance;
 
-    // Distribution analysis
+    if (appearances.length > 0) {
+      const first = appearances[0];
+      const last = appearances[appearances.length - 1];
+
+      firstAppearance = {
+        sceneId: first.sceneId,
+        sceneTitle: first.sceneTitle,
+        actOrder: first.actOrder,
+        chapterOrder: first.chapterOrder,
+      };
+
+      lastAppearance = {
+        sceneId: last.sceneId,
+        sceneTitle: last.sceneTitle,
+        actOrder: last.actOrder,
+        chapterOrder: last.chapterOrder,
+      };
+    }
+
+    // Calculate distributions
     const byAct: Record<string, number> = {};
     const byChapter: Record<string, number> = {};
     const byMentionType: Record<string, number> = {};
 
     appearances.forEach((appearance) => {
-      // By act
       const actKey = `Act ${appearance.actOrder}`;
-      byAct[actKey] = (byAct[actKey] || 0) + appearance.totalMentions;
+      const chapterKey = `${actKey}, Chapter ${appearance.chapterOrder}`;
 
-      // By chapter
-      const chapterKey = `${actKey}, Ch ${appearance.chapterOrder}`;
+      byAct[actKey] = (byAct[actKey] || 0) + appearance.totalMentions;
       byChapter[chapterKey] =
         (byChapter[chapterKey] || 0) + appearance.totalMentions;
 
-      // By mention type
       appearance.mentions.forEach((mention) => {
         byMentionType[mention.mentionType] =
           (byMentionType[mention.mentionType] || 0) + 1;
@@ -203,22 +222,8 @@ export class CharacterManuscriptService {
       totalMentions,
       totalScenes,
       povScenes,
-      firstAppearance: firstAppearance
-        ? {
-            sceneId: firstAppearance.sceneId,
-            sceneTitle: firstAppearance.sceneTitle,
-            actOrder: firstAppearance.actOrder,
-            chapterOrder: firstAppearance.chapterOrder,
-          }
-        : undefined,
-      lastAppearance: lastAppearance
-        ? {
-            sceneId: lastAppearance.sceneId,
-            sceneTitle: lastAppearance.sceneTitle,
-            actOrder: lastAppearance.actOrder,
-            chapterOrder: lastAppearance.chapterOrder,
-          }
-        : undefined,
+      firstAppearance,
+      lastAppearance,
       mentionDistribution: {
         byAct,
         byChapter,
@@ -228,99 +233,7 @@ export class CharacterManuscriptService {
   }
 
   /**
-   * Get character mentions for a specific scene
-   */
-  async getSceneCharacterMentions(
-    sceneId: string,
-    options: TextAnalysisOptions = {}
-  ): Promise<SceneCharacterMentions | null> {
-    const scene = await prisma.scene.findUnique({
-      where: { id: sceneId },
-      include: {
-        chapter: {
-          include: {
-            act: {
-              include: {
-                novel: {
-                  include: {
-                    characters: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!scene) {
-      return null;
-    }
-
-    const characters: SceneCharacterMentions["characters"] = [];
-
-    // Analyze scene content for each character
-    for (const character of scene.chapter.act.novel.characters) {
-      if (!scene.content || scene.content.trim() === "") {
-        continue;
-      }
-
-      const mentions = CharacterTextAnalyzer.findCharacterMentions(
-        scene.content,
-        character,
-        scene.id,
-        options
-      );
-
-      if (mentions.length > 0) {
-        characters.push({
-          characterId: character.id,
-          characterName: character.name,
-          mentions,
-        });
-      }
-    }
-
-    return {
-      sceneId: scene.id,
-      sceneTitle: scene.title || `Scene ${scene.order}`,
-      chapterTitle: scene.chapter.title,
-      actTitle: scene.chapter.act.title,
-      characters,
-    };
-  }
-
-  /**
-   * Scan entire manuscript for character mentions (heavy operation)
-   */
-  async scanManuscriptForCharacter(
-    novelId: string,
-    characterId: string,
-    options: TextAnalysisOptions = {}
-  ): Promise<{
-    scannedScenes: number;
-    foundMentions: number;
-    processing: boolean;
-  }> {
-    // This could be enhanced to be a background job for large manuscripts
-    const appearances = await this.getCharacterAppearances(
-      characterId,
-      options
-    );
-    const analytics = await this.getCharacterManuscriptAnalytics(
-      characterId,
-      options
-    );
-
-    return {
-      scannedScenes: analytics.totalScenes,
-      foundMentions: analytics.totalMentions,
-      processing: false,
-    };
-  }
-
-  /**
-   * Get character mentions with pagination for large manuscripts
+   * Get paginated character appearances for API responses
    */
   async getCharacterMentionsPaginated(
     characterId: string,
@@ -343,13 +256,16 @@ export class CharacterManuscriptService {
       options
     );
 
+    // Calculate pagination
     const total = allAppearances.length;
     const totalPages = Math.ceil(total / limit);
-    const offset = (page - 1) * limit;
-    const mentions = allAppearances.slice(offset, offset + limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    const paginatedAppearances = allAppearances.slice(startIndex, endIndex);
 
     return {
-      mentions,
+      mentions: paginatedAppearances,
       pagination: {
         page,
         limit,
@@ -362,27 +278,190 @@ export class CharacterManuscriptService {
   }
 
   /**
-   * Search for mentions by text content
+   * Search character mentions by context
    */
   async searchCharacterMentions(
     characterId: string,
     searchTerm: string,
     options: TextAnalysisOptions = {}
   ): Promise<CharacterAppearance[]> {
-    const appearances = await this.getCharacterAppearances(
+    const allAppearances = await this.getCharacterAppearances(
       characterId,
       options
     );
 
-    return appearances.filter((appearance) =>
-      appearance.mentions.some(
-        (mention) =>
-          mention.fullContext
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          mention.mentionText.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    if (!searchTerm.trim()) {
+      return allAppearances;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+
+    return allAppearances
+      .map((appearance) => ({
+        ...appearance,
+        mentions: appearance.mentions.filter(
+          (mention) =>
+            mention.fullContext.toLowerCase().includes(searchLower) ||
+            mention.mentionText.toLowerCase().includes(searchLower)
+        ),
+      }))
+      .filter((appearance) => appearance.mentions.length > 0)
+      .map((appearance) => ({
+        ...appearance,
+        totalMentions: appearance.mentions.length,
+      }));
+  }
+
+  /**
+   * Get all character mentions in a specific scene
+   */
+  async getSceneCharacterMentions(
+    sceneId: string,
+    options: TextAnalysisOptions = {}
+  ): Promise<SceneCharacterMentions | null> {
+    // Get scene with structure info
+    const scene = await prisma.scene.findUnique({
+      where: { id: sceneId },
+      include: {
+        chapter: {
+          include: {
+            act: true,
+          },
+        },
+      },
+    });
+
+    if (!scene || !scene.content) {
+      return null;
+    }
+
+    // Get all characters in the novel
+    const characters = await characterService.getAllCharacters(
+      scene.chapter.act.novelId
     );
+
+    const sceneCharacters: Array<{
+      characterId: string;
+      characterName: string;
+      mentions: CharacterMention[];
+    }> = [];
+
+    // ✅ IMPROVED: Analyze mentions for each character using titles
+    for (const character of characters) {
+      const characterWithTitles =
+        await characterService.getCharacterByIdWithTitles(character.id);
+      if (!characterWithTitles) continue;
+
+      const mentions = CharacterTextAnalyzer.findCharacterMentions(
+        scene.content,
+        characterWithTitles,
+        sceneId,
+        options
+      );
+
+      if (mentions.length > 0) {
+        sceneCharacters.push({
+          characterId: character.id,
+          characterName: character.name,
+          mentions,
+        });
+      }
+    }
+
+    return {
+      sceneId,
+      sceneTitle: scene.title || `Scene ${scene.order}`,
+      chapterTitle: scene.chapter.title,
+      actTitle: scene.chapter.act.title,
+      characters: sceneCharacters,
+    };
+  }
+
+  /**
+   * Batch update character mentions analysis
+   * Useful for re-analyzing after character title changes
+   */
+  async refreshCharacterMentions(
+    characterId: string,
+    options: TextAnalysisOptions = {}
+  ): Promise<CharacterManuscriptAnalytics> {
+    // This method would trigger a fresh analysis
+    // In a production system, you might want to cache results
+    // and only refresh when character data changes
+
+    return await this.getCharacterManuscriptAnalytics(characterId, options);
+  }
+
+  /**
+   * Get characters that appear together in scenes (co-occurrence)
+   */
+  async getCharacterCoOccurrence(
+    characterId: string,
+    options: TextAnalysisOptions = {}
+  ): Promise<
+    Array<{
+      characterId: string;
+      characterName: string;
+      sharedScenes: number;
+      scenes: Array<{
+        sceneId: string;
+        sceneTitle: string;
+        chapterTitle: string;
+        actTitle: string;
+      }>;
+    }>
+  > {
+    const character = await characterService.getCharacterById(characterId);
+    if (!character) {
+      throw new Error("Character not found");
+    }
+
+    const appearances = await this.getCharacterAppearances(
+      characterId,
+      options
+    );
+    const sceneIds = appearances.map((app) => app.sceneId);
+
+    if (sceneIds.length === 0) {
+      return [];
+    }
+
+    // Get all other characters in the novel
+    const allCharacters = await characterService.getAllCharacters(
+      character.novelId
+    );
+    const otherCharacters = allCharacters.filter((c) => c.id !== characterId);
+
+    const coOccurrences = [];
+
+    for (const otherCharacter of otherCharacters) {
+      const otherAppearances = await this.getCharacterAppearances(
+        otherCharacter.id,
+        options
+      );
+
+      // Find shared scenes
+      const sharedScenes = otherAppearances.filter((app) =>
+        sceneIds.includes(app.sceneId)
+      );
+
+      if (sharedScenes.length > 0) {
+        coOccurrences.push({
+          characterId: otherCharacter.id,
+          characterName: otherCharacter.name,
+          sharedScenes: sharedScenes.length,
+          scenes: sharedScenes.map((scene) => ({
+            sceneId: scene.sceneId,
+            sceneTitle: scene.sceneTitle,
+            chapterTitle: scene.chapterTitle,
+            actTitle: scene.actTitle,
+          })),
+        });
+      }
+    }
+
+    // Sort by number of shared scenes (descending)
+    return coOccurrences.sort((a, b) => b.sharedScenes - a.sharedScenes);
   }
 }
 

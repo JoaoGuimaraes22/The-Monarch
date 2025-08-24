@@ -48,13 +48,14 @@ export const CharacterManuscriptSection: React.FC<
     refreshAssignments,
   } = useCharacterPOV(character.id, novelId);
 
-  // ✅ FIX 3: Memoize options to prevent recreation on every render
+  // ✅ FIX 3: Memoize options + disable pronouns for accuracy
   const mentionOptions = useMemo(
     () => ({
       contextLength: 50,
       fullContextLength: 200,
-      minConfidence: 0.7,
-      includePronounMatches: true,
+      minConfidence: 0.8, // ✅ ACCURACY: Raised from 0.7 to 0.8
+      includePronounMatches: false, // ✅ ACCURACY: Disabled pronouns
+      caseSensitive: false,
     }),
     []
   );

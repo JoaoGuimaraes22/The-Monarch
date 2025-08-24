@@ -1,7 +1,7 @@
 // lib/characters/character-text-analyzer.ts
-// Smart character mention detection engine
+// Improved character mention detection with conservative name variations for better accuracy
 
-import type { Character } from "@/lib/characters/character-service";
+import type { CharacterWithParsedTitles } from "@/lib/characters/character-service";
 
 // ===== TYPES =====
 export interface CharacterMention {
@@ -22,16 +22,16 @@ export interface TextAnalysisOptions {
   contextLength?: number; // Characters before/after mention
   fullContextLength?: number; // Full context snippet length
   minConfidence?: number; // Minimum confidence threshold
-  includePronounMatches?: boolean; // Include pronoun detection
+  includePronounMatches?: boolean; // Include pronoun detection (recommended: false)
   caseSensitive?: boolean; // Case sensitive matching
 }
 
-export interface CharacterNameVariations {
+interface CharacterNameVariations {
   characterId: string;
-  variations: string[];
-  pronouns: string[];
-  titles: string[];
-  nicknames: string[];
+  variations: string[]; // Conservative name variations only
+  pronouns: string[]; // Keep for legacy but won't use
+  titles: string[]; // Only explicit titles
+  nicknames: string[]; // Only explicit nicknames
 }
 
 // ===== CHARACTER TEXT ANALYZER =====
@@ -39,87 +39,105 @@ export class CharacterTextAnalyzer {
   private static readonly DEFAULT_OPTIONS: Required<TextAnalysisOptions> = {
     contextLength: 50,
     fullContextLength: 200,
-    minConfidence: 0.7,
-    includePronounMatches: false, // Disabled by default - too many false positives
+    minConfidence: 0.8, // ✅ ACCURACY: Raised default threshold
+    includePronounMatches: false, // ✅ ACCURACY: Disabled by default
     caseSensitive: false,
   };
 
   /**
-   * Generate name variations for a character
+   * ✅ ACCURACY IMPROVEMENT: Generate conservative name variations with character titles
+   * Now uses titles from character profile data
    */
-  static generateNameVariations(character: Character): CharacterNameVariations {
+  private static generateNameVariations(
+    character: CharacterWithParsedTitles
+  ): CharacterNameVariations {
     const variations = new Set<string>();
-    const pronouns = new Set<string>();
     const titles = new Set<string>();
     const nicknames = new Set<string>();
+    const pronouns = new Set<string>(); // Keep for legacy, but won't use
 
-    // Core name
-    const fullName = character.name.trim();
-    variations.add(fullName);
+    // ===== CORE NAME VARIATIONS (High Confidence) =====
 
-    // Split full name into parts
-    const nameParts = fullName.split(/\s+/);
+    // Full name
+    if (character.name) {
+      variations.add(character.name);
 
-    // Add individual name parts (first, middle, last)
-    nameParts.forEach((part) => {
-      if (part.length > 1) {
-        // Skip single letters
-        variations.add(part);
-      }
-    });
-
-    // Add first + last name combinations
-    if (nameParts.length >= 2) {
-      variations.add(`${nameParts[0]} ${nameParts[nameParts.length - 1]}`);
-    }
-
-    // Add common title variations
-    if (character.gender) {
-      switch (character.gender.toLowerCase()) {
-        case "male":
-          titles.add("Mr.");
-          titles.add("Lord");
-          titles.add("Sir");
-          pronouns.add("he");
-          pronouns.add("him");
-          pronouns.add("his");
-          break;
-        case "female":
-          titles.add("Ms.");
-          titles.add("Mrs.");
-          titles.add("Lady");
-          titles.add("Dame");
-          pronouns.add("she");
-          pronouns.add("her");
-          pronouns.add("hers");
-          break;
-      }
-    }
-
-    // Add title + name combinations
-    titles.forEach((title) => {
-      variations.add(`${title} ${nameParts[0]}`);
+      // First name only (if multi-part name)
+      const nameParts = character.name.split(/\s+/);
       if (nameParts.length > 1) {
-        variations.add(`${title} ${nameParts[nameParts.length - 1]}`);
-      }
-      variations.add(`${title} ${fullName}`);
-    });
-
-    // Add species-based descriptions
-    if (character.species && character.species !== "Human") {
-      const species = character.species.toLowerCase();
-      variations.add(`the ${species}`);
-
-      // Add gendered species descriptions
-      if (character.gender) {
-        const genderPrefix =
-          character.gender.toLowerCase() === "male" ? "male" : "female";
-        variations.add(`the ${genderPrefix} ${species}`);
+        variations.add(nameParts[0]); // First name
+        // Add last name only if it's unique enough (length > 2)
+        const lastName = nameParts[nameParts.length - 1];
+        if (lastName.length > 2) {
+          variations.add(lastName);
+        }
       }
     }
 
-    // Parse character states for additional names/titles
-    // TODO: Could be enhanced to parse character states for temporal names
+    // ===== CHARACTER PROFILE TITLES (Medium-High Confidence) =====
+
+    // ✅ NEW: Use titles from character profile (now properly typed)
+    if (character.titles && Array.isArray(character.titles)) {
+      character.titles.forEach((title) => {
+        if (title && title.trim().length > 0) {
+          const cleanTitle = title.trim();
+          titles.add(cleanTitle);
+          variations.add(cleanTitle);
+
+          // Also add title without articles if present
+          const withoutArticles = cleanTitle.replace(/^(the|a|an)\s+/i, "");
+          if (withoutArticles !== cleanTitle && withoutArticles.length > 2) {
+            variations.add(withoutArticles);
+          }
+        }
+      });
+    }
+
+    // ===== FALLBACK: EXPLICIT TITLES FROM NOTES (Low Priority) =====
+
+    // Keep existing note parsing as fallback for legacy data
+    if (character.writerNotes) {
+      const titleMatches = character.writerNotes.match(
+        /(?:title|called|known as):\s*([^,\n\.]+)/gi
+      );
+      if (titleMatches) {
+        titleMatches.forEach((match) => {
+          const title = match
+            .replace(/(?:title|called|known as):\s*/gi, "")
+            .trim();
+          if (title.length > 2) {
+            titles.add(title);
+            variations.add(title);
+          }
+        });
+      }
+    }
+
+    // ===== REMOVE PROBLEMATIC VARIATIONS =====
+    // These cause too many false positives:
+    // - Generic species terms: "the human", "the elf"
+    // - Appearance terms: "the tall man", "the young woman"
+    // - Common titles: "the captain", "the lord" (unless explicit)
+    // - Age/gender combinations: "the old man"
+
+    // ===== STRICTER NICKNAME HANDLING =====
+    // Only add nicknames if they're explicitly defined or very unique
+    // TODO: Could parse character relationships for established nicknames
+
+    // ===== LEGACY PRONOUNS (Not Used) =====
+    // Keep this for interface compatibility, but includePronounMatches should be false
+    if (character.gender) {
+      const gender = character.gender.toLowerCase();
+      if (gender.includes("male") && !gender.includes("female")) {
+        pronouns.add("he");
+        pronouns.add("him");
+        pronouns.add("his");
+      } else if (gender.includes("female")) {
+        pronouns.add("she");
+        pronouns.add("her");
+        pronouns.add("hers");
+      }
+    }
 
     return {
       characterId: character.id,
@@ -131,11 +149,121 @@ export class CharacterTextAnalyzer {
   }
 
   /**
+   * ✅ ACCURACY IMPROVEMENT: Smarter confidence scoring
+   * Penalizes common words, rewards unique names
+   */
+  private static calculateConfidence(
+    matchedText: string,
+    character: CharacterWithParsedTitles,
+    content: string,
+    position: number
+  ): number {
+    let confidence = 0.8; // Base confidence
+
+    // ===== BOOST CONFIDENCE =====
+
+    // Exact full name match
+    if (matchedText === character.name) {
+      confidence += 0.15;
+    }
+
+    // Capitalized words (proper nouns)
+    if (/^[A-Z]/.test(matchedText)) {
+      confidence += 0.05;
+    }
+
+    // Longer names are more unique
+    if (matchedText.length >= 6) {
+      confidence += 0.05;
+    }
+
+    // Multiple words (full names)
+    if (matchedText.includes(" ")) {
+      confidence += 0.1;
+    }
+
+    // ===== PENALIZE CONFIDENCE =====
+
+    // Very common words
+    const commonWords = [
+      "will",
+      "may",
+      "rose",
+      "grace",
+      "hope",
+      "joy",
+      "faith",
+    ];
+    if (commonWords.includes(matchedText.toLowerCase())) {
+      confidence -= 0.3;
+    }
+
+    // Single letter names
+    if (matchedText.length === 1) {
+      confidence -= 0.4;
+    }
+
+    // Very short names (2 chars) are often false positives
+    if (matchedText.length === 2) {
+      confidence -= 0.2;
+    }
+
+    // ===== CONTEXT ANALYSIS =====
+
+    // Extract surrounding context for analysis
+    const contextStart = Math.max(0, position - 100);
+    const contextEnd = Math.min(
+      content.length,
+      position + matchedText.length + 100
+    );
+    const surroundingContext = content
+      .substring(contextStart, contextEnd)
+      .toLowerCase();
+
+    // Boost if mentioned with other character names (dialogue context)
+    if (
+      surroundingContext.includes(" said ") ||
+      surroundingContext.includes(" asked ") ||
+      surroundingContext.includes(" replied ")
+    ) {
+      confidence += 0.1;
+    }
+
+    // Penalize if in middle of larger word (partial matches)
+    const beforeChar = position > 0 ? content[position - 1] : " ";
+    const afterChar =
+      position + matchedText.length < content.length
+        ? content[position + matchedText.length]
+        : " ";
+
+    if (/[a-zA-Z]/.test(beforeChar) || /[a-zA-Z]/.test(afterChar)) {
+      confidence -= 0.3; // This is a partial word match
+    }
+
+    return Math.max(0, Math.min(1, confidence));
+  }
+
+  /**
+   * ✅ ACCURACY IMPROVEMENT: Remove pronoun confidence calculation
+   * Since we're not using pronouns anymore, this can be simplified or removed
+   */
+  private static calculatePronounConfidence(
+    pronoun: string,
+    character: CharacterWithParsedTitles,
+    content: string,
+    position: number
+  ): number {
+    // Always return low confidence since we don't want pronouns
+    return 0.1;
+  }
+
+  /**
    * Find all character mentions in text
+   * ✅ ACCURACY: Improved with conservative variations and stricter matching
    */
   static findCharacterMentions(
     content: string,
-    character: Character,
+    character: CharacterWithParsedTitles,
     sceneId: string,
     options: TextAnalysisOptions = {}
   ): CharacterMention[] {
@@ -143,98 +271,55 @@ export class CharacterTextAnalyzer {
     const mentions: CharacterMention[] = [];
     const nameVariations = this.generateNameVariations(character);
 
-    // Search for each name variation
+    // ===== CONSERVATIVE NAME MATCHING =====
     nameVariations.variations.forEach((variation) => {
       const matches = this.findTextMatches(content, variation, opts);
 
       matches.forEach((match) => {
-        const mention: CharacterMention = {
-          sceneId,
-          characterId: character.id,
-          mentionText: match.matchedText,
-          startPosition: match.startPosition,
-          endPosition: match.endPosition,
-          contextBefore: this.extractContext(
-            content,
-            match.startPosition,
-            -opts.contextLength
-          ),
-          contextAfter: this.extractContext(
-            content,
-            match.endPosition,
-            opts.contextLength
-          ),
-          fullContext: this.extractFullContext(
-            content,
-            match.startPosition,
-            match.endPosition,
-            opts.fullContextLength
-          ),
-          mentionType: this.determineMentionType(variation, nameVariations),
-          confidence: this.calculateConfidence(
-            variation,
-            character,
-            content,
-            match.startPosition
-          ),
-          lineNumber: this.getLineNumber(content, match.startPosition),
-        };
+        const confidence = this.calculateConfidence(
+          match.matchedText,
+          character,
+          content,
+          match.startPosition
+        );
 
         // Only include mentions above confidence threshold
-        if (mention.confidence >= opts.minConfidence) {
+        if (confidence >= opts.minConfidence) {
+          const mention: CharacterMention = {
+            sceneId,
+            characterId: character.id,
+            mentionText: match.matchedText,
+            startPosition: match.startPosition,
+            endPosition: match.endPosition,
+            contextBefore: this.extractContext(
+              content,
+              match.startPosition,
+              -opts.contextLength
+            ),
+            contextAfter: this.extractContext(
+              content,
+              match.endPosition,
+              opts.contextLength
+            ),
+            fullContext: this.extractFullContext(
+              content,
+              match.startPosition,
+              match.endPosition,
+              opts.fullContextLength
+            ),
+            mentionType: this.determineMentionType(variation, nameVariations),
+            confidence,
+            lineNumber: this.getLineNumber(content, match.startPosition),
+          };
+
           mentions.push(mention);
         }
       });
     });
 
-    // Add pronoun matches if enabled
-    if (opts.includePronounMatches) {
-      nameVariations.pronouns.forEach((pronoun) => {
-        const matches = this.findTextMatches(content, pronoun, opts);
-
-        matches.forEach((match) => {
-          // Pronouns need higher confidence threshold and context analysis
-          const confidence = this.calculatePronounConfidence(
-            pronoun,
-            character,
-            content,
-            match.startPosition
-          );
-
-          if (confidence >= Math.max(opts.minConfidence, 0.8)) {
-            // Higher threshold for pronouns
-            const mention: CharacterMention = {
-              sceneId,
-              characterId: character.id,
-              mentionText: match.matchedText,
-              startPosition: match.startPosition,
-              endPosition: match.endPosition,
-              contextBefore: this.extractContext(
-                content,
-                match.startPosition,
-                -opts.contextLength
-              ),
-              contextAfter: this.extractContext(
-                content,
-                match.endPosition,
-                opts.contextLength
-              ),
-              fullContext: this.extractFullContext(
-                content,
-                match.startPosition,
-                match.endPosition,
-                opts.fullContextLength
-              ),
-              mentionType: "pronoun",
-              confidence,
-              lineNumber: this.getLineNumber(content, match.startPosition),
-            };
-
-            mentions.push(mention);
-          }
-        });
-      });
-    }
+    // ===== SKIP PRONOUN MATCHING =====
+    // Even if includePronounMatches is true, we skip it for accuracy
+    // This prevents any pronoun matches from being included
 
     // Sort by position and remove overlapping matches
     return this.deduplicateMatches(
@@ -243,7 +328,7 @@ export class CharacterTextAnalyzer {
   }
 
   /**
-   * Find all occurrences of a text pattern
+   * Find all occurrences of a text pattern with word boundaries
    */
   private static findTextMatches(
     content: string,
@@ -261,9 +346,12 @@ export class CharacterTextAnalyzer {
     }> = [];
     const flags = options.caseSensitive ? "g" : "gi";
 
-    // Create word boundary regex for more accurate matching
+    // ✅ ACCURACY: Better regex for word boundaries
     const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`\\b${escapedPattern}\\b`, flags);
+
+    // More sophisticated word boundary detection
+    // Handles apostrophes and hyphens within names
+    const regex = new RegExp(`(?<![\w'-])${escapedPattern}(?![\w'-])`, flags);
 
     let match;
     while ((match = regex.exec(content)) !== null) {
@@ -323,149 +411,19 @@ export class CharacterTextAnalyzer {
     nameVariations: CharacterNameVariations
   ): CharacterMention["mentionType"] {
     if (nameVariations.pronouns.includes(matchedText.toLowerCase())) {
-      return "pronoun";
+      return "pronoun"; // Won't be used since pronouns are disabled
     }
 
-    if (nameVariations.titles.some((title) => matchedText.includes(title))) {
+    if (nameVariations.titles.includes(matchedText)) {
       return "title";
     }
 
-    if (matchedText.includes("the ")) {
-      return "description";
+    if (nameVariations.nicknames.includes(matchedText)) {
+      return "name"; // Treat nicknames as names
     }
 
+    // Default to name for most matches
     return "name";
-  }
-
-  /**
-   * Calculate confidence score for a mention
-   */
-  private static calculateConfidence(
-    matchedText: string,
-    character: Character,
-    content: string,
-    position: number
-  ): number {
-    let confidence = 0.5; // Base confidence
-
-    // Exact name match = high confidence
-    if (matchedText === character.name) {
-      confidence = 0.95;
-    }
-
-    // Partial name match
-    else if (
-      character.name.includes(matchedText) ||
-      matchedText.includes(character.name)
-    ) {
-      confidence = 0.8;
-    }
-
-    // Title-based matches
-    else if (
-      matchedText.includes("Lord") ||
-      matchedText.includes("Lady") ||
-      matchedText.includes("Sir") ||
-      matchedText.includes("Dame")
-    ) {
-      confidence = 0.75;
-    }
-
-    // Adjust based on context (simple heuristics)
-    const contextBefore = content
-      .substring(Math.max(0, position - 50), position)
-      .toLowerCase();
-    const contextAfter = content
-      .substring(position, Math.min(content.length, position + 50))
-      .toLowerCase();
-
-    // Dialogue context increases confidence
-    if (contextBefore.includes('"') || contextAfter.includes('"')) {
-      confidence += 0.1;
-    }
-
-    // Action context increases confidence
-    if (
-      contextBefore.includes("said") ||
-      contextAfter.includes("said") ||
-      contextBefore.includes("walked") ||
-      contextAfter.includes("walked")
-    ) {
-      confidence += 0.05;
-    }
-
-    return Math.min(1.0, confidence);
-  }
-
-  /**
-   * Calculate confidence for pronoun matches (more complex)
-   */
-  private static calculatePronounConfidence(
-    pronoun: string,
-    character: Character,
-    content: string,
-    position: number
-  ): number {
-    // Pronoun matching is complex and needs character name proximity analysis
-    // This is a simplified implementation - could be much more sophisticated
-
-    let confidence = 0.3; // Lower base confidence for pronouns
-
-    // Look for character name in nearby context (within 100 characters)
-    const contextWindow = 100;
-    const start = Math.max(0, position - contextWindow);
-    const end = Math.min(content.length, position + contextWindow);
-    const nearbyContext = content.substring(start, end).toLowerCase();
-
-    // If character name appears nearby, increase confidence
-    const nameParts = character.name.toLowerCase().split(/\s+/);
-    let nameFoundNearby = false;
-
-    nameParts.forEach((namePart) => {
-      if (nearbyContext.includes(namePart)) {
-        nameFoundNearby = true;
-        confidence += 0.3;
-      }
-    });
-
-    // Gender matching
-    const genderMatch = this.checkGenderPronounMatch(pronoun, character.gender);
-    if (genderMatch) {
-      confidence += 0.2;
-    }
-
-    // If no name found nearby, confidence is very low
-    if (!nameFoundNearby) {
-      confidence *= 0.3;
-    }
-
-    return Math.min(1.0, confidence);
-  }
-
-  /**
-   * Check if pronoun matches character gender
-   */
-  private static checkGenderPronounMatch(
-    pronoun: string,
-    gender: string | null
-  ): boolean {
-    if (!gender) return false;
-
-    const malePronouns = ["he", "him", "his"];
-    const femalePronouns = ["she", "her", "hers"];
-
-    const genderLower = gender.toLowerCase();
-    const pronounLower = pronoun.toLowerCase();
-
-    if (genderLower === "male" && malePronouns.includes(pronounLower)) {
-      return true;
-    }
-
-    if (genderLower === "female" && femalePronouns.includes(pronounLower)) {
-      return true;
-    }
-
-    return false;
   }
 
   /**
@@ -478,6 +436,7 @@ export class CharacterTextAnalyzer {
 
   /**
    * Remove overlapping and duplicate matches
+   * ✅ ACCURACY: Prefer higher confidence matches in overlaps
    */
   private static deduplicateMatches(
     mentions: CharacterMention[]
@@ -486,28 +445,21 @@ export class CharacterTextAnalyzer {
 
     for (const mention of mentions) {
       // Check for overlaps with existing mentions
-      const hasOverlap = deduplicated.some(
+      const overlappingIndex = deduplicated.findIndex(
         (existing) =>
           mention.startPosition < existing.endPosition &&
           mention.endPosition > existing.startPosition
       );
 
-      if (!hasOverlap) {
+      if (overlappingIndex === -1) {
+        // No overlap, add the mention
         deduplicated.push(mention);
       } else {
-        // If there's an overlap, keep the one with higher confidence
-        const overlappingIndex = deduplicated.findIndex(
-          (existing) =>
-            mention.startPosition < existing.endPosition &&
-            mention.endPosition > existing.startPosition
-        );
-
-        if (
-          overlappingIndex !== -1 &&
-          mention.confidence > deduplicated[overlappingIndex].confidence
-        ) {
+        // Overlap detected - keep the one with higher confidence
+        if (mention.confidence > deduplicated[overlappingIndex].confidence) {
           deduplicated[overlappingIndex] = mention;
         }
+        // Otherwise, keep the existing one (don't add the new one)
       }
     }
 
