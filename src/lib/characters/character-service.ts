@@ -1,13 +1,14 @@
 // lib/characters/character-service.ts
-// Complete character service with state management - Updated with titles support
+// Core character service - refactored with titles support and separated states
 
 import { prisma } from "@/lib/prisma";
+import { APIError } from "@/lib/api";
 
 // ===== BASIC TYPES =====
 export interface Character {
   id: string;
   name: string;
-  titles: string | null; // JSON string - ✅ Already exists
+  titles: string; // JSON string - ✅ Updated to match schema
   species: string;
   gender: string | null;
   imageUrl: string | null;
@@ -23,6 +24,7 @@ export interface Character {
   updatedAt: Date;
 }
 
+// ===== CHARACTER-SPECIFIC INTERFACES =====
 export interface CharacterWithCurrentState extends Character {
   currentState: CharacterState | null;
   povSceneCount: number;
@@ -59,8 +61,9 @@ export interface CharacterState {
   updatedAt: Date;
 }
 
-// ===== CREATION OPTIONS =====
+// ===== CHARACTER CREATION & UPDATE OPTIONS =====
 export interface CreateCharacterOptions {
+  novelId: string;
   name: string;
   titles?: string[]; // ✅ NEW: Support titles array in creation
   species?: string;
@@ -75,60 +78,19 @@ export interface CreateCharacterOptions {
   tags?: string[];
 }
 
-export interface CreateCharacterStateOptions {
-  characterId: string;
-  age?: number;
-  title?: string;
-  occupation?: string;
-  location?: string;
-  socialStatus?: string;
-  faction?: string;
-  currentTraits?: string[];
-  activeFears?: string[];
-  currentGoals?: string[];
-  motivations?: string[];
-  skills?: string[];
-  knowledge?: string[];
-  secrets?: string[];
-  currentAppearance?: object;
-  mentalState?: string;
-  scopeType: "novel" | "act" | "chapter" | "scene";
-  startActId?: string;
-  startChapterId?: string;
-  startSceneId?: string;
-  endActId?: string;
-  endChapterId?: string;
-  endSceneId?: string;
-  changes?: object;
-  triggerSceneId?: string;
-}
-
-// ===== UPDATE OPTIONS =====
-export interface UpdateCharacterStateOptions {
-  age?: number;
-  title?: string;
-  occupation?: string;
-  location?: string;
-  socialStatus?: string;
-  faction?: string;
-  currentTraits?: string[];
-  activeFears?: string[];
-  currentGoals?: string[];
-  motivations?: string[];
-  skills?: string[];
-  knowledge?: string[];
-  secrets?: string[];
-  currentAppearance?: object;
-  mentalState?: string;
-  scopeType?: "novel" | "act" | "chapter" | "scene";
-  startActId?: string;
-  startChapterId?: string;
-  startSceneId?: string;
-  endActId?: string;
-  endChapterId?: string;
-  endSceneId?: string;
-  changes?: string; // ✅ FIXED: Should be string, not object (API transforms it to object)
-  triggerSceneId?: string;
+export interface UpdateCharacterOptions {
+  name?: string;
+  titles?: string[]; // ✅ NEW: Support titles array in updates
+  species?: string;
+  gender?: string | null;
+  imageUrl?: string | null;
+  birthplace?: string | null;
+  family?: object | null;
+  baseAppearance?: object | null;
+  coreNature?: object | null;
+  inspirations?: string[];
+  writerNotes?: string | null;
+  tags?: string[];
 }
 
 // ✅ NEW: Helper to transform Character for external use (with parsed titles)
@@ -163,21 +125,10 @@ const safeParseArray = (str: string): string[] => {
   }
 };
 
-// ✅ NEW: Helper to transform Character with parsed titles
-const transformCharacterWithTitles = (
-  character: Character
-): CharacterWithParsedTitles => {
-  return {
-    ...character,
-    titles: safeParseArray(character.titles || ""),
-  };
-};
-
 // ===== CHARACTER SERVICE =====
 export class CharacterService {
   /**
    * Get all characters for a novel with their current states and POV scene counts
-   * ✅ UPDATED: Returns characters with parsed titles
    */
   async getAllCharacters(
     novelId: string
@@ -236,21 +187,35 @@ export class CharacterService {
   ): Promise<CharacterWithParsedTitles | null> {
     const character = await this.getCharacterById(characterId);
     if (!character) return null;
-    return transformCharacterWithTitles(character);
+
+    return {
+      ...character,
+      titles: safeParseArray(character.titles || ""),
+    };
   }
 
   /**
-   * Create a new character with optional initial state
+   * Create a new character
    * ✅ UPDATED: Now supports titles
    */
-  async createCharacter(
-    novelId: string,
-    options: CreateCharacterOptions
-  ): Promise<Character> {
+  async createCharacter(options: CreateCharacterOptions): Promise<Character> {
+    // Check if character name is unique in novel
+    const isUnique = await this.isCharacterNameUnique(
+      options.novelId,
+      options.name
+    );
+    if (!isUnique) {
+      throw new APIError(
+        `Character "${options.name}" already exists in this novel`,
+        409,
+        "CONFLICT"
+      );
+    }
+
     const character = await prisma.character.create({
       data: {
-        novelId,
-        name: options.name,
+        novelId: options.novelId,
+        name: options.name.trim(),
         titles: safeStringify(options.titles || []), // ✅ NEW: Store titles as JSON
         species: options.species || "Human",
         gender: options.gender || null,
@@ -274,11 +239,11 @@ export class CharacterService {
    */
   async updateCharacter(
     characterId: string,
-    options: Partial<CreateCharacterOptions>
+    options: UpdateCharacterOptions
   ): Promise<Character> {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
 
-    if (options.name !== undefined) updateData.name = options.name;
+    if (options.name !== undefined) updateData.name = options.name.trim();
     if (options.titles !== undefined)
       updateData.titles = safeStringify(options.titles); // ✅ NEW: Handle titles
     if (options.species !== undefined) updateData.species = options.species;
@@ -313,149 +278,6 @@ export class CharacterService {
   async deleteCharacter(characterId: string): Promise<void> {
     await prisma.character.delete({
       where: { id: characterId },
-    });
-  }
-
-  /**
-   * Create a character state
-   */
-  async createCharacterState(
-    options: CreateCharacterStateOptions
-  ): Promise<CharacterState> {
-    const state = await prisma.characterState.create({
-      data: {
-        characterId: options.characterId,
-        age: options.age || null,
-        title: options.title || null,
-        occupation: options.occupation || null,
-        location: options.location || null,
-        socialStatus: options.socialStatus || null,
-        faction: options.faction || null,
-        currentTraits: safeStringify(options.currentTraits || []),
-        activeFears: safeStringify(options.activeFears || []),
-        currentGoals: safeStringify(options.currentGoals || []),
-        motivations: safeStringify(options.motivations || []),
-        skills: safeStringify(options.skills || []),
-        knowledge: safeStringify(options.knowledge || []),
-        secrets: safeStringify(options.secrets || []),
-        currentAppearance: safeStringify(options.currentAppearance),
-        mentalState: options.mentalState || null,
-        scopeType: options.scopeType,
-        startActId: options.startActId || null,
-        startChapterId: options.startChapterId || null,
-        startSceneId: options.startSceneId || null,
-        endActId: options.endActId || null,
-        endChapterId: options.endChapterId || null,
-        endSceneId: options.endSceneId || null,
-        changes: safeStringify(options.changes),
-        triggerSceneId: options.triggerSceneId || null,
-      },
-    });
-
-    return state;
-  }
-
-  /**
-   * Get character states for a character
-   */
-  async getCharacterStates(characterId: string): Promise<CharacterState[]> {
-    return await prisma.characterState.findMany({
-      where: { characterId },
-      orderBy: [
-        { startActId: "asc" },
-        { startChapterId: "asc" },
-        { startSceneId: "asc" },
-        { createdAt: "asc" },
-      ],
-    });
-  }
-
-  /**
-   * Get a specific character state by ID
-   */
-  async getCharacterStateById(stateId: string): Promise<CharacterState | null> {
-    const state = await prisma.characterState.findUnique({
-      where: { id: stateId },
-    });
-
-    return state;
-  }
-
-  /**
-   * Update a character state
-   */
-  async updateCharacterState(
-    stateId: string,
-    options: Partial<CreateCharacterStateOptions>
-  ): Promise<CharacterState> {
-    // Build update data object
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
-
-    // Handle simple fields
-    if (options.age !== undefined) updateData.age = options.age;
-    if (options.title !== undefined) updateData.title = options.title;
-    if (options.occupation !== undefined)
-      updateData.occupation = options.occupation;
-    if (options.location !== undefined) updateData.location = options.location;
-    if (options.socialStatus !== undefined)
-      updateData.socialStatus = options.socialStatus;
-    if (options.faction !== undefined) updateData.faction = options.faction;
-    if (options.mentalState !== undefined)
-      updateData.mentalState = options.mentalState;
-    if (options.scopeType !== undefined)
-      updateData.scopeType = options.scopeType;
-    if (options.startActId !== undefined)
-      updateData.startActId = options.startActId;
-    if (options.startChapterId !== undefined)
-      updateData.startChapterId = options.startChapterId;
-    if (options.startSceneId !== undefined)
-      updateData.startSceneId = options.startSceneId;
-    if (options.endActId !== undefined) updateData.endActId = options.endActId;
-    if (options.endChapterId !== undefined)
-      updateData.endChapterId = options.endChapterId;
-    if (options.endSceneId !== undefined)
-      updateData.endSceneId = options.endSceneId;
-    if (options.triggerSceneId !== undefined)
-      updateData.triggerSceneId = options.triggerSceneId;
-
-    // Handle JSON array fields with stringification
-    if (options.currentTraits !== undefined)
-      updateData.currentTraits = safeStringify(options.currentTraits);
-    if (options.activeFears !== undefined)
-      updateData.activeFears = safeStringify(options.activeFears);
-    if (options.currentGoals !== undefined)
-      updateData.currentGoals = safeStringify(options.currentGoals);
-    if (options.motivations !== undefined)
-      updateData.motivations = safeStringify(options.motivations);
-    if (options.skills !== undefined)
-      updateData.skills = safeStringify(options.skills);
-    if (options.knowledge !== undefined)
-      updateData.knowledge = safeStringify(options.knowledge);
-    if (options.secrets !== undefined)
-      updateData.secrets = safeStringify(options.secrets);
-
-    // Handle changes and currentAppearance objects
-    if (options.changes !== undefined) {
-      updateData.changes = safeStringify(options.changes);
-    }
-    if (options.currentAppearance !== undefined) {
-      updateData.currentAppearance = safeStringify(options.currentAppearance);
-    }
-
-    const state = await prisma.characterState.update({
-      where: { id: stateId },
-      data: updateData,
-    });
-
-    return state;
-  }
-
-  /**
-   * Delete a character state
-   */
-  async deleteCharacterState(stateId: string): Promise<void> {
-    await prisma.characterState.delete({
-      where: { id: stateId },
     });
   }
 
@@ -603,7 +425,7 @@ export class CharacterService {
 
     // Return current character if title already exists
     const character = await this.getCharacterById(characterId);
-    if (!character) throw new Error("Character not found");
+    if (!character) throw new APIError("Character not found", 404, "NOT_FOUND");
     return character;
   }
 

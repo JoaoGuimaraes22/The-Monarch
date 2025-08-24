@@ -87,7 +87,7 @@ model Character {
   
   // Core identity (rarely changes)
   name        String
-  titles      String?
+  titles      String  @default("")
   species     String   @default("Human")
   gender      String?
   imageUrl    String?  // Character portrait

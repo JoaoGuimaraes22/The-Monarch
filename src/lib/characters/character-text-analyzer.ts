@@ -1,7 +1,10 @@
 // lib/characters/character-text-analyzer.ts
-// Improved character mention detection with conservative name variations for better accuracy
+// Updated character mention detection compatible with refactored services and titles support
 
-import type { CharacterWithParsedTitles } from "@/lib/characters/character-service";
+import type {
+  Character,
+  CharacterWithParsedTitles,
+} from "@/lib/characters/character-service";
 
 // ===== TYPES =====
 export interface CharacterMention {
@@ -45,6 +48,52 @@ export class CharacterTextAnalyzer {
   };
 
   /**
+   * ✅ NEW: Helper method to transform Character to CharacterWithParsedTitles
+   */
+  private static transformCharacterWithTitles(
+    character: Character
+  ): CharacterWithParsedTitles {
+    // Parse titles from JSON string
+    const parseTitles = (titlesJson: string): string[] => {
+      if (!titlesJson || titlesJson === "") return [];
+      try {
+        const parsed = JSON.parse(titlesJson);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
+
+    return {
+      ...character,
+      titles: parseTitles(character.titles),
+    };
+  }
+
+  /**
+   * ✅ OVERLOADED: Support both Character and CharacterWithParsedTitles inputs
+   */
+  static findCharacterMentions(
+    content: string,
+    character: Character | CharacterWithParsedTitles,
+    sceneId: string,
+    options: TextAnalysisOptions = {}
+  ): CharacterMention[] {
+    // Transform Character to CharacterWithParsedTitles if needed
+    const characterWithTitles =
+      "titles" in character && Array.isArray(character.titles)
+        ? (character as CharacterWithParsedTitles)
+        : this.transformCharacterWithTitles(character as Character);
+
+    return this.findCharacterMentionsInternal(
+      content,
+      characterWithTitles,
+      sceneId,
+      options
+    );
+  }
+
+  /**
    * ✅ ACCURACY IMPROVEMENT: Generate conservative name variations with character titles
    * Now uses titles from character profile data
    */
@@ -76,7 +125,7 @@ export class CharacterTextAnalyzer {
 
     // ===== CHARACTER PROFILE TITLES (Medium-High Confidence) =====
 
-    // ✅ NEW: Use titles from character profile (now properly typed)
+    // ✅ UPDATED: Use titles from character profile (properly typed array)
     if (character.titles && Array.isArray(character.titles)) {
       character.titles.forEach((title) => {
         if (title && title.trim().length > 0) {
@@ -88,6 +137,12 @@ export class CharacterTextAnalyzer {
           const withoutArticles = cleanTitle.replace(/^(the|a|an)\s+/i, "");
           if (withoutArticles !== cleanTitle && withoutArticles.length > 2) {
             variations.add(withoutArticles);
+          }
+
+          // Add title + first name combinations
+          if (character.name) {
+            const firstName = character.name.split(/\s+/)[0];
+            variations.add(`${cleanTitle} ${firstName}`);
           }
         }
       });
@@ -112,17 +167,6 @@ export class CharacterTextAnalyzer {
         });
       }
     }
-
-    // ===== REMOVE PROBLEMATIC VARIATIONS =====
-    // These cause too many false positives:
-    // - Generic species terms: "the human", "the elf"
-    // - Appearance terms: "the tall man", "the young woman"
-    // - Common titles: "the captain", "the lord" (unless explicit)
-    // - Age/gender combinations: "the old man"
-
-    // ===== STRICTER NICKNAME HANDLING =====
-    // Only add nicknames if they're explicitly defined or very unique
-    // TODO: Could parse character relationships for established nicknames
 
     // ===== LEGACY PRONOUNS (Not Used) =====
     // Keep this for interface compatibility, but includePronounMatches should be false
@@ -167,6 +211,11 @@ export class CharacterTextAnalyzer {
       confidence += 0.15;
     }
 
+    // ✅ NEW: Boost for character's personal titles
+    if (character.titles.includes(matchedText)) {
+      confidence += 0.1;
+    }
+
     // Capitalized words (proper nouns)
     if (/^[A-Z]/.test(matchedText)) {
       confidence += 0.05;
@@ -193,6 +242,12 @@ export class CharacterTextAnalyzer {
       "hope",
       "joy",
       "faith",
+      "king",
+      "queen",
+      "lord",
+      "lady",
+      "sir",
+      "captain", // Generic titles
     ];
     if (commonWords.includes(matchedText.toLowerCase())) {
       confidence -= 0.3;
@@ -244,24 +299,9 @@ export class CharacterTextAnalyzer {
   }
 
   /**
-   * ✅ ACCURACY IMPROVEMENT: Remove pronoun confidence calculation
-   * Since we're not using pronouns anymore, this can be simplified or removed
+   * Internal method for finding character mentions (after type transformation)
    */
-  private static calculatePronounConfidence(
-    pronoun: string,
-    character: CharacterWithParsedTitles,
-    content: string,
-    position: number
-  ): number {
-    // Always return low confidence since we don't want pronouns
-    return 0.1;
-  }
-
-  /**
-   * Find all character mentions in text
-   * ✅ ACCURACY: Improved with conservative variations and stricter matching
-   */
-  static findCharacterMentions(
+  private static findCharacterMentionsInternal(
     content: string,
     character: CharacterWithParsedTitles,
     sceneId: string,
@@ -317,13 +357,36 @@ export class CharacterTextAnalyzer {
       });
     });
 
-    // ===== SKIP PRONOUN MATCHING =====
-    // Even if includePronounMatches is true, we skip it for accuracy
-    // This prevents any pronoun matches from being included
-
     // Sort by position and remove overlapping matches
     return this.deduplicateMatches(
       mentions.sort((a, b) => a.startPosition - b.startPosition)
+    );
+  }
+
+  /**
+   * ✅ NEW: Batch analyze multiple characters (for manuscript integration)
+   */
+  static analyzeMultipleCharacters(
+    content: string,
+    characters: Character[],
+    sceneId: string,
+    options: TextAnalysisOptions = {}
+  ): CharacterMention[] {
+    const allMentions: CharacterMention[] = [];
+
+    characters.forEach((character) => {
+      const mentions = this.findCharacterMentions(
+        content,
+        character,
+        sceneId,
+        options
+      );
+      allMentions.push(...mentions);
+    });
+
+    // Sort by position and deduplicate across all characters
+    return this.deduplicateMatches(
+      allMentions.sort((a, b) => a.startPosition - b.startPosition)
     );
   }
 
@@ -464,5 +527,30 @@ export class CharacterTextAnalyzer {
     }
 
     return deduplicated;
+  }
+
+  /**
+   * ✅ NEW: Get character name variations (useful for debugging)
+   */
+  static getCharacterVariations(character: Character): CharacterNameVariations {
+    const characterWithTitles = this.transformCharacterWithTitles(character);
+    return this.generateNameVariations(characterWithTitles);
+  }
+
+  /**
+   * ✅ NEW: Test character mention detection (useful for debugging)
+   */
+  static testCharacterDetection(
+    character: Character,
+    testText: string,
+    sceneId: string = "test-scene"
+  ): {
+    variations: CharacterNameVariations;
+    mentions: CharacterMention[];
+  } {
+    const variations = this.getCharacterVariations(character);
+    const mentions = this.findCharacterMentions(testText, character, sceneId);
+
+    return { variations, mentions };
   }
 }

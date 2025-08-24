@@ -1,9 +1,8 @@
 // app/api/novels/[id]/characters/[characterId]/analytics/route.ts
-// Character manuscript analytics API following established patterns
+// Fixed character manuscript analytics API using actual service methods
 
 import { NextRequest } from "next/server";
 import { characterManuscriptService } from "@/lib/characters/character-manuscript-service";
-import { CharacterPOVParamsSchema } from "@/lib/characters/pov-types";
 import {
   withValidation,
   withRateLimit,
@@ -16,65 +15,90 @@ import { z } from "zod";
 
 // ===== VALIDATION SCHEMAS =====
 const AnalyticsQuerySchema = z.object({
-  contextLength: z
+  includeMinorMentions: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 50)),
-  fullContextLength: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 200)),
+    .transform((val) => val === "true"),
   minConfidence: z
     .string()
     .optional()
-    .transform((val) => (val ? parseFloat(val) : 0.7)),
-  includePronounMatches: z
+    .transform((val) => (val ? parseFloat(val) : 0.8)),
+  includePronouns: z
     .string()
     .optional()
     .transform((val) => val === "true"),
-  caseSensitive: z
+  sceneIds: z
     .string()
     .optional()
-    .transform((val) => val === "true"),
+    .transform((val) => (val ? val.split(",") : undefined)),
+});
+
+const CharacterParamsSchema = z.object({
+  id: z.string().min(1, "Invalid novel ID"),
+  characterId: z.string().min(1, "Invalid character ID"),
 });
 
 // ===== GET /api/novels/[id]/characters/[characterId]/analytics - Get character analytics =====
 export const GET = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
-  withValidation(undefined, CharacterPOVParamsSchema, AnalyticsQuerySchema)
+  withValidation(undefined, CharacterParamsSchema, AnalyticsQuerySchema)
 )(async function (req: NextRequest, context) {
   try {
     const params = await context.params;
     const { characterId } = params as { characterId: string };
     const query = context.query as {
-      contextLength?: number;
-      fullContextLength?: number;
+      includeMinorMentions?: boolean;
       minConfidence?: number;
-      includePronounMatches?: boolean;
-      caseSensitive?: boolean;
+      includePronouns?: boolean;
+      sceneIds?: string[];
     };
 
-    // Build text analysis options
+    // Build analysis options using actual service interface
     const analysisOptions = {
-      contextLength: query.contextLength,
-      fullContextLength: query.fullContextLength,
+      includeMinorMentions: query.includeMinorMentions,
       minConfidence: query.minConfidence,
-      includePronounMatches: query.includePronounMatches,
-      caseSensitive: query.caseSensitive,
+      includePronouns: query.includePronouns,
+      sceneIds: query.sceneIds,
     };
 
-    // Get comprehensive analytics
-    const analytics =
-      await characterManuscriptService.getCharacterManuscriptAnalytics(
+    // ✅ USE ACTUAL SERVICE METHOD: getCharacterManuscriptData
+    const manuscriptData =
+      await characterManuscriptService.getCharacterManuscriptData(
         characterId,
         analysisOptions
       );
 
+    if (!manuscriptData) {
+      return createSuccessResponse(
+        { analytics: null },
+        "Character not found",
+        context.requestId
+      );
+    }
+
+    // ✅ ALSO GET CHARACTER TIMELINE for comprehensive analytics
+    const timeline = await characterManuscriptService.getCharacterTimeline(
+      characterId,
+      analysisOptions
+    );
+
+    // Build comprehensive analytics response
+    const analytics = {
+      ...manuscriptData,
+      timeline,
+      // Add computed fields for UI convenience
+      averageMentionsPerScene:
+        manuscriptData.totalScenes > 0
+          ? manuscriptData.totalMentions / manuscriptData.totalScenes
+          : 0,
+      isPrimaryCharacter:
+        manuscriptData.povScenes > 0 || manuscriptData.totalMentions > 10,
+      appearances: manuscriptData.appearances,
+    };
+
     return createSuccessResponse(
-      {
-        analytics,
-      },
-      `Character analytics generated for ${analytics.characterName}`,
+      { analytics },
+      `Character analytics generated for ${manuscriptData.characterName}`,
       context.requestId
     );
   } catch (error) {

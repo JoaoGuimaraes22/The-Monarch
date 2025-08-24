@@ -1,8 +1,8 @@
 // app/api/novels/[id]/characters/[characterId]/states/[stateId]/route.ts
-// Individual character state CRUD operations following established patterns
+// Updated individual character state CRUD operations using separated service
 
 import { NextRequest } from "next/server";
-import { characterService } from "@/lib/characters/character-service";
+import { characterStateService } from "@/lib/characters/character-state-service";
 import {
   withValidation,
   withRateLimit,
@@ -28,6 +28,7 @@ const UpdateCharacterStateSchema = z.object({
   skills: z.array(z.string().max(100)).optional(),
   knowledge: z.array(z.string().max(200)).optional(),
   secrets: z.array(z.string().max(500)).optional(),
+  currentAppearance: z.record(z.string(), z.unknown()).nullable().optional(),
   mentalState: z.string().max(500, "Mental state too long").optional(),
   scopeType: z.enum(["novel", "act", "chapter", "scene"]).optional(),
   startActId: z.string().nullable().optional(),
@@ -40,66 +41,38 @@ const UpdateCharacterStateSchema = z.object({
   triggerSceneId: z.string().nullable().optional(),
 });
 
-const CharacterStateParamsSchema = z.object({
+const StateParamsSchema = z.object({
   id: z.string().min(1, "Invalid novel ID"),
   characterId: z.string().min(1, "Invalid character ID"),
   stateId: z.string().min(1, "Invalid state ID"),
 });
 
-// Helper function to convert null to undefined for service layer
-const sanitizeUpdateData = (
-  data: z.infer<typeof UpdateCharacterStateSchema>
-) => {
-  const sanitized: Record<string, unknown> = {};
-
-  // Handle all fields, converting null to undefined
-  Object.entries(data).forEach(([key, value]) => {
-    if (value !== null) {
-      sanitized[key] = value;
-    }
-    // If value is null, we simply don't include it (undefined)
-  });
-
-  return sanitized;
-};
-
 // ===== GET /api/novels/[id]/characters/[characterId]/states/[stateId] - Get specific state =====
 export const GET = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
-  withValidation(undefined, CharacterStateParamsSchema)
+  withValidation(undefined, StateParamsSchema)
 )(async function (req: NextRequest, context) {
   try {
     const params = await context.params;
-    const {
-      id: novelId,
-      characterId,
-      stateId,
-    } = params as {
+    const { stateId } = params as {
       id: string;
       characterId: string;
       stateId: string;
     };
 
-    // Verify character exists and belongs to novel
-    const character = await characterService.getCharacterById(characterId);
-    if (!character) {
-      throw new Error("Character not found");
-    }
-    if (character.novelId !== novelId) {
-      throw new Error("Character not found in this novel");
-    }
+    // ✅ USE SEPARATED SERVICE: characterStateService
+    const state = await characterStateService.getCharacterStateById(stateId);
 
-    // Get specific character state
-    const state = await characterService.getCharacterStateById(stateId);
     if (!state) {
-      throw new Error("Character state not found");
-    }
-    if (state.characterId !== characterId) {
-      throw new Error("Character state not found for this character");
+      return createSuccessResponse(
+        { state: null },
+        "Character state not found",
+        context.requestId
+      );
     }
 
     return createSuccessResponse(
-      state,
+      { state },
       "Character state retrieved successfully",
       context.requestId
     );
@@ -111,15 +84,11 @@ export const GET = composeMiddleware(
 // ===== PUT /api/novels/[id]/characters/[characterId]/states/[stateId] - Update state =====
 export const PUT = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
-  withValidation(UpdateCharacterStateSchema, CharacterStateParamsSchema)
+  withValidation(UpdateCharacterStateSchema, StateParamsSchema)
 )(async function (req: NextRequest, context, validatedData) {
   try {
     const params = await context.params;
-    const {
-      id: novelId,
-      characterId,
-      stateId,
-    } = params as {
+    const { stateId } = params as {
       id: string;
       characterId: string;
       stateId: string;
@@ -128,41 +97,14 @@ export const PUT = composeMiddleware(
       typeof UpdateCharacterStateSchema
     >;
 
-    // Verify character exists and belongs to novel
-    const character = await characterService.getCharacterById(characterId);
-    if (!character) {
-      throw new Error("Character not found");
-    }
-    if (character.novelId !== novelId) {
-      throw new Error("Character not found in this novel");
-    }
-
-    // Verify state exists and belongs to character
-    const existingState = await characterService.getCharacterStateById(stateId);
-    if (!existingState) {
-      throw new Error("Character state not found");
-    }
-    if (existingState.characterId !== characterId) {
-      throw new Error("Character state not found for this character");
-    }
-
-    // Sanitize data and handle changes transformation
-    const sanitizedData = sanitizeUpdateData(updateData);
-    const serviceData = {
-      ...sanitizedData,
-      changes: updateData.changes
-        ? { description: updateData.changes }
-        : undefined,
-    };
-
-    // Update character state
-    const updatedState = await characterService.updateCharacterState(
+    // ✅ USE SEPARATED SERVICE: characterStateService
+    const state = await characterStateService.updateCharacterState(
       stateId,
-      serviceData
+      updateData
     );
 
     return createSuccessResponse(
-      updatedState,
+      { state },
       "Character state updated successfully",
       context.requestId
     );
@@ -174,44 +116,81 @@ export const PUT = composeMiddleware(
 // ===== DELETE /api/novels/[id]/characters/[characterId]/states/[stateId] - Delete state =====
 export const DELETE = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
-  withValidation(undefined, CharacterStateParamsSchema)
+  withValidation(undefined, StateParamsSchema)
 )(async function (req: NextRequest, context) {
   try {
     const params = await context.params;
-    const {
-      id: novelId,
-      characterId,
-      stateId,
-    } = params as {
+    const { stateId } = params as {
       id: string;
       characterId: string;
       stateId: string;
     };
 
-    // Verify character exists and belongs to novel
-    const character = await characterService.getCharacterById(characterId);
-    if (!character) {
-      throw new Error("Character not found");
-    }
-    if (character.novelId !== novelId) {
-      throw new Error("Character not found in this novel");
-    }
-
-    // Verify state exists and belongs to character
-    const existingState = await characterService.getCharacterStateById(stateId);
-    if (!existingState) {
-      throw new Error("Character state not found");
-    }
-    if (existingState.characterId !== characterId) {
-      throw new Error("Character state not found for this character");
-    }
-
-    // Delete character state
-    await characterService.deleteCharacterState(stateId);
+    // ✅ USE SEPARATED SERVICE: characterStateService
+    await characterStateService.deleteCharacterState(stateId);
 
     return createSuccessResponse(
-      null,
+      { success: true },
       "Character state deleted successfully",
+      context.requestId
+    );
+  } catch (error) {
+    handleServiceError(error);
+  }
+});
+
+// ===== POST /api/novels/[id]/characters/[characterId]/states/[stateId]/duplicate - Duplicate state =====
+export const POST = composeMiddleware(
+  withRateLimit(RATE_LIMIT_CONFIGS.CREATION),
+  withValidation(
+    z.object({
+      overrides: z
+        .object({
+          scopeType: z.enum(["novel", "act", "chapter", "scene"]).optional(),
+          startActId: z.string().nullable().optional(),
+          startChapterId: z.string().nullable().optional(),
+          startSceneId: z.string().nullable().optional(),
+          endActId: z.string().nullable().optional(),
+          endChapterId: z.string().nullable().optional(),
+          endSceneId: z.string().nullable().optional(),
+          changes: z.record(z.string(), z.unknown()).optional(),
+          triggerSceneId: z.string().nullable().optional(),
+        })
+        .optional(),
+    }),
+    StateParamsSchema
+  )
+)(async function (req: NextRequest, context, validatedData) {
+  try {
+    const params = await context.params;
+    const { stateId } = params as {
+      id: string;
+      characterId: string;
+      stateId: string;
+    };
+    const { overrides } = validatedData as {
+      overrides?: {
+        scopeType?: "novel" | "act" | "chapter" | "scene";
+        startActId?: string | null;
+        startChapterId?: string | null;
+        startSceneId?: string | null;
+        endActId?: string | null;
+        endChapterId?: string | null;
+        endSceneId?: string | null;
+        changes?: object;
+        triggerSceneId?: string | null;
+      };
+    };
+
+    // ✅ USE SEPARATED SERVICE: characterStateService
+    const duplicatedState = await characterStateService.duplicateCharacterState(
+      stateId,
+      overrides || {}
+    );
+
+    return createSuccessResponse(
+      { state: duplicatedState },
+      "Character state duplicated successfully",
       context.requestId
     );
   } catch (error) {

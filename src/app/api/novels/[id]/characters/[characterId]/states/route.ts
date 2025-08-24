@@ -1,8 +1,8 @@
 // app/api/novels/[id]/characters/[characterId]/states/route.ts
-// Character states management API - following established patterns
+// Updated to use separated character state service
 
 import { NextRequest } from "next/server";
-import { characterService } from "@/lib/characters/character-service";
+import { characterStateService } from "@/lib/characters/character-state-service";
 import {
   withValidation,
   withRateLimit,
@@ -30,47 +30,43 @@ const CreateCharacterStateSchema = z.object({
   secrets: z.array(z.string().max(500)).optional(),
   mentalState: z.string().max(500, "Mental state too long").optional(),
   scopeType: z.enum(["novel", "act", "chapter", "scene"]),
-  startActId: z.string().optional(),
-  startChapterId: z.string().optional(),
-  startSceneId: z.string().optional(),
-  endActId: z.string().optional(),
-  endChapterId: z.string().optional(),
-  endSceneId: z.string().optional(),
-  changes: z.string().max(2000, "Changes description too long").optional(),
-  triggerSceneId: z.string().optional(),
+  startActId: z.string().nullable().optional(),
+  startChapterId: z.string().nullable().optional(),
+  startSceneId: z.string().nullable().optional(),
+  endActId: z.string().nullable().optional(),
+  endChapterId: z.string().nullable().optional(),
+  endSceneId: z.string().nullable().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
+  triggerSceneId: z.string().nullable().optional(),
 });
 
-const CharacterStateParamsSchema = z.object({
+const CharacterParamsSchema = z.object({
   id: z.string().min(1, "Invalid novel ID"),
   characterId: z.string().min(1, "Invalid character ID"),
 });
 
-// ===== GET /api/novels/[id]/characters/[characterId]/states - List states =====
+// ===== GET /api/novels/[id]/characters/[characterId]/states - Get character states =====
 export const GET = composeMiddleware(
   withRateLimit(RATE_LIMIT_CONFIGS.STANDARD),
-  withValidation(undefined, CharacterStateParamsSchema)
+  withValidation(undefined, CharacterParamsSchema)
 )(async function (req: NextRequest, context) {
   try {
     const params = await context.params;
-    const { id: novelId, characterId } = params as {
-      id: string;
-      characterId: string;
-    };
+    const { characterId } = params as { id: string; characterId: string };
 
-    // Verify character exists and belongs to novel
-    const character = await characterService.getCharacterById(characterId);
-    if (!character) {
-      throw new Error("Character not found");
-    }
-    if (character.novelId !== novelId) {
-      throw new Error("Character not found in this novel");
-    }
+    // ✅ USE SEPARATED SERVICE: characterStateService
+    const states = await characterStateService.getCharacterStates(characterId);
 
-    // Get character states
-    const states = await characterService.getCharacterStates(characterId);
+    // Get statistics
+    const statistics = await characterStateService.getCharacterStateStatistics(
+      characterId
+    );
 
     return createSuccessResponse(
-      { states },
+      {
+        states,
+        statistics,
+      },
       `Retrieved ${states.length} character states`,
       context.requestId
     );
@@ -79,44 +75,26 @@ export const GET = composeMiddleware(
   }
 });
 
-// ===== POST /api/novels/[id]/characters/[characterId]/states - Create state =====
+// ===== POST /api/novels/[id]/characters/[characterId]/states - Create character state =====
 export const POST = composeMiddleware(
-  withRateLimit(RATE_LIMIT_CONFIGS.CREATION), // Use CREATION rate limit like other creation endpoints
-  withValidation(CreateCharacterStateSchema, CharacterStateParamsSchema)
+  withRateLimit(RATE_LIMIT_CONFIGS.CREATION),
+  withValidation(CreateCharacterStateSchema, CharacterParamsSchema)
 )(async function (req: NextRequest, context, validatedData) {
   try {
     const params = await context.params;
-    const { id: novelId, characterId } = params as {
-      id: string;
-      characterId: string;
-    };
+    const { characterId } = params as { id: string; characterId: string };
     const stateData = validatedData as z.infer<
       typeof CreateCharacterStateSchema
     >;
 
-    // Verify character exists and belongs to novel
-    const character = await characterService.getCharacterById(characterId);
-    if (!character) {
-      throw new Error("Character not found");
-    }
-    if (character.novelId !== novelId) {
-      throw new Error("Character not found in this novel");
-    }
-
-    // Transform changes from string to object for service layer
-    const serviceData = {
+    // ✅ USE SEPARATED SERVICE: characterStateService
+    const state = await characterStateService.createCharacterState({
       characterId,
       ...stateData,
-      changes: stateData.changes
-        ? { description: stateData.changes }
-        : undefined,
-    };
-
-    // Create character state
-    const newState = await characterService.createCharacterState(serviceData);
+    });
 
     return createSuccessResponse(
-      newState,
+      { state },
       "Character state created successfully",
       context.requestId
     );
@@ -124,3 +102,25 @@ export const POST = composeMiddleware(
     handleServiceError(error);
   }
 });
+
+// ===== Additional utility endpoints =====
+
+// GET most recent state
+export async function getMostRecentState(req: NextRequest, context: any) {
+  try {
+    const params = await context.params;
+    const { characterId } = params as { characterId: string };
+
+    const state = await characterStateService.getMostRecentCharacterState(
+      characterId
+    );
+
+    return createSuccessResponse(
+      { state },
+      state ? "Most recent state retrieved" : "No states found",
+      context.requestId
+    );
+  } catch (error) {
+    handleServiceError(error);
+  }
+}

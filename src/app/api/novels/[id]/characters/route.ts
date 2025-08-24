@@ -1,5 +1,5 @@
 // app/api/novels/[id]/characters/route.ts
-// Character API routes following your established patterns
+// Updated CREATE character API route to include titles support
 
 import { NextRequest } from "next/server";
 import { characterService } from "@/lib/characters/character-service";
@@ -27,6 +27,7 @@ const CreateCharacterSchema = z.object({
   baseAppearance: z.record(z.string(), z.unknown()).optional(),
   coreNature: z.record(z.string(), z.unknown()).optional(),
   inspirations: z.array(z.string()).optional(),
+  titles: z.array(z.string().max(100, "Title too long")).optional(), // ✨ NEW: Titles support
   writerNotes: z.string().max(2000, "Notes too long").optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -71,28 +72,41 @@ export const POST = composeMiddleware(
   try {
     const params = await context.params;
     const { id: novelId } = params as { id: string };
-    const characterData = validatedData as z.infer<
-      typeof CreateCharacterSchema
-    >;
+    const {
+      name,
+      species,
+      gender,
+      imageUrl,
+      birthplace,
+      family,
+      baseAppearance,
+      coreNature,
+      inspirations,
+      titles, // ✨ NEW: Extract titles from validated data
+      writerNotes,
+      tags,
+    } = validatedData as z.infer<typeof CreateCharacterSchema>;
 
-    // Check if name is unique
-    const isNameUnique = await characterService.isCharacterNameUnique(
+    // Create character with all fields including titles
+    const character = await characterService.createCharacter({
       novelId,
-      characterData.name
-    );
-    if (!isNameUnique) {
-      throw new Error("Character name already exists in this novel");
-    }
-
-    // Create character
-    const character = await characterService.createCharacter(
-      novelId,
-      characterData
-    );
+      name: name.trim(),
+      species: species || "Human",
+      gender: gender || null,
+      imageUrl: imageUrl || null,
+      birthplace: birthplace || null,
+      family: family || null,
+      baseAppearance: baseAppearance || null,
+      coreNature: coreNature || null,
+      inspirations: inspirations || [],
+      titles: titles || [], // ✨ NEW: Pass titles to service
+      writerNotes: writerNotes || null,
+      tags: tags || [],
+    });
 
     return createSuccessResponse(
-      character,
-      `Character "${character.name}" created successfully`,
+      { character },
+      `Character "${name}" created successfully`,
       context.requestId
     );
   } catch (error) {
